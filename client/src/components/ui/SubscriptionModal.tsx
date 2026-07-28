@@ -9,8 +9,6 @@ interface SubscriptionModalProps {
 }
 
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }) => {
-  const { setProUser } = useAppStore();
-
   const navigate = useNavigate();
 
   useEffect(() => {

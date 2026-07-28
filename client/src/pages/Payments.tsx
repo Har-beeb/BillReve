@@ -24,7 +24,7 @@ const Payments: React.FC = () => {
     const fetchSecrets = async () => {
       if (!user?.id) return;
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('user_secrets')
           .select('paystack_secret_key, flutterwave_secret_key')
           .eq('user_id', user.id)

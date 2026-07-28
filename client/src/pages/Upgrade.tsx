@@ -4,7 +4,7 @@ import { CheckCircle2, Zap, Shield, Globe } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 const Upgrade: React.FC = () => {
-  const { user, businessProfile } = useAppStore();
+  const { user } = useAppStore();
   const [isSuccess, setIsSuccess] = useState(false);
 
   // The SaaS Master Key (Read from environment variables)

@@ -142,6 +142,8 @@ export const useAppStore = create<AppState>()(
             email: 'hello@billreve.app',
             phone: '+234 123 456 7890',
             address: 'Lagos, Nigeria',
+            country: 'Nigeria',
+            currency: 'NGN',
             bankAccounts: []
           },
           taxSettings: [
