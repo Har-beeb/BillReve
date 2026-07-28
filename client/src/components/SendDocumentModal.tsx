@@ -1,0 +1,231 @@
+import React, { useState, useEffect } from 'react';
+import { X, Mail, MessageCircle, Loader2, Sparkles } from 'lucide-react';
+import { generateDocumentPdf } from '../utils/pdfGenerator';
+import { draftAiEmail } from '../api/ai';
+import { useAppStore } from '../store/useAppStore';
+import { db } from '../db/db';
+
+interface SendDocumentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  documentId: string;
+  clientEmail?: string;
+  documentType: 'Invoice' | 'Quote';
+  amount: string;
+}
+
+export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
+  isOpen,
+  onClose,
+  documentId,
+  clientEmail = '',
+  documentType,
+  amount,
+}) => {
+  const { businessProfile } = useAppStore();
+  const [isSending, setIsSending] = useState(false);
+  const [customMessage, setCustomMessage] = useState('');
+  const [isDrafting, setIsDrafting] = useState(false);
+  const [documentDetails, setDocumentDetails] = useState<any>(null);
+  const [clientDetails, setClientDetails] = useState<any>(null);
+
+  useEffect(() => {
+    if (isOpen && documentId) {
+      const loadDetails = async () => {
+        const doc = documentType === 'Invoice' 
+          ? await db.invoices.get(documentId)
+          : await db.quotes.get(documentId);
+        
+        if (doc) {
+          setDocumentDetails(doc);
+          const client = await db.clients.get(doc.clientId);
+          if (client) setClientDetails(client);
+        }
+      };
+      loadDetails();
+    } else {
+      setCustomMessage('');
+    }
+  }, [isOpen, documentId, documentType]);
+
+  const handleDraftEmail = async () => {
+    if (!documentDetails || !clientDetails) return;
+    
+    setIsDrafting(true);
+    try {
+      const isOverdue = documentType === 'Invoice' && documentDetails.dueDate && new Date(documentDetails.dueDate) < new Date();
+      
+      // Fetch client history (past invoices and quotes) to personalize the draft
+      const pastInvoices = await db.invoices.where('clientId').equals(clientDetails.localId).toArray();
+      const pastQuotes = await db.quotes.where('clientId').equals(clientDetails.localId).toArray();
+      
+      const clientHistory = {
+        totalInvoices: pastInvoices.length,
+        totalPaidInvoices: pastInvoices.filter(i => i.status === 'PAID').length,
+        totalQuotes: pastQuotes.length,
+        isNewClient: (pastInvoices.length + pastQuotes.length) <= 1,
+      };
+
+      const draft = await draftAiEmail({
+        documentType: documentType.toUpperCase() as 'QUOTE' | 'INVOICE',
+        documentDetails,
+        clientDetails,
+        clientHistory,
+        businessName: businessProfile.name || 'Your Business',
+        currency: documentDetails.currency || 'USD',
+        isOverdue: isOverdue || false
+      });
+      
+      if (draft?.text) {
+        setCustomMessage(draft.text);
+      }
+    } catch (err) {
+      console.error('Failed to draft email:', err);
+      alert('Failed to draft email.');
+    } finally {
+      setIsDrafting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const publicLink = documentType === 'Invoice' 
+    ? `${window.location.origin}/pay/${documentId}`
+    : `${window.location.origin}/quote/${documentId}`;
+
+  const handleSendEmail = async () => {
+    setIsSending(true);
+    try {
+      // 1. Get the document and client from IndexedDB
+      const document = documentType === 'Invoice' 
+        ? await db.invoices.get(documentId)
+        : await db.quotes.get(documentId);
+      
+      if (!document) throw new Error('Document not found');
+      
+      const client = await db.clients.get(document.clientId);
+
+      // 2. Generate PDF as base64
+      const pdfBase64 = await generateDocumentPdf(document, client, businessProfile, documentType.toUpperCase() as any, false);
+      
+      // 3. Send to backend
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/email/send-document`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: clientEmail,
+          subject: `Your ${documentType} from ${businessProfile.name || 'BillReve'}`,
+          documentData: {
+            type: documentType.toUpperCase(),
+            documentNumber: (document as any).invoiceNumber || (document as any).quoteNumber || documentId.slice(0,8),
+            clientName: client?.name || 'Client',
+            amount: amount,
+            dueDate: (document as any).dueDate ? new Date((document as any).dueDate).toLocaleDateString() : undefined,
+            businessName: businessProfile.name || 'BillReve',
+            paymentLink: documentType === 'Invoice' ? publicLink : undefined,
+            customMessage: customMessage.trim() || undefined
+          },
+          attachments: [
+            {
+              filename: `${documentType.toLowerCase()}-${(document as any).invoiceNumber || (document as any).quoteNumber || documentId.slice(0,8)}.pdf`,
+              content: pdfBase64
+            }
+          ]
+        })
+      });
+
+      const result = await response.json();
+      if (!result.success) throw new Error(result.message);
+
+      alert(`${documentType} sent successfully!`);
+      onClose();
+    } catch (err) {
+      console.error('Failed to send email:', err);
+      alert('Failed to send email. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSendWhatsApp = () => {
+    const defaultText = `Hi there,\n\nPlease find the link to your ${documentType} for the amount of ${amount} below:\n\n${publicLink}\n\nThank you!`;
+    const messageToSend = customMessage.trim() ? `${customMessage.trim()}\n\n${publicLink}` : defaultText;
+    const text = encodeURIComponent(messageToSend);
+    // Using wa.me which will open WhatsApp app or web depending on device
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+      />
+      
+      {/* Modal */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm relative z-10 animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            Send {documentType}
+          </h3>
+          <button 
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Custom Message (Optional)</label>
+              <button
+                onClick={handleDraftEmail}
+                disabled={isDrafting || !documentDetails}
+                className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-md transition-colors disabled:opacity-50"
+                title="Draft a professional message using AI"
+              >
+                {isDrafting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                {documentType === 'Invoice' && documentDetails?.dueDate && new Date(documentDetails.dueDate) < new Date() 
+                  ? 'AI Draft Reminder' 
+                  : 'AI Draft Message'}
+              </button>
+            </div>
+            <textarea
+              rows={4}
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Add a personal note to the email body..."
+              className="w-full p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-purple-500/50"
+            />
+          </div>
+
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+            How would you like to send this {documentType.toLowerCase()} to your client?
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleSendEmail}
+              disabled={isSending}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 dark:text-purple-300 rounded-lg transition-colors font-medium border border-purple-200 dark:border-purple-800/50 disabled:opacity-50"
+            >
+              {isSending ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
+              {isSending ? 'Sending...' : 'Send via Email (Default)'}
+            </button>
+            
+            <button
+              onClick={handleSendWhatsApp}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-300 rounded-lg transition-colors font-medium border border-green-200 dark:border-green-800/50"
+            >
+              <MessageCircle size={18} />
+              Send via WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

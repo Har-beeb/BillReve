@@ -1,0 +1,228 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  /* Map standard 'blue' to our new Dark Premium Purple brand color */
+  --color-blue-50: #f5f3ff;
+  --color-blue-100: #ede9fe;
+  --color-blue-200: #ddd6fe;
+  --color-blue-300: #c4b5fd;
+  --color-blue-400: #8b5cf6;
+  --color-blue-500: #6d28d9; /* Darkened purple (Tailwind violet-700) */
+  --color-blue-600: #5b21b6; /* Tailwind violet-800 */
+  --color-blue-700: #4c1d95; /* Tailwind violet-900 */
+  --color-blue-800: #3b0764; /* Very dark purple */
+  --color-blue-900: #2e1065; 
+  --color-blue-950: #170833;
+
+  /* Custom neutral/zinc palette to match IDE dark mode */
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f4f4f5;
+  --color-slate-200: #e4e4e7;
+  --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1aa;
+  --color-slate-500: #71717a;
+  --color-slate-600: #52525b;
+  --color-slate-700: #3f3f46;
+  --color-slate-800: #27272a;
+  --color-slate-900: #18181b;
+  --color-slate-950: #09090b;
+}
+@variant dark (&:is(.dark *));
+
+/* Base layer adjustments for background and text to handle dark mode seamlessly on the body */
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-200;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  
+  html.theme-wine {
+    /* Glossy Wine Primary, Black Secondary, Silver Accents */
+    --color-purple-50: #fdf2f8; /* pink-50ish */
+    --color-purple-100: #fce7f3;
+    --color-purple-200: #fbcfe8;
+    --color-purple-300: #f9a8d4;
+    --color-purple-400: #f472b6;
+    --color-purple-500: #ec4899;
+    --color-purple-600: #831843; /* Glossy wine - mapped to 600 where most bg-purple-600 is used */
+    --color-purple-700: #500724;
+    --color-purple-800: #3f051c;
+    --color-purple-900: #290413;
+    --color-purple-950: #1a020c;
+    
+    /* Overriding slate to be Black/Silver */
+    --color-slate-50: #f9f9f9;
+    --color-slate-100: #f0f0f0; /* Silver */
+    --color-slate-200: #e0e0e0;
+    --color-slate-300: #cccccc;
+    --color-slate-400: #aaaaaa;
+    --color-slate-500: #888888;
+    --color-slate-600: #666666;
+    --color-slate-700: #444444;
+    --color-slate-800: #222222;
+    --color-slate-900: #0a0a0a; /* Black */
+    --color-slate-950: #000000;
+  }
+
+  html.theme-ocean {
+    --color-purple-50: #eff6ff;
+    --color-purple-100: #dbeafe;
+    --color-purple-200: #bfdbfe;
+    --color-purple-300: #93c5fd;
+    --color-purple-400: #60a5fa;
+    --color-purple-500: #3b82f6;
+    --color-purple-600: #2563eb;
+    --color-purple-700: #1d4ed8;
+    --color-purple-800: #1e40af;
+    --color-purple-900: #1e3a8a;
+    --color-purple-950: #172554;
+  }
+
+  html.theme-emerald {
+    --color-purple-50: #ecfdf5;
+    --color-purple-100: #d1fae5;
+    --color-purple-200: #a7f3d0;
+    --color-purple-300: #6ee7b7;
+    --color-purple-400: #34d399;
+    --color-purple-500: #10b981;
+    --color-purple-600: #059669;
+    --color-purple-700: #047857;
+    --color-purple-800: #065f46;
+    --color-purple-900: #064e3b;
+    --color-purple-950: #022c22;
+  }
+
+  html.theme-slate {
+    --color-purple-50: #f8fafc;
+    --color-purple-100: #f1f5f9;
+    --color-purple-200: #e2e8f0;
+    --color-purple-300: #cbd5e1;
+    --color-purple-400: #94a3b8;
+    --color-purple-500: #64748b;
+    --color-purple-600: #475569;
+    --color-purple-700: #334155;
+    --color-purple-800: #1e293b;
+    --color-purple-900: #0f172a;
+    --color-purple-950: #020617;
+  }
+
+  html.theme-sunset {
+    --color-purple-50: #fff7ed;
+    --color-purple-100: #ffedd5;
+    --color-purple-200: #fed7aa;
+    --color-purple-300: #fdba74;
+    --color-purple-400: #fb923c;
+    --color-purple-500: #f97316;
+    --color-purple-600: #ea580c;
+    --color-purple-700: #c2410c;
+    --color-purple-800: #9a3412;
+    --color-purple-900: #7c2d12;
+    --color-purple-950: #431407;
+  }
+
+  html.theme-mustard {
+    --color-purple-50: #fefce8;
+    --color-purple-100: #fef9c3;
+    --color-purple-200: #fef08a;
+    --color-purple-300: #fde047;
+    --color-purple-400: #facc15;
+    --color-purple-500: #eab308;
+    --color-purple-600: #ca8a04;
+    --color-purple-700: #a16207;
+    --color-purple-800: #854d0e;
+    --color-purple-900: #713f12;
+    --color-purple-950: #422006;
+  }
+
+  html.theme-cherry {
+    --color-purple-50: #fef2f2;
+    --color-purple-100: #fee2e2;
+    --color-purple-200: #fecaca;
+    --color-purple-300: #fca5a5;
+    --color-purple-400: #f87171;
+    --color-purple-500: #ef4444;
+    --color-purple-600: #dc2626;
+    --color-purple-700: #b91c1c;
+    --color-purple-800: #991b1b;
+    --color-purple-900: #7f1d1d;
+    --color-purple-950: #450a0a;
+  }
+
+  @keyframes fade-in-up {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in-subtle {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-page-transition {
+    opacity: 0;
+    animation: fade-in-subtle 0.3s ease-out forwards;
+  }
+
+  .animate-fade-in-up {
+    opacity: 0; /* Ensure hidden before animation starts */
+    animation: fade-in-up 0.6s ease-out forwards;
+  }
+
+  @keyframes grow-up {
+    0% {
+      height: 0%;
+    }
+  }
+
+  .animate-grow-up {
+    animation: grow-up 1s ease-out forwards;
+  }
+  
+  /* Custom flush scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 dark:bg-slate-600 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400 dark:bg-slate-500;
+  }
+}
+
+@layer utilities {
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+}

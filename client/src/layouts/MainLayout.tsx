@@ -1,0 +1,576 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { 
+  LayoutDashboard, FileText, FileSignature, Users, Settings, 
+  RefreshCw, CheckCircle2, Clock, XCircle, 
+  Sun, Moon, LogOut, User, CreditCard,
+  BarChart3, WalletCards, Info, Crown, Menu, Bell, Check, MoreHorizontal
+} from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
+import { syncEngine } from '../services/syncEngine';
+import { useNotifications } from '../hooks/useNotifications';
+import SubscriptionModal from '../components/ui/SubscriptionModal';
+
+const MainLayout: React.FC = () => {
+  const { syncStatus, theme, toggleTheme, user, logout, isProUser, mobileNavStyle } = useAppStore();
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Start Sync Engine and Theme initialization
+  useEffect(() => {
+    syncEngine.start();
+    
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      syncEngine.stop();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    // Close mobile menu on route change
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  const navItems = [
+    { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
+    { name: 'Quotes', path: '/quotes', icon: <FileSignature size={20} /> },
+    { name: 'Invoices', path: '/invoices', icon: <FileText size={20} /> },
+    { name: 'Clients', path: '/clients', icon: <Users size={20} /> },
+    { name: 'Reports', path: '/reports', icon: <BarChart3 size={20} />, isPro: true },
+    { name: 'Payments', path: '/payments', icon: <WalletCards size={20} />, isPro: true },
+    { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
+    { name: 'About', path: '/about', icon: <Info size={20} /> },
+  ];
+
+  const renderSyncIcon = () => {
+    if (!isOnline) {
+      return <Clock className="text-amber-500" size={18} />;
+    }
+    switch (syncStatus) {
+      case 'synced': return <CheckCircle2 className="text-green-500" size={18} />;
+      case 'syncing': return <RefreshCw className="text-purple-500 animate-spin" size={18} />;
+      case 'pending': return <Clock className="text-amber-500" size={18} />;
+      case 'failed': return <XCircle className="text-red-500" size={18} />;
+      default: return null;
+    }
+  };
+
+  const renderSyncText = () => {
+    if (!isOnline) return 'Offline Mode';
+    switch (syncStatus) {
+      case 'synced': return 'All data synced';
+      case 'syncing': return 'Syncing...';
+      case 'pending': return 'Changes pending';
+      case 'failed': return 'Sync failed';
+      default: return '';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200">
+      {/* Desktop Sidebar (hidden on mobile) */}
+      <aside 
+        className={`hidden md:flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 sticky top-0 h-screen transition-[width] duration-300 ease-in-out will-change-[width] relative z-30 ${isSidebarExpanded ? 'w-64' : 'w-20'}`}
+        onMouseEnter={() => setIsSidebarExpanded(true)}
+        onMouseLeave={() => setIsSidebarExpanded(false)}
+      >
+        <div 
+          className={`absolute -right-3 top-5 w-6 h-6 transition-colors transform rotate-45 z-40
+            ${isSidebarExpanded 
+              ? 'bg-white dark:bg-slate-800 border-b border-l border-slate-200 dark:border-slate-700' 
+              : 'bg-white dark:bg-slate-800 border-t border-r border-slate-200 dark:border-slate-700 shadow-[2px_2px_4px_rgba(0,0,0,0.02)]'
+            }`}
+        />
+
+        <div className={`p-6 font-bold text-2xl text-purple-600 dark:text-purple-400 flex items-center justify-start h-20`}>
+          {/* Logo Placeholder (Geometric Shape) */}
+          <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
+             <div className="w-3 h-3 bg-white rounded-sm transform rotate-45" />
+          </div>
+          <span className={`overflow-hidden whitespace-nowrap text-lg transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-4'}`}>
+            BillReve
+          </span>
+        </div>
+        <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto overflow-x-hidden">
+          {navItems.map((item) => {
+            const isLocked = item.isPro && !isProUser;
+            
+            return (
+            <NavLink
+              key={item.path}
+              to={isLocked ? '#' : item.path}
+              onClick={(e) => {
+                if (isLocked) {
+                  e.preventDefault();
+                  setIsSubscriptionModalOpen(true);
+                }
+              }}
+              className={({ isActive }) =>
+                `flex items-center px-4 py-3 rounded-lg transition-colors justify-between group ${
+                  isActive && !isLocked
+                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                } ${isLocked ? 'cursor-pointer' : ''}`
+              }
+              title={!isSidebarExpanded ? item.name : undefined}
+            >
+              <div className={`flex items-center ${isLocked ? 'blur-[2.5px] opacity-70 group-hover:blur-none group-hover:opacity-100 transition-all duration-300' : ''}`}>
+                <div className="flex-shrink-0">{item.icon}</div>
+                <span className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-2'}`}>
+                  {item.name}
+                </span>
+              </div>
+              {isLocked && isSidebarExpanded && (
+                <span className="text-[9px] uppercase font-bold tracking-wider bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded ml-2">Pro</span>
+              )}
+            </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Upgrade Card at bottom of sidebar */}
+        {!isProUser && isSidebarExpanded && (
+          <div className="p-4 mx-4 mt-4 mb-4 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-slate-700 dark:to-slate-800/50 border border-purple-100 dark:border-slate-600 text-center animate-in fade-in flex-shrink-0">
+            <div className="w-10 h-10 mx-auto bg-purple-600 text-white rounded-full flex items-center justify-center mb-3 shadow-md">
+              <Crown size={20} />
+            </div>
+            <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">Upgrade to Pro</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Unlock advanced features</p>
+            <button 
+              onClick={() => setIsSubscriptionModalOpen(true)}
+              className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              View Plans
+            </button>
+          </div>
+        )}
+        {!isProUser && !isSidebarExpanded && (
+          <div className="mt-4 mb-6 mx-auto cursor-pointer flex-shrink-0" onClick={() => setIsSubscriptionModalOpen(true)}>
+             <div className="w-10 h-10 bg-purple-50 hover:bg-purple-100 dark:bg-slate-700 dark:hover:bg-slate-600 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center transition-colors">
+              <Crown size={20} />
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-h-screen pb-16 md:pb-0">
+        {/* Header */}
+        <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-16 md:h-20 flex items-center px-4 md:px-8 justify-between sticky top-0 z-20 transition-colors duration-200 pt-safe">
+          <div className="flex items-center gap-4 md:hidden">
+            {mobileNavStyle === 'drawer' && (
+              <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <Menu size={24} />
+              </button>
+            )}
+            <span className="font-bold text-xl text-purple-600 dark:text-purple-400 tracking-tight">BillReve</span>
+          </div>
+          <div className="flex-1 hidden md:flex">
+            {/* Desktop search placeholder */}
+          </div>
+          <div className="flex items-center gap-4">
+            <div 
+              onClick={() => isOnline && syncEngine.sync()}
+              className={`hidden md:flex items-center text-sm gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-colors ${!isOnline ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
+            >
+              {renderSyncIcon()}
+              <span>{renderSyncText()}</span>
+            </div>
+            {/* Mobile sync icon only */}
+            <div 
+              onClick={() => isOnline && syncEngine.sync()}
+              className={`md:hidden flex items-center p-2 rounded-full cursor-pointer transition-colors ${!isOnline ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              title={renderSyncText()}
+            >
+               {renderSyncIcon()}
+            </div>
+            
+            {/* Theme Toggle */}
+            <button 
+              onClick={toggleTheme}
+              className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+
+            {/* Notifications Dropdown */}
+            <div className="relative" ref={notificationsRef}>
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className="relative p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                aria-label="Notifications"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
+                )}
+              </button>
+              
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 rounded-t-xl">
+                    <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllAsRead} className="text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
+                        <Check size={12} /> Mark all read
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="max-h-[60vh] overflow-y-auto">
+                    {notifications.length > 0 ? (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                        {notifications.map((notification) => (
+                          <div 
+                            key={notification.id} 
+                            onClick={() => {
+                              if (!notification.is_read) markAsRead(notification.id);
+                              setIsNotificationsOpen(false);
+                              if (notification.type.startsWith('QUOTE')) navigate('/quotes');
+                              if (notification.type.startsWith('INVOICE')) navigate('/invoices');
+                            }}
+                            className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors flex gap-3 ${!notification.is_read ? 'bg-purple-50/30 dark:bg-purple-900/10' : ''}`}
+                          >
+                            <div className="mt-0.5 shrink-0">
+                              {!notification.is_read ? (
+                                <div className="w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400 mt-1.5"></div>
+                              ) : (
+                                <div className="w-2 h-2 rounded-full bg-transparent mt-1.5 border border-slate-300 dark:border-slate-600"></div>
+                              )}
+                            </div>
+                            <div>
+                              <p className={`text-sm ${!notification.is_read ? 'font-semibold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                                {notification.message}
+                              </p>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-medium">
+                                {new Date(notification.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-slate-500 flex flex-col items-center">
+                        <Bell size={24} className="mb-2 opacity-20" />
+                        <p className="text-sm">No notifications yet</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* User Dropdown */}
+            <div className="relative" ref={menuRef}>
+              <button 
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 overflow-hidden ring-2 ring-transparent"
+                aria-label="User menu"
+              >
+                {(() => {
+                  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+                  const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+                  const initial = fullName.charAt(0).toUpperCase();
+                  if (avatarUrl) {
+                    return <img src={avatarUrl} alt={fullName} className="w-full h-full object-cover" />;
+                  }
+                  return <span>{initial}</span>;
+                })()}
+              </button>
+
+              {/* Dropdown Menu */}
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                      {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                      {user?.email}
+                    </p>
+                  </div>
+                  
+                  <div className="p-1">
+                    <button 
+                      onClick={() => { setIsUserMenuOpen(false); navigate('/settings'); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors text-left"
+                    >
+                      <User size={16} className="text-slate-400" />
+                      Profile & Settings
+                    </button>
+                    <button 
+                      onClick={() => { setIsUserMenuOpen(false); navigate('/settings'); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors text-left"
+                    >
+                      <CreditCard size={16} className="text-slate-400" />
+                      Billing (Pro)
+                    </button>
+                  </div>
+                  
+                  <div className="p-1 border-t border-slate-100 dark:border-slate-700/50">
+                    <button 
+                      onClick={() => { setIsUserMenuOpen(false); logout(); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left font-medium"
+                    >
+                      <LogOut size={16} />
+                      Log out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div key={location.pathname} className="p-4 md:p-6 flex-1 mx-auto w-full max-w-7xl animate-page-transition">
+          <Outlet />
+        </div>
+      </main>
+
+      {/* Mobile Slide-out Drawer */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          
+          {/* Drawer */}
+          <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
+            <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
+              <span className="font-bold text-2xl text-purple-600 dark:text-purple-400">BillReve</span>
+              <button
+                type="button"
+                className="relative -m-2 inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <span className="sr-only">Close menu</span>
+                <XCircle size={24} aria-hidden="true" />
+              </button>
+            </div>
+            
+            <div className="space-y-1 px-4 py-6">
+              {navItems.map((item) => {
+                const isLocked = item.isPro && !isProUser;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={isLocked ? '#' : item.path}
+                    onClick={(e) => {
+                      if (isLocked) {
+                        e.preventDefault();
+                        setIsSubscriptionModalOpen(true);
+                      } else {
+                        setIsMobileMenuOpen(false);
+                      }
+                    }}
+                    className={({ isActive }) =>
+                      `flex items-center px-4 py-3 rounded-lg transition-colors gap-4 ${
+                        isActive && !isLocked
+                          ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                      }`
+                    }
+                  >
+                    <div className={isLocked ? 'blur-[1.5px] opacity-70' : ''}>
+                      {item.icon}
+                    </div>
+                    <span className={isLocked ? 'blur-[1.5px] opacity-70' : ''}>{item.name}</span>
+                    {isLocked && (
+                      <span className="ml-auto text-[10px] uppercase font-bold tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 px-2 py-0.5 rounded">Pro</span>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+            
+            {!isProUser && (
+              <div className="mt-auto px-4 pb-6">
+                <div className="rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-slate-700 dark:to-slate-800/50 border border-purple-100 dark:border-slate-600 p-4 text-center">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-purple-600 text-white shadow-sm mb-3">
+                    <Crown size={20} />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Upgrade to Pro</h4>
+                  <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Unlock advanced features</p>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsSubscriptionModalOpen(true);
+                    }}
+                    className="w-full rounded-lg bg-purple-600 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-purple-700 transition-colors"
+                  >
+                    View Plans
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Bottom Navigation Bar */}
+      {mobileNavStyle === 'bottom' && (
+        <div className="md:hidden">
+          {/* Animated "More" Panel */}
+          <div 
+            className={`fixed inset-x-0 bottom-[64px] bg-white dark:bg-slate-800 rounded-t-3xl shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.3)] border-t border-slate-200 dark:border-slate-700 transition-transform duration-200 ease-out z-[70] overflow-y-auto max-h-[70vh] ${
+              isMoreMenuOpen ? 'translate-y-0' : 'translate-y-full'
+            }`}
+          >
+            <div className="p-4 pb-6 space-y-2">
+              <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-4" />
+              {navItems.slice(4).map((item) => {
+                const isLocked = item.isPro && !isProUser;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={isLocked ? '#' : item.path}
+                    onClick={(e) => {
+                      if (isLocked) {
+                        e.preventDefault();
+                        setIsSubscriptionModalOpen(true);
+                      } else {
+                        setIsMoreMenuOpen(false);
+                      }
+                    }}
+                    className={({ isActive }) =>
+                      `flex items-center px-4 py-3.5 rounded-xl transition-colors gap-4 ${
+                        isActive && !isLocked
+                          ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                      }`
+                    }
+                  >
+                    <div className={isLocked ? 'blur-[1.5px] opacity-70' : ''}>
+                      {item.icon}
+                    </div>
+                    <span className={isLocked ? 'blur-[1.5px] opacity-70 font-medium' : 'font-medium'}>{item.name}</span>
+                    {isLocked && (
+                      <span className="ml-auto text-[10px] uppercase font-bold tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 px-2 py-0.5 rounded">Pro</span>
+                    )}
+                  </NavLink>
+                );
+              })}
+              
+              {!isProUser && (
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                  <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-slate-700 dark:to-slate-800/50 border border-purple-100 dark:border-slate-600 p-4 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Crown size={18} className="text-purple-600 dark:text-purple-400" />
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">Upgrade to Pro</h4>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Unlock advanced features</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsMoreMenuOpen(false);
+                        setIsSubscriptionModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-purple-700 transition-colors"
+                    >
+                      View
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <nav className="fixed bottom-0 w-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 flex justify-around items-center h-16 pb-safe z-[75]">
+            {navItems.slice(0, 4).map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsMoreMenuOpen(false)}
+                className={({ isActive }) =>
+                  `flex flex-col items-center justify-center w-full h-full space-y-1 ${
+                    isActive && !isMoreMenuOpen
+                      ? 'text-purple-600 dark:text-purple-400'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'
+                  }`
+                }
+              >
+                {item.icon}
+                <span className="text-[10px] font-medium">{item.name}</span>
+              </NavLink>
+            ))}
+            <button
+              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+              className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+                isMoreMenuOpen
+                  ? 'text-purple-600 dark:text-purple-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'
+              }`}
+            >
+              <MoreHorizontal size={20} className={`transition-transform duration-300 ${isMoreMenuOpen ? 'rotate-90' : 'rotate-0'}`} />
+              <span className="text-[10px] font-medium">More</span>
+            </button>
+          </nav>
+          
+          {isMoreMenuOpen && (
+            <div 
+              className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[65]"
+              onClick={() => setIsMoreMenuOpen(false)}
+            />
+          )}
+        </div>
+      )}
+
+      <SubscriptionModal 
+        isOpen={isSubscriptionModalOpen} 
+        onClose={() => setIsSubscriptionModalOpen(false)} 
+      />
+    </div>
+  );
+};
+
+export default MainLayout;
