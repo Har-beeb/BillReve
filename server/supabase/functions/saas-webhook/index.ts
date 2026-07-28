@@ -7,13 +7,40 @@ import { Buffer } from "node:buffer";
 const saasSecretKey = Deno.env.get('SAAS_PAYSTACK_SECRET_KEY') as string;
 
 serve(async (req) => {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  
+  let logId: string | null = null;
+  let bodyText = '';
+
   try {
-    const signature = req.headers.get('x-paystack-signature');
-    if (!signature) {
-      return new Response('No signature', { status: 400 });
+    bodyText = await req.text();
+    let payload = {};
+    try {
+      payload = JSON.parse(bodyText);
+    } catch (e) {
+      // Not JSON
     }
 
-    const bodyText = await req.text();
+    // 1. Log incoming webhook immediately
+    const { data: logEntry } = await supabase
+      .from('webhook_logs')
+      .insert({
+        provider: 'paystack',
+        event_type: (payload as any).event || 'unknown',
+        payload: payload,
+        status: 'processing'
+      })
+      .select('id')
+      .single();
+      
+    if (logEntry) logId = logEntry.id;
+
+    const signature = req.headers.get('x-paystack-signature');
+    if (!signature) {
+      throw new Error('No signature');
+    }
     
     // Verify SaaS Paystack Signature
     const hash = createHmac('sha512', saasSecretKey)
@@ -21,8 +48,7 @@ serve(async (req) => {
       .digest('hex');
 
     if (hash !== signature) {
-      console.error('Invalid SaaS Paystack signature');
-      return new Response('Invalid signature', { status: 401 });
+      throw new Error('Invalid signature');
     }
 
     const event = JSON.parse(bodyText);
@@ -44,12 +70,7 @@ serve(async (req) => {
       
       // If the charge was for a subscription
       if (userId && type === 'saas_subscription') {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
         // Update the user's profile to is_pro = true
-        // Note: You would need to add an 'is_pro' boolean column to the profiles table
         const { error } = await supabase
           .from('profiles')
           .update({ 
@@ -58,8 +79,7 @@ serve(async (req) => {
           .eq('id', userId);
 
         if (error) {
-          console.error('Failed to update user profile in DB:', error);
-          throw error;
+          throw new Error(`Failed to update user profile: ${error.message}`);
         }
         
         console.log(`User ${userId} successfully upgraded to PRO.`);
@@ -110,12 +130,31 @@ serve(async (req) => {
             console.warn('RESEND_API_KEY is not set in Edge Function secrets, skipping email.');
           }
         }
+      } else {
+        throw new Error(`Ignored charge.success: Missing userId or type is not saas_subscription (Found type: ${type})`);
       }
+    }
+
+    // Mark log as success
+    if (logId) {
+      await supabase.from('webhook_logs').update({ status: 'success' }).eq('id', logId);
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });
   } catch (error: any) {
-    console.error('Webhook error:', error);
+    console.error('Webhook error:', error.message);
+    
+    // Mark log as error
+    if (logId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabaseFallback = createClient(supabaseUrl, supabaseServiceKey);
+      await supabaseFallback.from('webhook_logs').update({ 
+        status: 'error',
+        error_message: error.message 
+      }).eq('id', logId);
+    }
+    
     return new Response(JSON.stringify({ error: error.message }), { status: 400 });
   }
 });

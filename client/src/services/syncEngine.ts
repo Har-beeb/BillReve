@@ -37,15 +37,32 @@ const toCamelCase = (obj: any): any => {
 
 class SyncEngine {
   private isSyncing = false;
-  private syncInterval: ReturnType<typeof setInterval> | null = null;
+  private channel: ReturnType<typeof supabase.channel> | null = null;
 
-  start() {
-    // Run sync immediately
-    this.sync();
+  async start() {
+    // Run initial sync immediately
+    await this.sync();
 
-    // Then run every 60 seconds
-    if (!this.syncInterval) {
-      this.syncInterval = setInterval(() => this.sync(), 60000);
+    // Set up Realtime Subscriptions
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    if (!this.channel) {
+      this.channel = supabase.channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            filter: `user_id=eq.${session.user.id}`
+          },
+          (payload) => {
+            console.log('Realtime change received!', payload);
+            // On any change, trigger a sync to pull remote changes
+            this.sync();
+          }
+        )
+        .subscribe();
     }
 
     // Also run when returning online
@@ -53,9 +70,9 @@ class SyncEngine {
   }
 
   stop() {
-    if (this.syncInterval) {
-      clearInterval(this.syncInterval);
-      this.syncInterval = null;
+    if (this.channel) {
+      supabase.removeChannel(this.channel);
+      this.channel = null;
     }
   }
 
