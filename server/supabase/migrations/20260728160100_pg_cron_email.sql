@@ -11,7 +11,12 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 -- Supabase Edge Functions can be called internally via the Supabase API Gateway.
 
 -- Drop the job if it exists to allow re-running this migration
-SELECT cron.unschedule('email-worker-job');
+DO $$
+BEGIN
+  PERFORM cron.unschedule('email-worker-job');
+EXCEPTION WHEN OTHERS THEN
+  -- Ignore if it doesn't exist yet
+END $$;
 
 -- Schedule the job to run every 5 minutes
 -- We use pg_net to make an HTTP POST request to the Edge Function.
