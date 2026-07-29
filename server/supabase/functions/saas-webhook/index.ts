@@ -101,7 +101,7 @@ serve(async (req) => {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                from: 'BillReve <onboarding@resend.dev>', // Replace with your verified sender if not using test domain
+                from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <onboarding@resend.dev>',
                 to: profile.email,
                 subject: 'Welcome to BillReve Pro! 🚀',
                 html: `
