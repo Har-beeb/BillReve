@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
-import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Mail, Database, Settings as SettingsIcon, Cloud, RefreshCw } from 'lucide-react';
+import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Database, Settings as SettingsIcon, Cloud, RefreshCw } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { BusinessProfile, TaxSetting } from '../types';
 import { syncEngine } from '../services/syncEngine';
@@ -12,7 +12,6 @@ const Settings: React.FC = () => {
   const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, syncStatus, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'taxes' | 'sync' | 'preferences'>('account');
-  const [isSendingMarketing, setIsSendingMarketing] = useState(false);
   
   const [localProfile, setLocalProfile] = useState<BusinessProfile>(businessProfile);
   const [localTaxes, setLocalTaxes] = useState<TaxSetting[]>(taxSettings);
@@ -136,36 +135,7 @@ const Settings: React.FC = () => {
     });
   };
 
-  const handleTestMarketingEmail = async () => {
-    if (!user?.email) {
-      alert('You must be logged in with a valid email to send a test marketing email.');
-      return;
-    }
-    setIsSendingMarketing(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/email/send-marketing`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: user.email,
-          subject: 'Unlock the Power of BillReve Pro 🚀',
-          title: 'Upgrade to BillReve Pro',
-          previewText: 'Accept global payments and auto-send recurring invoices.',
-          content: 'Hello!\n\nWe noticed you have been loving the basic features. It is time to unlock your true potential with BillReve Pro.\n\n- Accept Paystack payments instantly on invoices\n- Setup recurring billing\n- Access premium templates\n\nUpgrade today and get 20% off your first month!',
-          ctaText: 'Upgrade to Pro',
-          ctaLink: 'https://BillReve.app/upgrade'
-        })
-      });
-      const result = await response.json();
-      if (!result.success) throw new Error(result.message);
-      alert('Marketing email sent successfully! Check your inbox.');
-    } catch (err: any) {
-      console.error(err);
-      alert('Failed to send marketing email: ' + err.message);
-    } finally {
-      setIsSendingMarketing(false);
-    }
-  };
+  
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
@@ -745,14 +715,7 @@ const Settings: React.FC = () => {
                   <Save size={18} />
                   Save Profile
                 </button>
-                <button 
-                  onClick={handleTestMarketingEmail}
-                  disabled={isSendingMarketing}
-                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-5 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  <Mail size={18} />
-                  {isSendingMarketing ? 'Sending...' : 'Test Marketing Email'}
-                </button>
+                
               </div>
             </div>
           )}
@@ -902,6 +865,7 @@ const Settings: React.FC = () => {
     </div>
   );
 };
+
 
 export default Settings;
 

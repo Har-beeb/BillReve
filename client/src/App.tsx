@@ -34,6 +34,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   const setSession = useAppStore(state => state.setSession);
   const theme = useAppStore(state => state.theme);
+  const colorTheme = useAppStore(state => state.colorTheme);
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
@@ -97,7 +98,7 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [theme]);
+  }, [theme, colorTheme]);
 
   if (isInitializing) {
     return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
@@ -137,3 +138,4 @@ function App() {
 }
 
 export default App;
+
