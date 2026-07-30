@@ -119,7 +119,7 @@ export const RevenueChat: React.FC = () => {
         {!isOpen && <div className="absolute inset-0 bg-purple-400 rounded-full animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative p-4 text-white rounded-full transition-all duration-300 flex items-center justify-center group ${isOpen ? 'bg-slate-700 hover:bg-slate-800 shadow-lg rotate-90' : 'bg-[var(--color-primary-600)] hover:bg-[var(--color-primary-500)] shadow-[0_0_15px_var(--color-primary)] hover:shadow-[0_0_25px_var(--color-primary)] opacity-90 hover:opacity-100'}`}
+          className={`relative p-4 text-white rounded-full transition-all duration-300 flex items-center justify-center group ${isOpen ? 'bg-slate-700 hover:bg-slate-800 shadow-lg rotate-90' : 'bg-[#9333ea] hover:bg-[#a855f7] shadow-[0_0_15px_rgba(147,51,234,0.5)] hover:shadow-[0_0_25px_rgba(147,51,234,0.8)] opacity-90 hover:opacity-100'}`}
         >
           {isOpen ? <X size={24} className="transition-transform duration-300" /> : <Sparkles size={24} className="group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />}
         </button>
@@ -132,7 +132,7 @@ export const RevenueChat: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800 rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[var(--color-primary-600)] rounded-lg text-white">
+            <div className="p-2 bg-purple-600 rounded-lg text-white">
               <MessageSquare size={18} />
             </div>
             <div>
@@ -155,7 +155,7 @@ export const RevenueChat: React.FC = () => {
               <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${msg.role === 'user' ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' : 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400'}`}>
                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
-              <div className={`p-3 rounded-2xl ${msg.role === 'user' ? 'bg-[var(--color-primary-600)] text-white rounded-tr-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-tl-sm shadow-sm'}`}>
+              <div className={`p-3 rounded-2xl ${msg.role === 'user' ? 'bg-purple-600 text-white rounded-tr-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-tl-sm shadow-sm'}`}>
                 {msg.role === 'user' ? <p className="text-sm">{msg.content}</p> : formatMessage(msg.content)}
               </div>
             </div>
@@ -193,7 +193,7 @@ export const RevenueChat: React.FC = () => {
               <button
                 type="submit"
                 disabled={!input.trim() || isTyping}
-                className="p-2.5 bg-[var(--color-primary-600)] hover:bg-[var(--color-primary-700)] text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                className="p-2.5 bg-purple-600 hover:bg-[var(--color-primary-700)] text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
               >
                 {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               </button>

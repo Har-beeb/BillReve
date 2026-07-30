@@ -71,7 +71,7 @@ const Trash: React.FC = () => {
 
       {isEmpty ? (
         <EmptyState 
-          icon={<Trash2 size={48} /> as any}
+          icon={Trash2}
           title="Trash is empty"
           description="You haven't deleted any items yet."
         />

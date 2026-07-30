@@ -330,7 +330,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-purple-600"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-purple-600"></div>
                         Vibrant Violet
                       </span>
                     </div>
@@ -339,7 +339,8 @@ const Settings: React.FC = () => {
                     </p>
                   </label>
                   
-                  <ProFeature isProUser={isProUser} className="contents sm:col-span-1">
+                  <ProFeature isProUser={isProUser} className="sm:col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className={`cursor-pointer border rounded-xl p-4 flex flex-col gap-3 transition-colors ${colorTheme === 'wine' ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
                     <div className="flex items-center gap-3">
                       <input 
@@ -351,7 +352,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-pink-800"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-pink-800"></div>
                         Glossy Wine
                       </span>
                     </div>
@@ -371,7 +372,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-blue-600"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-blue-600"></div>
                         Ocean Blue
                       </span>
                     </div>
@@ -391,7 +392,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-emerald-600"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-emerald-600"></div>
                         Emerald Green
                       </span>
                     </div>
@@ -411,7 +412,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-slate-700"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-slate-700"></div>
                         Midnight Slate
                       </span>
                     </div>
@@ -430,7 +431,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-orange-500"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-orange-500"></div>
                         Sunset Orange
                       </span>
                     </div>
@@ -450,7 +451,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-yellow-500"></div>
                         Mustard Yellow
                       </span>
                     </div>
@@ -470,7 +471,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-red-600"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-red-600"></div>
                         Cherry Red
                       </span>
                     </div>
@@ -490,7 +491,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: customColor || '#8b5cf6' }}></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: customColor || '#8b5cf6' }}></div>
                         Custom Color
                       </span>
                     </label>
@@ -511,13 +512,15 @@ const Settings: React.FC = () => {
                       )}
                     </div>
                   </div>
+                    </div>
                   </ProFeature>
                 </div>
 
                 <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-700">
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Typography</h3>
                   
-                  <ProFeature isProUser={isProUser} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ProFeature isProUser={isProUser}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Font Family</label>
                       <select 
@@ -545,6 +548,7 @@ const Settings: React.FC = () => {
                         <option value="large">Large</option>
                       </select>
                       <p className="mt-2 text-xs text-slate-500">Adjust the base font size for your public documents.</p>
+                    </div>
                     </div>
                   </ProFeature>
                 </div>
