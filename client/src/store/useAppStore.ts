@@ -145,6 +145,9 @@ export const useAppStore = create<AppState>()(
           user: null, 
           session: null, 
           isAuthenticated: false,
+          colorTheme: 'default',
+          customColor: '#9333ea',
+          fontFamily: 'Inter',
           businessProfile: {
             name: 'BillReve',
             email: 'hello@billreve.app',
@@ -172,7 +175,7 @@ export const useAppStore = create<AppState>()(
           ]);
           
           // Clear any remaining storage
-          localStorage.removeItem('billflow-storage');
+          localStorage.removeItem('billreve-storage');
           
           // Delay reload slightly to ensure Zustand finishes writing/clearing
           setTimeout(() => {

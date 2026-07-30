@@ -4,12 +4,11 @@ import {
   LayoutDashboard, FileText, FileSignature, Users, Settings, 
   RefreshCw, CheckCircle2, Clock, XCircle, 
   Sun, Moon, LogOut, User, CreditCard,
-  BarChart3, WalletCards, Info, Crown, Menu, Bell, Check, MoreHorizontal
+  BarChart3, WalletCards, Info, Crown, Menu, Bell, Check, MoreHorizontal, Trash2
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { syncEngine } from '../services/syncEngine';
 import { useNotifications } from '../hooks/useNotifications';
-import SubscriptionModal from '../components/ui/SubscriptionModal';
 
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -58,7 +57,6 @@ const generatePalette = (hex: string) => {
 const MainLayout: React.FC = () => {
   const { syncStatus, theme, colorTheme, customColor, fontFamily, toggleTheme, user, logout, isProUser, mobileNavStyle } = useAppStore();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
-  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -133,6 +131,7 @@ const MainLayout: React.FC = () => {
     { name: 'Payments', path: '/payments', icon: <WalletCards size={20} />, isPro: true },
     { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
     { name: 'About', path: '/about', icon: <Info size={20} /> },
+    { name: 'Trash', path: '/trash', icon: <Trash2 size={20} /> },
   ];
 
   const renderSyncIcon = () => {
@@ -181,7 +180,7 @@ const MainLayout: React.FC = () => {
             }`}
         />
 
-        <div className={`p-6 font-bold text-2xl text-purple-600 dark:text-purple-400 flex items-center justify-start h-20`}>
+        <div className={`p-6 font-bold text-2xl text-[#9333ea] dark:text-[#a855f7] flex items-center justify-start h-20`}>
           {/* Logo Placeholder (Geometric Shape) */}
           <div className="w-8 h-8 rounded-lg bg-[#9333ea] flex items-center justify-center flex-shrink-0">
              <div className="w-3 h-3 bg-white rounded-sm transform rotate-45" />
@@ -195,57 +194,53 @@ const MainLayout: React.FC = () => {
             const isLocked = item.isPro && !isProUser;
             
             return (
-            <NavLink
-              key={item.path}
-              to={isLocked ? '#' : item.path}
-              onClick={(e) => {
-                if (isLocked) {
-                  e.preventDefault();
-                  setIsSubscriptionModalOpen(true);
+              <NavLink
+                key={item.path}
+                to={isLocked ? '#' : item.path}
+                onClick={(e) => {
+                  if (isLocked) {
+                    e.preventDefault();
+                    navigate('/upgrade');
+                  }
+                }}
+                className={({ isActive }) =>
+                  `flex items-center px-4 py-3 rounded-lg transition-colors justify-between group ${
+                    isActive && !isLocked
+                      ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  } ${isLocked ? 'cursor-pointer' : ''}`
                 }
-              }}
-              className={({ isActive }) =>
-                `flex items-center px-4 py-3 rounded-lg transition-colors justify-between group ${
-                  isActive && !isLocked
-                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                } ${isLocked ? 'cursor-pointer' : ''}`
-              }
-              title={!isSidebarExpanded ? item.name : undefined}
-            >
-              <div className={`flex items-center ${isLocked ? 'blur-[2.5px] opacity-70 group-hover:blur-none group-hover:opacity-100 transition-all duration-300' : ''}`}>
-                <div className="flex-shrink-0">{item.icon}</div>
-                <span className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-2'}`}>
-                  {item.name}
-                </span>
-              </div>
-              {isLocked && isSidebarExpanded && (
-                <span className="text-[9px] uppercase font-bold tracking-wider bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded ml-2">Pro</span>
-              )}
-            </NavLink>
+                title={!isSidebarExpanded ? item.name : undefined}
+              >
+                <div className={`flex items-center ${isLocked ? 'blur-[2.5px] opacity-70 group-hover:blur-none group-hover:opacity-100 transition-all duration-300' : ''}`}>
+                  <div className="flex-shrink-0">{item.icon}</div>
+                  <span className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-2'}`}>
+                    {item.name}
+                  </span>
+                </div>
+                {isLocked && isSidebarExpanded && (
+                  <span className="text-[9px] uppercase font-bold tracking-wider bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded ml-2">Pro</span>
+                )}
+              </NavLink>
             );
           })}
         </nav>
 
         {/* Upgrade Card at bottom of sidebar */}
         {!isProUser && isSidebarExpanded && (
-          <div className="p-4 mx-4 mt-4 mb-4 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-slate-700 dark:to-slate-800/50 border border-purple-100 dark:border-slate-600 text-center animate-in fade-in flex-shrink-0">
-            <div className="w-10 h-10 mx-auto bg-purple-600 text-white rounded-full flex items-center justify-center mb-3 shadow-md">
-              <Crown size={20} />
-            </div>
-            <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-1">Upgrade to Pro</h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Unlock advanced features</p>
+          <div className="mt-4 mb-6 mx-4 flex-shrink-0">
             <button 
-              onClick={() => setIsSubscriptionModalOpen(true)}
-              className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+              onClick={() => navigate('/upgrade')}
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white text-sm font-bold rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
             >
-              View Plans
+              <Crown size={18} className="text-yellow-100" />
+              Upgrade
             </button>
           </div>
         )}
         {!isProUser && !isSidebarExpanded && (
-          <div className="mt-4 mb-6 mx-auto cursor-pointer flex-shrink-0" onClick={() => setIsSubscriptionModalOpen(true)}>
-             <div className="w-10 h-10 bg-purple-50 hover:bg-purple-100 dark:bg-slate-700 dark:hover:bg-slate-600 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center transition-colors">
+          <div className="mt-4 mb-6 mx-auto cursor-pointer flex-shrink-0" onClick={() => navigate('/upgrade')}>
+            <div className="w-10 h-10 bg-gradient-to-tr from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-full flex items-center justify-center transition-colors shadow-md">
               <Crown size={20} />
             </div>
           </div>
@@ -314,7 +309,7 @@ const MainLayout: React.FC = () => {
                   <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 rounded-t-xl">
                     <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Notifications</h3>
                     {unreadCount > 0 && (
-                      <button onClick={markAllAsRead} className="text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
+                      <button onClick={markAllAsRead} className="text-xs text-[#9333ea] dark:text-[#a855f7] hover:underline flex items-center gap-1">
                         <Check size={12} /> Mark all read
                       </button>
                     )}
@@ -370,7 +365,7 @@ const MainLayout: React.FC = () => {
             <div className="relative" ref={menuRef}>
               <button 
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 overflow-hidden ring-2 ring-transparent"
+                className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/50 text-[#9333ea] dark:text-[#a855f7] flex items-center justify-center font-bold hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 overflow-hidden ring-2 ring-transparent"
                 aria-label="User menu"
               >
                 {(() => {
@@ -446,7 +441,7 @@ const MainLayout: React.FC = () => {
           {/* Drawer */}
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
-              <span className="font-bold text-2xl text-[#9333ea] dark:text-[#a855f7] dark:text-purple-400">BillReve</span>
+              <span className="font-bold text-2xl text-[#9333ea] dark:text-[#a855f7]">BillReve</span>
               <button
                 type="button"
                 className="relative -m-2 inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -461,21 +456,21 @@ const MainLayout: React.FC = () => {
               {navItems.map((item) => {
                 const isLocked = item.isPro && !isProUser;
                 return (
-                  <NavLink
-                    key={item.path}
-                    to={isLocked ? '#' : item.path}
-                    onClick={(e) => {
-                      if (isLocked) {
-                        e.preventDefault();
-                        setIsSubscriptionModalOpen(true);
-                      } else {
-                        setIsMobileMenuOpen(false);
-                      }
-                    }}
+                    <NavLink
+                      key={item.path}
+                      to={isLocked ? '#' : item.path}
+                      onClick={(e) => {
+                        if (isLocked) {
+                          e.preventDefault();
+                          navigate('/upgrade');
+                        } else {
+                          setIsMobileMenuOpen(false);
+                        }
+                      }}
                     className={({ isActive }) =>
                       `flex items-center px-4 py-3 rounded-lg transition-colors gap-4 ${
                         isActive && !isLocked
-                          ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
+                          ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                       }`
                     }
@@ -492,24 +487,19 @@ const MainLayout: React.FC = () => {
               })}
             </div>
             
+            {/* Mobile Upgrade Card */}
             {!isProUser && (
-              <div className="mt-auto px-4 pb-6">
-                <div className="rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-slate-700 dark:to-slate-800/50 border border-purple-100 dark:border-slate-600 p-4 text-center">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-purple-600 text-white shadow-sm mb-3">
-                    <Crown size={20} />
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Upgrade to Pro</h4>
-                  <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Unlock advanced features</p>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setIsSubscriptionModalOpen(true);
-                    }}
-                    className="w-full rounded-lg bg-purple-600 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-purple-700 transition-colors"
-                  >
-                    View Plans
-                  </button>
-                </div>
+              <div className="mt-4 mb-4 mx-4 flex-shrink-0">
+                <button 
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate('/upgrade');
+                  }}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white text-sm font-bold rounded-lg transition-colors shadow-md flex items-center justify-center gap-2"
+                >
+                  <Crown size={18} className="text-yellow-100" />
+                  Upgrade
+                </button>
               </div>
             )}
           </div>
@@ -536,7 +526,7 @@ const MainLayout: React.FC = () => {
                     onClick={(e) => {
                       if (isLocked) {
                         e.preventDefault();
-                        setIsSubscriptionModalOpen(true);
+                        navigate('/upgrade');
                       } else {
                         setIsMoreMenuOpen(false);
                       }
@@ -544,7 +534,7 @@ const MainLayout: React.FC = () => {
                     className={({ isActive }) =>
                       `flex items-center px-4 py-3.5 rounded-xl transition-colors gap-4 ${
                         isActive && !isLocked
-                          ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
+                          ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                       }`
                     }
@@ -565,7 +555,7 @@ const MainLayout: React.FC = () => {
                   <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-slate-700 dark:to-slate-800/50 border border-purple-100 dark:border-slate-600 p-4 flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <Crown size={18} className="text-purple-600 dark:text-purple-400" />
+                        <Crown size={18} className="text-[#9333ea] dark:text-[#a855f7]" />
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white">Upgrade to Pro</h4>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400">Unlock advanced features</p>
@@ -573,7 +563,7 @@ const MainLayout: React.FC = () => {
                     <button
                       onClick={() => {
                         setIsMoreMenuOpen(false);
-                        setIsSubscriptionModalOpen(true);
+                        navigate('/upgrade');
                       }}
                       className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-purple-700 transition-colors"
                     >
@@ -594,7 +584,7 @@ const MainLayout: React.FC = () => {
                 className={({ isActive }) =>
                   `flex flex-col items-center justify-center w-full h-full space-y-1 ${
                     isActive && !isMoreMenuOpen
-                      ? 'text-purple-600 dark:text-purple-400'
+                      ? 'text-[#9333ea] dark:text-[#a855f7]'
                       : 'text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'
                   }`
                 }
@@ -607,7 +597,7 @@ const MainLayout: React.FC = () => {
               onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
               className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
                 isMoreMenuOpen
-                  ? 'text-purple-600 dark:text-purple-400'
+                  ? 'text-[#9333ea] dark:text-[#a855f7]'
                   : 'text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'
               }`}
             >
@@ -625,10 +615,7 @@ const MainLayout: React.FC = () => {
         </div>
       )}
 
-      <SubscriptionModal 
-        isOpen={isSubscriptionModalOpen} 
-        onClose={() => setIsSubscriptionModalOpen(false)} 
-      />
+      
     </div>
   );
 };
