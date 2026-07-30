@@ -19,7 +19,7 @@ export const ProFeature: React.FC<ProFeatureProps> = ({ isProUser, children, cla
       </div>
       {/* Overlay */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-auto bg-slate-50/30">
-        <span className="bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+        <span className="bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap">
           PRO FEATURE
         </span>
       </div>
