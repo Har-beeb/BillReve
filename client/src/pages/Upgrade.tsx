@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PaystackButton } from 'react-paystack';
-import { CheckCircle2, Zap, Shield, Globe, Star, Check } from 'lucide-react';
+import { CheckCircle2, Star, Check } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 const Upgrade: React.FC = () => {
