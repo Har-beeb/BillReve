@@ -119,7 +119,7 @@ const Register: React.FC = () => {
       ) : (
         <form onSubmit={handleRegister} className="space-y-3">
         <AuthInput
-          label="Full Name"
+          label="Business Name (or Full Name for freelancers)"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}

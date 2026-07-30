@@ -4,6 +4,8 @@ import ReactMarkdown from 'react-markdown';
 import { MessageSquare, X, Send, Sparkles, Loader2, Bot, User } from 'lucide-react';
 import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
+import { useAppStore } from '../store/useAppStore';
+import { ProFeature } from './ui/ProFeature';
 
 interface Message {
   id: string;
@@ -13,6 +15,7 @@ interface Message {
 }
 
 export const RevenueChat: React.FC = () => {
+  const { isProUser } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -174,26 +177,28 @@ export const RevenueChat: React.FC = () => {
 
         {/* Input */}
         <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl">
-          <form 
-            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-            className="flex items-center gap-2"
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your revenue..."
-              className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              disabled={isTyping}
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || isTyping}
-              className="p-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          <ProFeature isProUser={isProUser}>
+            <form 
+              onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+              className="flex items-center gap-2"
             >
-              {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-            </button>
-          </form>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about your revenue..."
+                className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={isTyping}
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || isTyping}
+                className="p-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              >
+                {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              </button>
+            </form>
+          </ProFeature>
           <div className="text-center mt-2">
             <p className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
               <Sparkles size={10} /> AI-Powered · Privacy First (No PII sent)

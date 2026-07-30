@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { X, Wand2, UploadCloud, FileText, Loader2, Sparkles } from 'lucide-react';
 import { generateAiQuote } from '../api/ai';
+import { useAppStore } from '../store/useAppStore';
+import { useNavigate } from 'react-router-dom';
 
 interface AiDraftModalProps {
   isOpen: boolean;
@@ -10,7 +12,15 @@ interface AiDraftModalProps {
   documentType?: 'QUOTE' | 'INVOICE';
 }
 
-export const AiDraftModal: React.FC<AiDraftModalProps> = ({ isOpen, onClose, onSuccess, defaultTab = 'text', documentType = 'QUOTE' }) => {
+export const AiDraftModal: React.FC<AiDraftModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  documentType = 'QUOTE',
+  defaultTab = 'text'
+}) => {
+  const navigate = useNavigate();
+  const { isProUser } = useAppStore();
   const [activeTab, setActiveTab] = useState<'text' | 'document'>(defaultTab);
   const [textInput, setTextInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -84,7 +94,33 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({ isOpen, onClose, onS
           </button>
         </div>
 
-        {/* Tabs */}
+        {!isProUser ? (
+          <div className="p-8 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white mb-4 shadow-lg shadow-purple-500/30">
+              <Sparkles size={32} />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Unlock AI Drafting</h3>
+            <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-8">
+              Upgrade to BillReve Pro to instantly generate invoices and quotes from raw text or uploaded documents. Save hours of manual entry!
+            </p>
+            <div className="flex gap-4">
+              <button 
+                onClick={onClose}
+                className="px-6 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Maybe Later
+              </button>
+              <button 
+                onClick={() => { onClose(); navigate('/upgrade'); }}
+                className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors shadow-md"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Tabs */}
         <div className="flex border-b border-slate-100 dark:border-slate-800 px-6 pt-4 gap-6">
           <button
             onClick={() => setActiveTab('text')}
@@ -167,6 +203,8 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({ isOpen, onClose, onS
             )}
           </button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

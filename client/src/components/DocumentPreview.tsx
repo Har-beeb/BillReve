@@ -1,6 +1,7 @@
 import React from 'react';
 import { Eye } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import { useAppStore } from '../store/useAppStore';
 
 interface DocumentPreviewProps {
   businessProfile: any;
@@ -41,7 +42,13 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   notes,
   bankAccountId,
 }) => {
+  const { fontFamily, fontSize, isProUser } = useAppStore();
   const sanitizedNotes = notes ? DOMPurify.sanitize(notes, { ALLOWED_TAGS: ['br', 'b', 'i', 'strong', 'em', 'p'] }) : '';
+
+  const typographyStyle = isProUser ? {
+    fontFamily: fontFamily === 'Inter' ? undefined : fontFamily,
+    fontSize: fontSize === 'small' ? '0.875rem' : fontSize === 'large' ? '1.125rem' : '1rem'
+  } : {};
 
   return (
     <div className="hidden md:flex flex-1 bg-slate-200/50 dark:bg-slate-900/80 border-l border-slate-200 dark:border-slate-700 p-6 flex-col overflow-y-auto custom-scrollbar">
@@ -50,7 +57,10 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       </div>
       
       {/* Document Mock */}
-      <div className="bg-white text-slate-900 p-8 shadow-2xl rounded-sm min-h-[842px] w-full max-w-[850px] mx-auto flex flex-col relative transition-all duration-300 shrink-0">
+      <div 
+        className="bg-white text-slate-900 p-8 shadow-2xl rounded-sm min-h-[842px] w-full max-w-[850px] mx-auto flex flex-col relative transition-all duration-300 shrink-0"
+        style={typographyStyle}
+      >
         
         {/* Header */}
         <div className="flex justify-between items-start mb-12">

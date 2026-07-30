@@ -32,7 +32,6 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   const setSession = useAppStore(state => state.setSession);
-  const colorTheme = useAppStore(state => state.colorTheme);
   const theme = useAppStore(state => state.theme);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -97,20 +96,7 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-
-    // Handle color themes
-    document.documentElement.classList.remove('theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
-    if (colorTheme !== 'default') {
-      document.documentElement.classList.add(`theme-${colorTheme}`);
-    }
-    
-    // Handle custom color inline style
-    if (colorTheme === 'custom') {
-      document.documentElement.style.setProperty('--color-purple-600', useAppStore.getState().customColor);
-    } else {
-      document.documentElement.style.removeProperty('--color-purple-600');
-    }
-  }, [theme, colorTheme]);
+  }, [theme]);
 
   if (isInitializing) {
     return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">

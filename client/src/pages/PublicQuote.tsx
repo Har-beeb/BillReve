@@ -416,7 +416,7 @@ const PublicQuote: React.FC = () => {
           )}
           
           <div className="mt-12 text-center text-xs text-slate-400 border-t border-slate-100 pt-8">
-             Powered by <span className="font-semibold">{profile?.name || 'BillReve'}</span>
+             Powered by <span className="font-semibold">{profile?.is_pro ? (profile?.name || 'BillReve Inc.') : 'BillReve Inc.'}</span>
           </div>
 
         </div>

@@ -35,9 +35,9 @@ export const generateMockData = async (userId: string) => {
     const invoiceStatuses = ['PAID', 'SENT', 'OVERDUE', 'DRAFT', 'PARTIAL', 'COUNTERED'];
     const invoices = Array.from({ length: 25 }).map((_, i) => {
       const client = clients[Math.floor(Math.random() * clients.length)];
-      const subtotal = 500 + Math.random() * 5000;
+      const subtotal = Math.floor(50 + Math.random() * 500) * 1000;
       const status = invoiceStatuses[Math.floor(Math.random() * invoiceStatuses.length)];
-      const total = subtotal * 1.05; // 5% tax
+      const total = subtotal; // No invisible tax
       
       let amountPaid = 0;
       if (status === 'PAID') amountPaid = total;
@@ -54,7 +54,7 @@ export const generateMockData = async (userId: string) => {
           invoiceNumber: `INV-2026-${1000 + i}`,
           clientId: client.localId,
           status: status as any,
-          currency: 'USD',
+          currency: 'NGN',
           subtotal: subtotal,
           total: total,
           amountPaid: amountPaid,
@@ -86,9 +86,9 @@ export const generateMockData = async (userId: string) => {
     const quoteStatuses = ['DRAFT', 'SENT', 'ACCEPTED', 'DECLINED', 'COUNTERED'];
     const quotes = Array.from({ length: 10 }).map((_, i) => {
       const client = clients[Math.floor(Math.random() * clients.length)];
-      const subtotal = 1000 + Math.random() * 10000;
+      const subtotal = Math.floor(100 + Math.random() * 1000) * 1000;
       const status = quoteStatuses[Math.floor(Math.random() * quoteStatuses.length)];
-      const total = subtotal * 1.10;
+      const total = subtotal;
       
       const isCountered = status === 'COUNTERED';
       
@@ -102,9 +102,9 @@ export const generateMockData = async (userId: string) => {
         quoteNumber: `QT-2026-${1000 + i}`,
         clientId: client.localId,
         status: status as any,
-        currency: 'USD',
+        currency: 'NGN',
         subtotal: subtotal,
-        total: total, // 10% tax
+        total: total,
         taxes: [],
         items: [{ id: uuidv4(), description: 'Project Proposal Estimate', quantity: 1, unitPrice: subtotal, amount: subtotal }],
         allowCounterOffer: true,

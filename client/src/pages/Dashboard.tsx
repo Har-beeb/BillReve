@@ -4,6 +4,7 @@ import { TrendingUp, Clock, AlertCircle, FileText, Plus, ArrowRight, Zap, BarCha
 import { Card, Badge } from '../components/ui';
 import { SplitButton } from '../components/ui/SplitButton';
 import { AiDraftModal } from '../components/AiDraftModal';
+import { useQuota } from '../hooks/useQuota';
 import { RevenueChat } from '../components/RevenueChat';
 import { formatMoney } from '../utils/formatters';
 import { db } from '../db/db';
@@ -18,6 +19,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
  */
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { checkQuota } = useQuota();
   const invoices = useLiveQuery(() => db.invoices.toArray()) || [];
   const quotes = useLiveQuery(() => db.quotes.toArray()) || [];
   const clients = useLiveQuery(() => db.clients.toArray()) || [];
@@ -163,25 +165,25 @@ const Dashboard: React.FC = () => {
 
         <div className="grid grid-cols-2 sm:flex sm:justify-start gap-3 pb-2 md:pb-0 w-full md:w-auto mt-2 md:mt-0">
           <SplitButton
-            mainLabel={<><Plus size={20} className="hidden sm:block" /><span>Quote</span></>}
-            onMainClick={() => navigate('/quotes/new')}
+            mainLabel={<><Plus size={16} /> <span className="hidden sm:inline">New Quote</span></>}
+            onMainClick={() => checkQuota('quote') && navigate('/quotes/new')}
             align="left"
             size="lg"
             className="w-full sm:w-auto [&>button:first-child]:flex-1"
             options={[
-              { label: 'Create Manually', onClick: () => navigate('/quotes/new') },
-              { label: 'Draft with AI', onClick: () => { setAiDocumentType('QUOTE'); setAiModalDefaultTab('text'); setIsAiModalOpen(true); } }
+              { label: 'Create Manually', onClick: () => checkQuota('quote') && navigate('/quotes/new') },
+              { label: 'Draft with AI', onClick: () => { if (checkQuota('quote')) { setAiDocumentType('QUOTE'); setAiModalDefaultTab('text'); setIsAiModalOpen(true); } } }
             ]}
           />
           <SplitButton
-            mainLabel={<><Plus size={20} className="hidden sm:block" /><span>Invoice</span></>}
-            onMainClick={() => navigate('/invoices/new')}
+            mainLabel={<><Plus size={16} /> <span className="hidden sm:inline">New Invoice</span></>}
+            onMainClick={() => checkQuota('invoice') && navigate('/invoices/new')}
             align="right"
             size="lg"
             className="w-full sm:w-auto [&>button:first-child]:flex-1"
             options={[
-              { label: 'Create Manually', onClick: () => navigate('/invoices/new') },
-              { label: 'Draft with AI', onClick: () => { setAiDocumentType('INVOICE'); setAiModalDefaultTab('text'); setIsAiModalOpen(true); } }
+              { label: 'Create Manually', onClick: () => checkQuota('invoice') && navigate('/invoices/new') },
+              { label: 'Draft with AI', onClick: () => { if (checkQuota('invoice')) { setAiDocumentType('INVOICE'); setAiModalDefaultTab('text'); setIsAiModalOpen(true); } } }
             ]}
           />
         </div>
@@ -424,7 +426,9 @@ const Dashboard: React.FC = () => {
               <div className="p-8 text-center text-slate-500">
                 <FileText size={48} className="mx-auto mb-4 opacity-20" />
                 <p>No recent activity.</p>
-                <button onClick={() => navigate('/invoices/new')} className="mt-4 text-sm text-purple-600 hover:underline">Create your first invoice</button>
+                {invoices.length === 0 && (
+                  <button onClick={() => checkQuota('invoice') && navigate('/invoices/new')} className="mt-4 text-sm text-purple-600 hover:underline">Create your first invoice</button>
+                )}
               </div>
             )}
           </div>

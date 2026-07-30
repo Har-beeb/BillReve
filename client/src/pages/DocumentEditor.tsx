@@ -23,7 +23,7 @@ interface DocumentEditorProps {
  */
 const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const navigate = useNavigate();
-  const { businessProfile, taxSettings, user } = useAppStore();
+  const { businessProfile, taxSettings, user, isProUser } = useAppStore();
   const clients = useLiveQuery(() => db.clients.toArray()) || [];
   const invoicesList = useLiveQuery(() => db.invoices.toArray()) || [];
   const quotesList = useLiveQuery(() => db.quotes.toArray()) || [];
@@ -369,15 +369,17 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             <div>
                <div className="flex justify-between items-center mb-1.5">
                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Terms & Notes</label>
-                 <button
-                   onClick={handleEnhanceNote}
-                   disabled={isEnhancingNote || !notes.trim()}
-                   className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                   title="Enhance Terms with AI"
-                 >
-                   {isEnhancingNote ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                   <span className="hidden sm:inline">AI Expand</span>
-                 </button>
+                 <ProFeature isProUser={isProUser} className="inline-block">
+                   <button
+                     onClick={handleEnhanceNote}
+                     disabled={isEnhancingNote || !notes.trim()}
+                     className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                     title="Enhance Terms with AI"
+                   >
+                     {isEnhancingNote ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                     <span className="hidden sm:inline">AI Expand</span>
+                   </button>
+                 </ProFeature>
                </div>
                <textarea 
                  rows={3}

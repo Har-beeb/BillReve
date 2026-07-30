@@ -7,6 +7,7 @@ import { CheckCircle2, AlertCircle, Download, MessageSquare } from 'lucide-react
 import { formatMoney } from '../utils/formatters';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { db } from '../db/db';
+import { useAppStore } from '../store/useAppStore';
 
 const PublicInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,7 @@ const PublicInvoice: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS' | 'FAILED'>('PENDING');
   const [showCounterModal, setShowCounterModal] = useState(false);
+  const { fontFamily, fontSize } = useAppStore();
   const [counterAmount, setCounterAmount] = useState<number | ''>('');
   const [counterMessage, setCounterMessage] = useState('');
   const [isSubmittingCounter, setIsSubmittingCounter] = useState(false);
@@ -230,9 +232,14 @@ const PublicInvoice: React.FC = () => {
 
   const handleFlutterwavePayment = useFlutterwave(flutterwaveConfig as any);
 
+  const typographyStyle = profile?.is_pro ? {
+    fontFamily: fontFamily === 'Inter' ? undefined : fontFamily,
+    fontSize: fontSize === 'small' ? '0.875rem' : fontSize === 'large' ? '1.125rem' : '1rem'
+  } : {};
+
   return (
     <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto space-y-8">
+      <div className="max-w-3xl mx-auto space-y-8" style={typographyStyle}>
         
         {/* Header Actions */}
         <div className="flex justify-end mb-4">
@@ -403,7 +410,7 @@ const PublicInvoice: React.FC = () => {
                {!isPaid && (
                  <>
                    {/* Conditionally render Paystack for African currencies */}
-                   {['NGN', 'GHS', 'ZAR', 'KES'].includes(invoice.currency || profile?.currency || 'NGN') && componentProps ? (
+                   {profile?.is_pro && ['NGN', 'GHS', 'ZAR', 'KES'].includes(invoice.currency || profile?.currency || 'NGN') && componentProps ? (
                      <>
                        <p className="text-sm text-slate-500 mb-1">Or pay instantly via Paystack</p>
                        <PaystackButton 
@@ -411,7 +418,7 @@ const PublicInvoice: React.FC = () => {
                          className="bg-[#0ba4db] hover:bg-[#0a93c4] text-white font-medium px-8 py-3 rounded-lg shadow-md transition-all active:scale-95 w-full md:w-auto"
                        />
                      </>
-                   ) : ['USD', 'EUR', 'GBP', 'CAD'].includes(invoice.currency || profile?.currency) && flutterwaveConfig ? (
+                   ) : profile?.is_pro && ['USD', 'EUR', 'GBP', 'CAD'].includes(invoice.currency || profile?.currency) && flutterwaveConfig ? (
                      <>
                        <p className="text-sm text-slate-500 mb-1">Or pay instantly via Flutterwave</p>
                        <button 
@@ -493,7 +500,7 @@ const PublicInvoice: React.FC = () => {
           )}
           
           <div className="mt-12 text-center text-xs text-slate-400">
-             Powered by <span className="font-semibold">{profile?.name || 'BillReve'}</span>
+             Powered by <span className="font-semibold">{profile?.is_pro ? (profile?.name || 'BillReve Inc.') : 'BillReve Inc.'}</span>
           </div>
 
         </div>

@@ -74,9 +74,13 @@ const Clients: React.FC = () => {
     setEditingClient({});
   };
 
+  const { checkQuota } = useQuota();
+
   const openNewClientModal = () => {
-    setEditingClient({});
-    setIsModalOpen(true);
+    if (checkQuota('client')) {
+      setEditingClient({});
+      setIsModalOpen(true);
+    }
   };
 
   const handleDeleteClient = async (id: string) => {

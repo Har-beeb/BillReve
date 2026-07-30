@@ -18,6 +18,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
+import { useQuota } from '../hooks/useQuota';
 
 /**
  * Quotes Component
@@ -27,6 +28,13 @@ import { generateDocumentPdf } from '../utils/pdfGenerator';
 
 const Quotes: React.FC = () => {
   const navigate = useNavigate();
+  const { checkQuota } = useQuota();
+
+  const handleNewQuote = () => {
+    if (checkQuota('quote')) {
+      navigate('/quotes/new');
+    }
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const isProUser = useAppStore((state) => state.isProUser);
   const businessProfile = useAppStore((state) => state.businessProfile);
@@ -262,10 +270,15 @@ const Quotes: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 pb-2 md:pb-0">
           <SplitButton
             mainLabel={<><Plus size={18} /><span>New Quote</span></>}
-            onMainClick={() => navigate('/quotes/new')}
+            onMainClick={handleNewQuote}
             options={[
-              { label: 'Create Manually', onClick: () => navigate('/quotes/new') },
-              { label: 'Draft with AI', onClick: () => { setAiModalDefaultTab('text'); setIsAiModalOpen(true); } }
+              { label: 'Create Manually', onClick: handleNewQuote },
+              { label: 'Draft with AI', onClick: () => { 
+                  if (checkQuota('quote')) {
+                    setAiModalDefaultTab('text'); 
+                    setIsAiModalOpen(true); 
+                  }
+              } }
             ]}
           />
           <button 
@@ -310,10 +323,15 @@ const Quotes: React.FC = () => {
         <div className="flex-shrink-0 flex items-center">
           <SplitButton
             mainLabel={<Plus size={18} />}
-            onMainClick={() => navigate('/quotes/new')}
+            onMainClick={handleNewQuote}
             options={[
-              { label: 'Create Manually', onClick: () => navigate('/quotes/new') },
-              { label: 'Draft with AI', onClick: () => { setAiModalDefaultTab('text'); setIsAiModalOpen(true); } }
+              { label: 'Create Manually', onClick: handleNewQuote },
+              { label: 'Draft with AI', onClick: () => { 
+                  if (checkQuota('quote')) {
+                    setAiModalDefaultTab('text'); 
+                    setIsAiModalOpen(true); 
+                  }
+              } }
             ]}
           />
         </div>
@@ -603,7 +621,7 @@ const Quotes: React.FC = () => {
                 title="No quotes found"
                 description={filter === 'All' ? "You haven't created any quotes yet. Send a quote to win your next client." : `No quotes match the "${filter}" filter.`}
                 actionLabel={filter === 'All' ? "Create Quote" : undefined}
-                onAction={filter === 'All' ? () => navigate('/quotes/new') : undefined}
+                onAction={filter === 'All' ? handleNewQuote : undefined}
               />
             </div>
           )}
@@ -613,7 +631,7 @@ const Quotes: React.FC = () => {
       {/* Mobile Floating Action Button */}
       {createPortal(
         <button 
-          onClick={() => navigate('/quotes/new')}
+          onClick={handleNewQuote}
           className="md:hidden fixed bottom-24 right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 hover:scale-110 active:scale-95 transition-all duration-300"
         >
           <Plus size={24} />

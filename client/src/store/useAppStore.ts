@@ -21,6 +21,8 @@ interface AppState {
   theme: Theme;
   colorTheme: 'default' | 'wine' | 'ocean' | 'emerald' | 'slate' | 'sunset' | 'mustard' | 'cherry' | 'custom';
   customColor: string;
+  fontFamily: 'Inter' | 'Roboto' | 'Playfair Display' | 'monospace';
+  fontSize: 'small' | 'medium' | 'large';
   mobileNavStyle: 'drawer' | 'bottom';
   clients: Client[];
   quotes: Quote[];
@@ -33,6 +35,8 @@ interface AppState {
   toggleTheme: () => void;
   setColorTheme: (theme: 'default' | 'wine' | 'ocean' | 'emerald' | 'slate' | 'sunset' | 'mustard' | 'cherry' | 'custom') => void;
   setCustomColor: (color: string) => void;
+  setFontFamily: (font: AppState['fontFamily']) => void;
+  setFontSize: (size: AppState['fontSize']) => void;
   setMobileNavStyle: (style: 'drawer' | 'bottom') => void;
   addClient: (client: Client) => void;
   addQuote: (quote: Quote) => void;
@@ -63,7 +67,9 @@ export const useAppStore = create<AppState>()(
       theme: 'light',
       colorTheme: 'default',
       customColor: '#8b5cf6', // default tailwind violet-500
-      mobileNavStyle: 'bottom', // Default to bottom nav based on user preference
+      fontFamily: 'Inter',
+      fontSize: 'medium',
+      mobileNavStyle: 'drawer', // Default to bottom nav based on user preference
       clients: [],
       quotes: [],
       invoices: [],
@@ -116,6 +122,8 @@ export const useAppStore = create<AppState>()(
           document.documentElement.style.setProperty('--color-purple-600', customColor);
         }
       },
+      setFontFamily: (fontFamily) => set({ fontFamily }),
+      setFontSize: (fontSize) => set({ fontSize }),
       setMobileNavStyle: (style) => set({ mobileNavStyle: style }),
       addClient: (client) => set((state) => ({ clients: [...state.clients, client] })),
       addQuote: (quote) => set((state) => ({ quotes: [...state.quotes, quote] })),
@@ -201,6 +209,8 @@ export const useAppStore = create<AppState>()(
           theme: state.theme,
           colorTheme: state.colorTheme,
           customColor: state.customColor,
+          fontFamily: state.fontFamily,
+          fontSize: state.fontSize,
           mobileNavStyle: state.mobileNavStyle,
           isSidebarExpanded: state.isSidebarExpanded,
           businessProfile: profile as BusinessProfile,

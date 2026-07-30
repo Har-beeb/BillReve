@@ -11,8 +11,52 @@ import { syncEngine } from '../services/syncEngine';
 import { useNotifications } from '../hooks/useNotifications';
 import SubscriptionModal from '../components/ui/SubscriptionModal';
 
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+};
+
+const rgbToHex = (r: number, g: number, b: number) => '#' + [r, g, b].map(x => {
+  const hex = x.toString(16);
+  return hex.length === 1 ? '0' + hex : hex;
+}).join('');
+
+const mix = (color1: any, color2: any, weight: number) => {
+  const w = weight / 100;
+  return {
+    r: Math.round(color1.r * w + color2.r * (1 - w)),
+    g: Math.round(color1.g * w + color2.g * (1 - w)),
+    b: Math.round(color1.b * w + color2.b * (1 - w))
+  };
+};
+
+const generatePalette = (hex: string) => {
+  const base = hexToRgb(hex);
+  if (!base) return {};
+  const white = { r: 255, g: 255, b: 255 };
+  const black = { r: 0, g: 0, b: 0 };
+  
+  return {
+    '--color-purple-50': rgbToHex(mix(base, white, 10).r, mix(base, white, 10).g, mix(base, white, 10).b),
+    '--color-purple-100': rgbToHex(mix(base, white, 20).r, mix(base, white, 20).g, mix(base, white, 20).b),
+    '--color-purple-200': rgbToHex(mix(base, white, 40).r, mix(base, white, 40).g, mix(base, white, 40).b),
+    '--color-purple-300': rgbToHex(mix(base, white, 60).r, mix(base, white, 60).g, mix(base, white, 60).b),
+    '--color-purple-400': rgbToHex(mix(base, white, 80).r, mix(base, white, 80).g, mix(base, white, 80).b),
+    '--color-purple-500': rgbToHex(base.r, base.g, base.b),
+    '--color-purple-600': rgbToHex(mix(base, black, 80).r, mix(base, black, 80).g, mix(base, black, 80).b),
+    '--color-purple-700': rgbToHex(mix(base, black, 60).r, mix(base, black, 60).g, mix(base, black, 60).b),
+    '--color-purple-800': rgbToHex(mix(base, black, 40).r, mix(base, black, 40).g, mix(base, black, 40).b),
+    '--color-purple-900': rgbToHex(mix(base, black, 20).r, mix(base, black, 20).g, mix(base, black, 20).b),
+    '--color-purple-950': rgbToHex(mix(base, black, 10).r, mix(base, black, 10).g, mix(base, black, 10).b),
+  } as React.CSSProperties;
+};
+
 const MainLayout: React.FC = () => {
-  const { syncStatus, theme, toggleTheme, user, logout, isProUser, mobileNavStyle } = useAppStore();
+  const { syncStatus, theme, colorTheme, customColor, fontFamily, toggleTheme, user, logout, isProUser, mobileNavStyle } = useAppStore();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -115,8 +159,14 @@ const MainLayout: React.FC = () => {
     }
   };
 
+  const themeClass = colorTheme !== 'default' ? `theme-${colorTheme}` : '';
+  const customStyles: React.CSSProperties = {
+    ...(colorTheme === 'custom' ? generatePalette(customColor) : {}),
+    fontFamily: fontFamily === 'Inter' ? undefined : fontFamily
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200">
+    <div className={`min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200 ${themeClass}`} style={customStyles}>
       {/* Desktop Sidebar (hidden on mobile) */}
       <aside 
         className={`hidden md:flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 sticky top-0 h-screen transition-[width] duration-300 ease-in-out will-change-[width] relative z-30 ${isSidebarExpanded ? 'w-64' : 'w-20'}`}

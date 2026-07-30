@@ -19,9 +19,17 @@ import { useAppStore } from '../store/useAppStore';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
+import { useQuota } from '../hooks/useQuota';
 
 const Invoices: React.FC = () => {
   const navigate = useNavigate();
+  const { checkQuota } = useQuota();
+  
+  const handleNewInvoice = () => {
+    if (checkQuota('invoice')) {
+      navigate('/invoices/new');
+    }
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const isProUser = useAppStore((state) => state.isProUser);
   const businessProfile = useAppStore((state) => state.businessProfile);
@@ -277,10 +285,15 @@ const Invoices: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 pb-2 md:pb-0">
           <SplitButton
             mainLabel={<><Plus size={18} /><span>New Invoice</span></>}
-            onMainClick={() => navigate('/invoices/new')}
+            onMainClick={handleNewInvoice}
             options={[
-              { label: 'Create Manually', onClick: () => navigate('/invoices/new') },
-              { label: 'Draft with AI', onClick: () => { setAiModalDefaultTab('text'); setIsAiModalOpen(true); } }
+              { label: 'Create Manually', onClick: handleNewInvoice },
+              { label: 'Draft with AI', onClick: () => { 
+                  if (checkQuota('invoice')) {
+                    setAiModalDefaultTab('text'); 
+                    setIsAiModalOpen(true); 
+                  }
+              } }
             ]}
           />
           <button 
@@ -317,10 +330,15 @@ const Invoices: React.FC = () => {
         <div className="flex-shrink-0 flex items-center">
           <SplitButton
             mainLabel={<Plus size={18} />}
-            onMainClick={() => navigate('/invoices/new')}
+            onMainClick={handleNewInvoice}
             options={[
-              { label: 'Create Manually', onClick: () => navigate('/invoices/new') },
-              { label: 'Draft with AI', onClick: () => { setAiModalDefaultTab('text'); setIsAiModalOpen(true); } }
+              { label: 'Create Manually', onClick: handleNewInvoice },
+              { label: 'Draft with AI', onClick: () => { 
+                  if (checkQuota('invoice')) {
+                    setAiModalDefaultTab('text'); 
+                    setIsAiModalOpen(true); 
+                  }
+              } }
             ]}
           />
         </div>
@@ -584,7 +602,7 @@ const Invoices: React.FC = () => {
                 title="No invoices found"
                 description={filter === 'All' ? "You haven't created any invoices yet. Create your first invoice to get paid." : `No invoices match the "${filter}" filter.`}
                 actionLabel={filter === 'All' ? "Create Invoice" : undefined}
-                onAction={filter === 'All' ? () => navigate('/invoices/new') : undefined}
+                onAction={filter === 'All' ? handleNewInvoice : undefined}
               />
             </div>
           )}
@@ -593,7 +611,7 @@ const Invoices: React.FC = () => {
       
       {createPortal(
         <button 
-          onClick={() => navigate('/invoices/new')}
+          onClick={handleNewInvoice}
           className="md:hidden fixed bottom-24 right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 hover:scale-110 active:scale-95 transition-all duration-300"
         >
           <Plus size={24} />

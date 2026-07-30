@@ -1,29 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Mail, Database, Cloud, RefreshCw, Settings as SettingsIcon } from 'lucide-react';
+import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Mail, Database, Settings as SettingsIcon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { BusinessProfile, TaxSetting } from '../types';
-import { syncEngine } from '../services/syncEngine';
 import { supabase } from '../lib/supabase';
+import { ProFeature } from '../components/ui/ProFeature';
 
 const Settings: React.FC = () => {
-  const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, syncStatus, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor } = useAppStore();
+  const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
   const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'taxes' | 'sync' | 'preferences'>('account');
   const [isSendingMarketing, setIsSendingMarketing] = useState(false);
   
-  // Local state for profile form
   const [localProfile, setLocalProfile] = useState<BusinessProfile>(businessProfile);
-  
-  // Local state for taxes form
   const [localTaxes, setLocalTaxes] = useState<TaxSetting[]>(taxSettings);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalProfile(businessProfile);
   }, [businessProfile]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalTaxes(taxSettings);
   }, [taxSettings]);
 
@@ -153,7 +148,6 @@ const Settings: React.FC = () => {
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        {/* Tabs */}
         <div className="flex border-b border-slate-200 dark:border-slate-700 overflow-x-auto hide-scrollbar">
           <button
             onClick={() => setActiveTab('account')}
@@ -212,7 +206,6 @@ const Settings: React.FC = () => {
           </button>
         </div>
 
-        {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'account' && (
             <div className="space-y-6 max-w-2xl mx-auto py-2">
@@ -238,15 +231,17 @@ const Settings: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-4">
-                <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-xl p-6 text-white flex flex-col sm:flex-row justify-between items-center gap-4 shadow-lg">
-                  <div>
-                    <h4 className="text-xl font-bold mb-1">Upgrade to BillReve Pro 🚀</h4>
-                    <p className="text-purple-200 text-sm">Accept global payments, remove branding, and automate reminders.</p>
+              {!isProUser && (
+                <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-4">
+                  <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-xl p-6 text-white flex flex-col sm:flex-row justify-between items-center gap-4 shadow-lg">
+                    <div>
+                      <h4 className="text-xl font-bold mb-1">Upgrade to BillReve Pro 🚀</h4>
+                      <p className="text-purple-200 text-sm">Accept global payments, remove branding, and automate reminders.</p>
+                    </div>
+                    <a href="/upgrade" className="bg-white text-purple-900 hover:bg-slate-100 font-bold py-2.5 px-6 rounded-lg transition-colors whitespace-nowrap">View Pro Plan</a>
                   </div>
-                  <a href="/upgrade" className="bg-white text-purple-900 hover:bg-slate-100 font-bold py-2.5 px-6 rounded-lg transition-colors whitespace-nowrap">View Pro Plan</a>
                 </div>
-              </div>
+              )}
               <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-500">
                   Your personal account details are managed by your authentication provider. 
@@ -320,6 +315,7 @@ const Settings: React.FC = () => {
                     </p>
                   </label>
                   
+                  <ProFeature isProUser={isProUser} className="contents sm:col-span-1">
                   <label className={`cursor-pointer border rounded-xl p-4 flex flex-col gap-3 transition-colors ${colorTheme === 'wine' ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
                     <div className="flex items-center gap-3">
                       <input 
@@ -491,6 +487,42 @@ const Settings: React.FC = () => {
                       )}
                     </div>
                   </div>
+                  </ProFeature>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-700">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Typography</h3>
+                  
+                  <ProFeature isProUser={isProUser} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Font Family</label>
+                      <select 
+                        value={fontFamily}
+                        onChange={(e) => setFontFamily(e.target.value as any)}
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:text-white"
+                      >
+                        <option value="Inter">Inter (Default)</option>
+                        <option value="Roboto">Roboto</option>
+                        <option value="Playfair Display">Playfair Display (Serif)</option>
+                        <option value="monospace">Monospace</option>
+                      </select>
+                      <p className="mt-2 text-xs text-slate-500">Affects your dashboard, invoices, and quotes.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Font Size (Invoices)</label>
+                      <select 
+                        value={fontSize}
+                        onChange={(e) => setFontSize(e.target.value as any)}
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:text-white"
+                      >
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                      </select>
+                      <p className="mt-2 text-xs text-slate-500">Adjust the base font size for your public documents.</p>
+                    </div>
+                  </ProFeature>
                 </div>
               </div>
             </div>

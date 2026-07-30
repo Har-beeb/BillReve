@@ -3,6 +3,7 @@ import { X, Mail, MessageCircle, Loader2, Sparkles } from 'lucide-react';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { draftAiEmail } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
+import { ProFeature } from './ui/ProFeature';
 import { db } from '../db/db';
 
 interface SendDocumentModalProps {
@@ -22,7 +23,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
   documentType,
   amount,
 }) => {
-  const { businessProfile } = useAppStore();
+  const { businessProfile, isProUser } = useAppStore();
   const [isSending, setIsSending] = useState(false);
   const [customMessage, setCustomMessage] = useState('');
   const [isDrafting, setIsDrafting] = useState(false);
@@ -181,17 +182,19 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Custom Message (Optional)</label>
-              <button
-                onClick={handleDraftEmail}
-                disabled={isDrafting || !documentDetails}
-                className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-md transition-colors disabled:opacity-50"
-                title="Draft a professional message using AI"
-              >
-                {isDrafting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                {documentType === 'Invoice' && documentDetails?.dueDate && new Date(documentDetails.dueDate) < new Date() 
-                  ? 'AI Draft Reminder' 
-                  : 'AI Draft Message'}
-              </button>
+              <ProFeature isProUser={isProUser} className="inline-block">
+                <button
+                  onClick={handleDraftEmail}
+                  disabled={isDrafting || !documentDetails}
+                  className="flex-1 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-medium rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Draft a professional message using AI"
+                >
+                  {isDrafting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  {documentType === 'Invoice' && documentDetails?.dueDate && new Date(documentDetails.dueDate) < new Date() 
+                    ? 'AI Draft Reminder' 
+                    : 'AI Draft Message'}
+                </button>
+              </ProFeature>
             </div>
             <textarea
               rows={4}
