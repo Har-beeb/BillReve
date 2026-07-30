@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
-import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Database, Settings as SettingsIcon, Cloud, RefreshCw } from 'lucide-react';
+import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Database, Settings as SettingsIcon, Cloud, RefreshCw, FileUp } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { BusinessProfile, TaxSetting } from '../types';
 import { syncEngine } from '../services/syncEngine';
 import { supabase } from '../lib/supabase';
 import { ProFeature } from '../components/ui/ProFeature';
+import { CsvImportWizard } from '../components/CsvImportWizard';
 
 const Settings: React.FC = () => {
   const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, syncStatus, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'taxes' | 'sync' | 'preferences'>('account');
+  const [showImportWizard, setShowImportWizard] = useState(false);
   
   const [localProfile, setLocalProfile] = useState<BusinessProfile>(businessProfile);
   const [localTaxes, setLocalTaxes] = useState<TaxSetting[]>(taxSettings);
