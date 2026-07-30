@@ -1,37 +1,35 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import { supabase } from '../lib/supabase';
 
 export const generateAiQuote = async (payload: { text?: string; documents?: { mimeType: string; data: string }[] }) => {
-  const response = await fetch(`${API_URL}/ai/generate-quote`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+  const { data, error } = await supabase.functions.invoke('ai/generate-quote', {
+    body: payload,
   });
 
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to generate quote');
+  if (error) {
+    throw new Error(error.message || 'Failed to generate quote');
   }
 
-  return result.data;
+  if (!data?.success) {
+    throw new Error(data?.message || 'Failed to generate quote');
+  }
+
+  return data.data;
 };
 
 export const enhanceAiText = async (payload: { text: string; mode: 'line_item' | 'note' }) => {
-  const response = await fetch(`${API_URL}/ai/enhance-text`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+  const { data, error } = await supabase.functions.invoke('ai/enhance-text', {
+    body: payload,
   });
 
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to enhance text');
+  if (error) {
+    throw new Error(error.message || 'Failed to enhance text');
   }
 
-  return result.data;
+  if (!data?.success) {
+    throw new Error(data?.message || 'Failed to enhance text');
+  }
+
+  return data.data;
 };
 
 export const draftAiEmail = async (payload: { 
@@ -43,35 +41,33 @@ export const draftAiEmail = async (payload: {
   currency?: string,
   isOverdue?: boolean 
 }) => {
-  const response = await fetch(`${API_URL}/ai/draft-email`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+  const { data, error } = await supabase.functions.invoke('ai/draft-email', {
+    body: payload,
   });
 
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to draft email');
+  if (error) {
+    throw new Error(error.message || 'Failed to draft email');
   }
 
-  return result.data;
+  if (!data?.success) {
+    throw new Error(data?.message || 'Failed to draft email');
+  }
+
+  return data.data;
 };
 
 export const chatWithRevenue = async (payload: { prompt: string; data: any }) => {
-  const response = await fetch(`${API_URL}/ai/insights`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+  const { data, error } = await supabase.functions.invoke('ai/insights', {
+    body: payload,
   });
 
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to chat with revenue AI');
+  if (error) {
+    throw new Error(error.message || 'Failed to chat with revenue AI');
   }
 
-  return result.data;
+  if (!data?.success) {
+    throw new Error(data?.message || 'Failed to chat with revenue AI');
+  }
+
+  return data.data;
 };

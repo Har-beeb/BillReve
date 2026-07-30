@@ -1,6 +1,7 @@
 {
   "name": "billreve-server",
   "version": "1.0.0",
+  "description": "Legacy Express backend for BillReve, maintained for historic models/controllers.",
   "private": true,
   "type": "module",
   "scripts": {
