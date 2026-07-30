@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Mail, Database, Settings as SettingsIcon, Cloud, RefreshCw } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,6 +10,7 @@ import { ProFeature } from '../components/ui/ProFeature';
 
 const Settings: React.FC = () => {
   const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, syncStatus, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'taxes' | 'sync' | 'preferences'>('account');
   const [isSendingMarketing, setIsSendingMarketing] = useState(false);
   
@@ -262,7 +264,7 @@ const Settings: React.FC = () => {
                       <h4 className="text-xl font-bold mb-1">Upgrade to BillReve Pro 🚀</h4>
                       <p className="text-purple-200 text-sm">Accept global payments, remove branding, and automate reminders.</p>
                     </div>
-                    <a href="/upgrade" className="bg-white text-purple-900 hover:bg-slate-100 font-bold py-2.5 px-6 rounded-lg transition-colors whitespace-nowrap">View Pro Plan</a>
+                    <button onClick={() => navigate('/upgrade')} className="bg-white text-purple-900 hover:bg-slate-100 font-bold py-2.5 px-6 rounded-lg transition-colors whitespace-nowrap">View Pro Plan</button>
                   </div>
                 </div>
               )}
