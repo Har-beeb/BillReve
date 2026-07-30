@@ -293,7 +293,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-100 dark:bg-slate-950">
         
         {/* Editor Form Pane - Fixed width sidebar */}
-        <div className="w-full lg:w-[500px] xl:w-[550px] flex-none overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/50 shadow-2xl lg:shadow-[10px_0_30px_-15px_rgba(0,0,0,0.1)] z-10 custom-scrollbar">
+        <div className="w-full lg:w-[500px] xl:w-[550px] flex-1 lg:flex-none overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/50 shadow-2xl lg:shadow-[10px_0_30px_-15px_rgba(0,0,0,0.1)] z-10 custom-scrollbar">
           
           {/* Client Selection section */}
           <div className="space-y-4">
@@ -370,15 +370,15 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             <div>
                <div className="flex justify-between items-center mb-1.5">
                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Terms & Notes</label>
-                 <ProFeature isProUser={isProUser} className="inline-block">
+                 <ProFeature isProUser={isProUser} className="flex-shrink-0 ml-2">
                    <button
                      onClick={handleEnhanceNote}
                      disabled={isEnhancingNote || !notes.trim()}
-                     className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                     className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                      title="Enhance Terms with AI"
                    >
                      {isEnhancingNote ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                     <span className="hidden sm:inline">AI Expand</span>
+                     <span>AI Expand</span>
                    </button>
                  </ProFeature>
                </div>
