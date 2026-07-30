@@ -9,6 +9,7 @@ import { SendDocumentModal } from '../components/SendDocumentModal';
 import { DocumentItemsTable, type LineItem } from '../components/DocumentItemsTable';
 import { DocumentPreview } from '../components/DocumentPreview';
 import { enhanceAiText } from '../api/ai';
+import { ProFeature } from '../components/ui/ProFeature';
 
 interface DocumentEditorProps {
   type: 'QUOTE' | 'INVOICE';

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Mail, Database, Settings as SettingsIcon } from 'lucide-react';
+import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Mail, Database, Settings as SettingsIcon, Cloud, RefreshCw } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { BusinessProfile, TaxSetting } from '../types';
+import { syncEngine } from '../services/syncEngine';
 import { supabase } from '../lib/supabase';
 import { ProFeature } from '../components/ui/ProFeature';
 
 const Settings: React.FC = () => {
-  const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
+  const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, syncStatus, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
   const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'taxes' | 'sync' | 'preferences'>('account');
   const [isSendingMarketing, setIsSendingMarketing] = useState(false);
   
