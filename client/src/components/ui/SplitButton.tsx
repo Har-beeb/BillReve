@@ -28,8 +28,8 @@ export const SplitButton: React.FC<SplitButtonProps> = ({ mainLabel, onMainClick
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const paddingClasses = size === 'lg' ? 'px-6 py-3 text-base' : 'px-4 py-2 text-sm';
-  const iconPaddingClasses = size === 'lg' ? 'px-3 py-3' : 'px-2 py-2';
+  const paddingClasses = size === 'lg' ? 'px-3 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base' : 'px-4 py-2 text-sm';
+  const iconPaddingClasses = size === 'lg' ? 'px-2 sm:px-3 py-2.5 sm:py-3' : 'px-2 py-2';
 
   return (
     <div className={`relative inline-flex rounded-lg shadow-sm ${className}`} ref={menuRef}>
