@@ -87,7 +87,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
             
             <button 
               onClick={handleUpgrade}
-              className="w-full sm:w-auto px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-purple-600/20 transition-all hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md rounded-xl font-bold text-lg shadow-lg shadow-purple-600/20 transition-all hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
             >
               <Sparkles size={20} />
               Upgrade Now

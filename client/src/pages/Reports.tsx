@@ -210,7 +210,7 @@ const Reports: React.FC = () => {
           
           <button 
             onClick={handleExportCsv}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md rounded-lg font-medium transition-colors shadow-sm"
           >
             <Download size={18} />
             Export Tax Report

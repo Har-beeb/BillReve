@@ -165,7 +165,7 @@ const Dashboard: React.FC = () => {
 
         <div className="grid grid-cols-2 sm:flex sm:justify-start gap-3 pb-2 md:pb-0 w-full md:w-auto mt-2 md:mt-0">
           <SplitButton
-            mainLabel={<><Plus size={16} /> <span className="hidden sm:inline">New Quote</span></>}
+            mainLabel={<><Plus size={16} /> <span className="ml-1 truncate">New Quote</span></>}
             onMainClick={() => checkQuota('quote') && navigate('/quotes/new')}
             align="left"
             size="lg"
@@ -176,7 +176,7 @@ const Dashboard: React.FC = () => {
             ]}
           />
           <SplitButton
-            mainLabel={<><Plus size={16} /> <span className="hidden sm:inline">New Invoice</span></>}
+            mainLabel={<><Plus size={16} /> <span className="ml-1 truncate">New Invoice</span></>}
             onMainClick={() => checkQuota('invoice') && navigate('/invoices/new')}
             align="right"
             size="lg"

@@ -71,7 +71,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
                 variant === 'danger' 
                   ? 'bg-red-600 hover:bg-red-700' 
-                  : 'bg-purple-600 hover:bg-purple-700'
+                  : 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 shadow-md'
               }`}
             >
               {confirmText}

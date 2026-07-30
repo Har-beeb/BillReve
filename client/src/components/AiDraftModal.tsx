@@ -112,7 +112,7 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
               </button>
               <button 
                 onClick={() => { onClose(); navigate('/upgrade'); }}
-                className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors shadow-md"
+                className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md font-bold transition-colors shadow-md"
               >
                 Upgrade to Pro
               </button>
@@ -194,7 +194,7 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
           <button
             onClick={handleGenerate}
             disabled={isLoading || (activeTab === 'text' ? !textInput.trim() : !file)}
-            className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             {isLoading ? (
               <><Loader2 size={18} className="animate-spin" /> Generating {documentType === 'INVOICE' ? 'Invoice' : 'Quote'}...</>

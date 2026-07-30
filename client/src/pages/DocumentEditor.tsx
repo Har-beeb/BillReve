@@ -281,7 +281,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           </button>
           <button 
             onClick={() => handleSave('SENT')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 shadow-md transition-colors"
           >
             <Send size={18} />
             <span className="hidden md:inline">Save & Send</span>
@@ -370,7 +370,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             <div>
                <div className="flex justify-between items-center mb-1.5">
                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Terms & Notes</label>
-                 <ProFeature isProUser={isProUser} className="inline-block">
+                 <ProFeature isProUser={isProUser} className="inline-block flex-shrink-0 ml-2">
                    <button
                      onClick={handleEnhanceNote}
                      disabled={isEnhancingNote || !notes.trim()}
@@ -514,7 +514,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           </div>
           
           {/* Bottom spacing for mobile to ensure scrollability past FAB */}
-          <div className="h-20 md:hidden"></div>
+          <div className="h-32 md:hidden"></div>
         </div>
 
         {/* Live Preview Pane (Desktop Only) */}
