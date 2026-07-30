@@ -24,7 +24,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
  */
 const Clients: React.FC = () => {
   const { invoices } = useAppStore();
-  const clients = useLiveQuery(() => db.clients.toArray()) || [];
+  const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   
@@ -85,12 +85,12 @@ const Clients: React.FC = () => {
   };
 
   const handleDeleteClient = async (id: string) => {
-    await db.clients.delete(id);
+    await db.clients.update(id, { deletedAt: new Date().toISOString(), syncStatus: 'pending' });
     await db.syncQueue.add({
       id: uuidv4(),
-      action: 'DELETE',
+      action: 'UPDATE',
       entity: 'CLIENT',
-      payload: { local_id: id },
+      payload: { local_id: id, deleted_at: new Date().toISOString() },
       status: 'pending',
       createdAt: new Date().toISOString()
     });
@@ -104,12 +104,12 @@ const Clients: React.FC = () => {
 
   const handleBulkDelete = async () => {
     for (const id of selectedIds) {
-      await db.clients.delete(id);
+      await db.clients.update(id, { deletedAt: new Date().toISOString(), syncStatus: 'pending' });
       await db.syncQueue.add({
         id: uuidv4(),
-        action: 'DELETE',
+        action: 'UPDATE',
         entity: 'CLIENT',
-        payload: { local_id: id },
+        payload: { local_id: id, deleted_at: new Date().toISOString() },
         status: 'pending',
         createdAt: new Date().toISOString()
       });
@@ -505,3 +505,4 @@ const Clients: React.FC = () => {
 };
 
 export default Clients;
+

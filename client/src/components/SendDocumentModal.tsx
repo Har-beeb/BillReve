@@ -57,8 +57,8 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       const isOverdue = documentType === 'Invoice' && documentDetails.dueDate && new Date(documentDetails.dueDate) < new Date();
       
       // Fetch client history (past invoices and quotes) to personalize the draft
-      const pastInvoices = await db.invoices.where('clientId').equals(clientDetails.localId).toArray();
-      const pastQuotes = await db.quotes.where('clientId').equals(clientDetails.localId).toArray();
+      const pastInvoices = await db.invoices.where('clientId').equals(clientDetails.localId).filter(x => !x.deletedAt).toArray();
+      const pastQuotes = await db.quotes.where('clientId').equals(clientDetails.localId).filter(x => !x.deletedAt).toArray();
       
       const clientHistory = {
         totalInvoices: pastInvoices.length,
@@ -232,3 +232,4 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     </div>
   );
 };
+

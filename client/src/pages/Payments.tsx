@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui';
-import { CircleDollarSign, Save } from 'lucide-react';
+import { CircleDollarSign, Save, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 
@@ -76,7 +76,7 @@ const Payments: React.FC = () => {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div>;
 
   return (
     <div className="space-y-6 animate-fade-in-up">

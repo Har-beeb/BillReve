@@ -13,8 +13,8 @@ type Timeframe = 'day' | 'week' | 'month' | '3month' | '6month' | 'year' | 'cust
 
 const Reports: React.FC = () => {
   const { businessProfile } = useAppStore();
-  const invoices = useLiveQuery(() => db.invoices.toArray(), []) || [];
-  const clients = useLiveQuery(() => db.clients.toArray(), []) || [];
+  const invoices = useLiveQuery(() => db.invoices.filter(x => !x.deletedAt).toArray(), []) || [];
+  const clients = useLiveQuery(() => db.clients.filter(x => !x.deletedAt).toArray(), []) || [];
 
   const [timeframe, setTimeframe] = useState<Timeframe>('6month');
   const [customStart, setCustomStart] = useState<string>('');

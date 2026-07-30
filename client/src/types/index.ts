@@ -44,6 +44,7 @@ export interface Client {
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
+  deletedAt?: string;
 }
 
 export interface Quote {
@@ -65,6 +66,7 @@ export interface Quote {
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
+  deletedAt?: string;
   items: QuoteItem[];
   counterAmount?: number;
   clientMessage?: string;
@@ -102,6 +104,7 @@ export interface Invoice {
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
+  deletedAt?: string;
   items: InvoiceItem[];
   counterAmount?: number;
   clientMessage?: string;

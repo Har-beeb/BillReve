@@ -38,35 +38,32 @@ const toCamelCase = (obj: any): any => {
 class SyncEngine {
   private isSyncing = false;
   private channel: ReturnType<typeof supabase.channel> | null = null;
+  private retryCount = 0;
+  private maxRetries = 5;
 
   async start() {
-    // Run initial sync immediately
     await this.sync();
 
-    // Set up Realtime Subscriptions
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     
     if (!this.channel) {
-      this.channel = supabase.channel('schema-db-changes')
+      this.channel = supabase
+        .channel('schema-db-changes')
         .on(
           'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            filter: `user_id=eq.${session.user.id}`
-          },
-          (payload) => {
-            console.log('Realtime change received!', payload);
-            // On any change, trigger a sync to pull remote changes
+          { event: '*', schema: 'public' },
+          () => {
             this.sync();
           }
         )
         .subscribe();
     }
 
-    // Also run when returning online
-    window.addEventListener('online', () => this.sync());
+    window.addEventListener('online', () => {
+      this.retryCount = 0;
+      this.sync();
+    });
   }
 
   stop() {
@@ -85,11 +82,17 @@ class SyncEngine {
       await this.pushLocalChanges();
       await this.pullRemoteChanges();
       
-      // If we made it here, everything is successfully synced
       useAppStore.getState().setSyncStatus('synced');
+      this.retryCount = 0;
     } catch (error) {
       console.error('Sync failed:', error);
       useAppStore.getState().setSyncStatus('failed');
+      
+      if (this.retryCount < this.maxRetries) {
+        const delay = Math.pow(2, this.retryCount) * 2000; // 2s, 4s, 8s, 16s, 32s
+        this.retryCount++;
+        setTimeout(() => this.sync(), delay);
+      }
     } finally {
       this.isSyncing = false;
     }
@@ -191,3 +194,4 @@ class SyncEngine {
 }
 
 export const syncEngine = new SyncEngine();
+

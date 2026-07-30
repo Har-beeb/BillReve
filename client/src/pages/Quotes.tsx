@@ -51,8 +51,8 @@ const Quotes: React.FC = () => {
   const [sendModalOpen, setSendModalOpen] = useState(false);
   const [quoteToSend, setQuoteToSend] = useState<Quote | null>(null);
   
-  const quotes = useLiveQuery(() => db.quotes.toArray()) || [];
-  const clients = useLiveQuery(() => db.clients.toArray()) || [];
+  const quotes = useLiveQuery(() => db.quotes.filter(q => !q.deletedAt).toArray()) || [];
+  const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
   const [activeCard, setActiveCard] = useState(0);
   const carouselRef = React.useRef<HTMLDivElement>(null);
 
@@ -109,12 +109,12 @@ const Quotes: React.FC = () => {
   };
 
   const handleDeleteQuote = async (id: string) => {
-    await db.quotes.delete(id);
+    await db.quotes.update(id, { deletedAt: new Date().toISOString(), syncStatus: 'pending' });
     await db.syncQueue.add({
       id: uuidv4(),
-      action: 'DELETE',
+      action: 'UPDATE',
       entity: 'QUOTE',
-      payload: { local_id: id },
+      payload: { local_id: id, deleted_at: new Date().toISOString() },
       status: 'pending',
       createdAt: new Date().toISOString()
     });
@@ -128,12 +128,12 @@ const Quotes: React.FC = () => {
 
   const handleBulkDelete = async () => {
     for (const id of selectedIds) {
-      await db.quotes.delete(id);
+      await db.quotes.update(id, { deletedAt: new Date().toISOString(), syncStatus: 'pending' });
       await db.syncQueue.add({
         id: uuidv4(),
-        action: 'DELETE',
+        action: 'UPDATE',
         entity: 'QUOTE',
-        payload: { local_id: id },
+        payload: { local_id: id, deleted_at: new Date().toISOString() },
         status: 'pending',
         createdAt: new Date().toISOString()
       });
@@ -816,3 +816,4 @@ const Quotes: React.FC = () => {
 };
 
 export default Quotes;
+

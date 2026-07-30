@@ -49,8 +49,8 @@ const Invoices: React.FC = () => {
   const [recordPaymentModalOpen, setRecordPaymentModalOpen] = useState(false);
   const [invoiceForPayment, setInvoiceForPayment] = useState<Invoice | null>(null);
   
-  const invoices = useLiveQuery(() => db.invoices.toArray()) || [];
-  const clients = useLiveQuery(() => db.clients.toArray()) || [];
+  const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
+  const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
   const [activeCard, setActiveCard] = useState(0);
   const carouselRef = React.useRef<HTMLDivElement>(null);
 
@@ -135,12 +135,12 @@ const Invoices: React.FC = () => {
   };
 
   const handleDeleteInvoice = async (id: string) => {
-    await db.invoices.delete(id);
+    await db.invoices.update(id, { deletedAt: new Date().toISOString(), syncStatus: 'pending' });
     await db.syncQueue.add({
       id: uuidv4(),
-      action: 'DELETE',
+      action: 'UPDATE',
       entity: 'INVOICE',
-      payload: { local_id: id },
+      payload: { local_id: id, deleted_at: new Date().toISOString() },
       status: 'pending',
       createdAt: new Date().toISOString()
     });
@@ -154,12 +154,12 @@ const Invoices: React.FC = () => {
 
   const handleBulkDelete = async () => {
     for (const id of selectedIds) {
-      await db.invoices.delete(id);
+      await db.invoices.update(id, { deletedAt: new Date().toISOString(), syncStatus: 'pending' });
       await db.syncQueue.add({
         id: uuidv4(),
-        action: 'DELETE',
+        action: 'UPDATE',
         entity: 'INVOICE',
-        payload: { local_id: id },
+        payload: { local_id: id, deleted_at: new Date().toISOString() },
         status: 'pending',
         createdAt: new Date().toISOString()
       });
@@ -782,3 +782,4 @@ const Invoices: React.FC = () => {
 };
 
 export default Invoices;
+

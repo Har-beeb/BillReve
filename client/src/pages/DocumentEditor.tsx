@@ -25,9 +25,9 @@ interface DocumentEditorProps {
 const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const navigate = useNavigate();
   const { businessProfile, taxSettings, user, isProUser } = useAppStore();
-  const clients = useLiveQuery(() => db.clients.toArray()) || [];
-  const invoicesList = useLiveQuery(() => db.invoices.toArray()) || [];
-  const quotesList = useLiveQuery(() => db.quotes.toArray()) || [];
+  const clients = useLiveQuery(() => db.clients.filter(x => !x.deletedAt).toArray()) || [];
+  const invoicesList = useLiveQuery(() => db.invoices.filter(x => !x.deletedAt).toArray()) || [];
+  const quotesList = useLiveQuery(() => db.quotes.filter(x => !x.deletedAt).toArray()) || [];
 
   const nextInvoiceNum = `INV-${String(invoicesList.length + 1).padStart(3, '0')}`;
   const nextQuoteNum = `QTE-${String(quotesList.length + 1).padStart(3, '0')}`;
