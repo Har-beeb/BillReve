@@ -98,7 +98,6 @@ const Upgrade: React.FC = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-[2.5rem] transform rotate-3 scale-[0.98] opacity-70 blur-sm mix-blend-multiply dark:mix-blend-screen transition-transform hover:rotate-6 duration-500" />
               
               <div className="relative w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/50 dark:border-slate-700/50 p-10 flex flex-col items-center text-center transform transition-all hover:-translate-y-2 duration-500">
-                <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-t-[2rem]" />
                 
                 <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-4">Pro Subscription</h3>
                 <p className="text-slate-500 dark:text-slate-400 mb-8 font-medium">Everything you need to scale.</p>
