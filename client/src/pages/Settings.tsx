@@ -712,7 +712,7 @@ const Settings: React.FC = () => {
               <div className="pt-4 mt-6 border-t border-slate-200 dark:border-slate-700 flex gap-3">
                 <button 
                   onClick={handleSaveProfile}
-                  className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md px-5 py-2.5 rounded-lg font-medium transition-colors"
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
                 >
                   <Save size={18} />
                   Save Profile
@@ -786,7 +786,7 @@ const Settings: React.FC = () => {
               <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
                 <button 
                   onClick={handleSaveTaxes}
-                  className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md px-5 py-2.5 rounded-lg font-medium transition-colors"
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
                 >
                   <Save size={18} />
                   Save Taxes
@@ -852,7 +852,7 @@ const Settings: React.FC = () => {
                         const { generateMockData } = await import('../utils/mockDataGenerator');
                         await generateMockData(user.id);
                       }}
-                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto"
+                      className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto"
                     >
                       <Database size={16} />
                       Generate Mock Data

@@ -90,7 +90,7 @@ const Login: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md p-3.5 rounded-xl font-medium transition-all disabled:opacity-70 shadow-md shadow-purple-900/20"
+          className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white p-3.5 rounded-xl font-medium transition-all disabled:opacity-70 shadow-md shadow-purple-900/20"
         >
           {loading ? 'Signing in...' : 'Sign in'}
         </button>

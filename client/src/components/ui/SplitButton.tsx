@@ -35,14 +35,14 @@ export const SplitButton: React.FC<SplitButtonProps> = ({ mainLabel, onMainClick
     <div className={`relative inline-flex rounded-lg shadow-sm ${className}`} ref={menuRef}>
       <button
         onClick={onMainClick}
-        className={`relative inline-flex items-center justify-center bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md ${paddingClasses} rounded-l-lg font-medium transition-colors focus:z-10 focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-nowrap gap-2`}
+        className={`relative inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white ${paddingClasses} rounded-l-lg font-medium transition-colors focus:z-10 focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-nowrap gap-2`}
       >
         {mainLabel}
       </button>
       <div className="relative block">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative inline-flex items-center bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-md ${iconPaddingClasses} rounded-r-lg border-l border-purple-500 transition-colors focus:z-10 focus:outline-none focus:ring-2 focus:ring-purple-500 h-full`}
+          className={`relative inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white ${iconPaddingClasses} rounded-r-lg border-l border-purple-500 transition-colors focus:z-10 focus:outline-none focus:ring-2 focus:ring-purple-500 h-full`}
         >
           <ChevronDown size={size === 'lg' ? 22 : 18} />
         </button>

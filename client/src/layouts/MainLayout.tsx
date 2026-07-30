@@ -180,7 +180,7 @@ const MainLayout: React.FC = () => {
             }`}
         />
 
-        <div className={`p-6 font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 flex items-center justify-start h-20`}>
+        <div className={`p-6 font-bold text-2xl text-[#9333ea] dark:text-[#a855f7] flex items-center justify-start h-20`}>
           {/* Logo Placeholder (Geometric Shape) */}
           <div className="w-8 h-8 rounded-lg bg-[#9333ea] flex items-center justify-center flex-shrink-0">
              <div className="w-3 h-3 bg-white rounded-sm transform rotate-45" />
@@ -206,7 +206,7 @@ const MainLayout: React.FC = () => {
                 className={({ isActive }) =>
                   `flex items-center px-4 py-3 rounded-lg transition-colors justify-between group ${
                     isActive && !isLocked
-                      ? 'bg-purple-50 dark:bg-purple-900/30 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 font-medium' 
+                      ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                   } ${isLocked ? 'cursor-pointer' : ''}`
                 }
@@ -260,7 +260,7 @@ const MainLayout: React.FC = () => {
                 <Menu size={24} />
               </button>
             )}
-            <span className="font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 tracking-tight">BillReve</span>
+            <span className="font-bold text-xl text-[#9333ea] dark:text-[#a855f7] dark:text-purple-400 tracking-tight">BillReve</span>
           </div>
           <div className="flex-1 hidden md:flex">
             {/* Desktop search placeholder */}
@@ -309,7 +309,7 @@ const MainLayout: React.FC = () => {
                   <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 rounded-t-xl">
                     <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Notifications</h3>
                     {unreadCount > 0 && (
-                      <button onClick={markAllAsRead} className="text-xs text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 hover:underline flex items-center gap-1">
+                      <button onClick={markAllAsRead} className="text-xs text-[#9333ea] dark:text-[#a855f7] hover:underline flex items-center gap-1">
                         <Check size={12} /> Mark all read
                       </button>
                     )}
@@ -365,7 +365,7 @@ const MainLayout: React.FC = () => {
             <div className="relative" ref={menuRef}>
               <button 
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/50 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 flex items-center justify-center font-bold hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 overflow-hidden ring-2 ring-transparent"
+                className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/50 text-[#9333ea] dark:text-[#a855f7] flex items-center justify-center font-bold hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 overflow-hidden ring-2 ring-transparent"
                 aria-label="User menu"
               >
                 {(() => {
@@ -441,7 +441,7 @@ const MainLayout: React.FC = () => {
           {/* Drawer */}
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
-              <span className="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400">BillReve</span>
+              <span className="font-bold text-2xl text-[#9333ea] dark:text-[#a855f7]">BillReve</span>
               <button
                 type="button"
                 className="relative -m-2 inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -470,7 +470,7 @@ const MainLayout: React.FC = () => {
                     className={({ isActive }) =>
                       `flex items-center px-4 py-3 rounded-lg transition-colors gap-4 ${
                         isActive && !isLocked
-                          ? 'bg-purple-50 dark:bg-purple-900/30 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 font-medium' 
+                          ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                       }`
                     }
@@ -534,7 +534,7 @@ const MainLayout: React.FC = () => {
                     className={({ isActive }) =>
                       `flex items-center px-4 py-3.5 rounded-xl transition-colors gap-4 ${
                         isActive && !isLocked
-                          ? 'bg-purple-50 dark:bg-purple-900/30 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 font-medium' 
+                          ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                       }`
                     }
@@ -555,7 +555,7 @@ const MainLayout: React.FC = () => {
                   <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-slate-700 dark:to-slate-800/50 border border-purple-100 dark:border-slate-600 p-4 flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <Crown size={18} className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400" />
+                        <Crown size={18} className="text-[#9333ea] dark:text-[#a855f7]" />
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white">Upgrade to Pro</h4>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400">Unlock advanced features</p>
@@ -584,7 +584,7 @@ const MainLayout: React.FC = () => {
                 className={({ isActive }) =>
                   `flex flex-col items-center justify-center w-full h-full space-y-1 ${
                     isActive && !isMoreMenuOpen
-                      ? 'text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400'
+                      ? 'text-[#9333ea] dark:text-[#a855f7]'
                       : 'text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'
                   }`
                 }
@@ -597,7 +597,7 @@ const MainLayout: React.FC = () => {
               onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
               className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
                 isMoreMenuOpen
-                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400'
+                  ? 'text-[#9333ea] dark:text-[#a855f7]'
                   : 'text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'
               }`}
             >
