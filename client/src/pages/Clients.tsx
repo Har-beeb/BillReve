@@ -58,9 +58,20 @@ const Clients: React.FC = () => {
   const handleSaveClient = async () => {
     if (!editingClient.name) return alert('Name is required');
     if (editingClient.localId) {
-       await db.clients.update(editingClient.localId, editingClient);
+       await db.clients.update(editingClient.localId, { ...editingClient, updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+       const updated = await db.clients.get(editingClient.localId);
+       if (updated) {
+         await db.syncQueue.add({
+           id: uuidv4(),
+           action: 'UPDATE',
+           entity: 'CLIENT',
+           payload: updated as any,
+           status: 'pending',
+           createdAt: new Date().toISOString()
+         });
+       }
     } else {
-       await db.clients.add({
+       const newClient = {
          localId: uuidv4(),
          name: editingClient.name,
          email: editingClient.email || '',
@@ -69,6 +80,15 @@ const Clients: React.FC = () => {
          createdAt: new Date().toISOString(),
          updatedAt: new Date().toISOString(),
          syncStatus: 'pending'
+       };
+       await db.clients.add(newClient as Client);
+       await db.syncQueue.add({
+         id: uuidv4(),
+         action: 'CREATE',
+         entity: 'CLIENT',
+         payload: newClient as any,
+         status: 'pending',
+         createdAt: new Date().toISOString()
        });
     }
     setIsModalOpen(false);
@@ -428,8 +448,8 @@ const Clients: React.FC = () => {
       </PreviewPanel>
 
       {/* Simple Add Client Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
             <div className="p-5 border-b border-slate-200 dark:border-slate-700 shrink-0">
               <h2 className="text-xl font-bold">{editingClient.localId ? 'Edit Client' : 'New Client'}</h2>
@@ -473,7 +493,7 @@ const Clients: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="p-5 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-end gap-3">
+            <div className="p-5 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-end gap-3 rounded-b-2xl">
                <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 font-medium text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg transition-colors">
                  Cancel
                </button>
@@ -482,7 +502,8 @@ const Clients: React.FC = () => {
                </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <ConfirmationModal
