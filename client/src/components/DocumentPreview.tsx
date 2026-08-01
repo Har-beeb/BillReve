@@ -203,7 +203,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         </div>
 
         <div className="mt-8 pt-8 text-center text-[10px] text-slate-400 w-full border-t border-slate-100">
-          Powered by <span className="font-semibold text-slate-500">{businessProfile.name || 'BillReve'}</span>
+          Powered by <span className="font-semibold text-slate-500">{isProUser ? (businessProfile.name || 'BillReve') : 'BillReve'}</span>
         </div>
       </div>
     </div>

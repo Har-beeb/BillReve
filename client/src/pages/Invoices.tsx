@@ -481,7 +481,7 @@ const Invoices: React.FC = () => {
                 onLongPress={() => toggleSelect(invoice.localId)}
                 onClick={() => setSelectedInvoice(invoice)}
                 style={{ animationDelay: `${index * 50}ms` }}
-                className={`group px-6 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(invoice.localId) ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
+                className={`group px-6 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(invoice.localId) || selectedInvoice?.localId === invoice.localId ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
               >
                 <div className="flex md:hidden gap-3 items-start py-4">
                   <div className="flex-shrink-0 pt-1">

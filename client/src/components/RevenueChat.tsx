@@ -119,7 +119,7 @@ export const RevenueChat: React.FC = () => {
         {!isOpen && <div className="absolute inset-0 bg-purple-400 rounded-full animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative p-4 text-white rounded-full transition-all duration-300 flex items-center justify-center group ${isOpen ? 'bg-slate-700 hover:bg-slate-800 shadow-lg rotate-90' : 'bg-[#9333ea] hover:bg-[#a855f7] shadow-[0_0_15px_rgba(147,51,234,0.5)] hover:shadow-[0_0_25px_rgba(147,51,234,0.8)] opacity-90 hover:opacity-100'}`}
+          className={`relative p-4 text-white rounded-full transition-all duration-300 flex items-center justify-center group ${isOpen ? 'bg-slate-700 hover:bg-slate-800 shadow-lg rotate-90' : 'bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/50 hover:shadow-purple-500/80 opacity-90 hover:opacity-100'}`}
         >
           {isOpen ? <X size={24} className="transition-transform duration-300" /> : <Sparkles size={24} className="group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />}
         </button>
@@ -193,7 +193,7 @@ export const RevenueChat: React.FC = () => {
               <button
                 type="submit"
                 disabled={!input.trim() || isTyping}
-                className="p-2.5 bg-purple-600 hover:bg-[var(--color-primary-700)] text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                className="p-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
               >
                 {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               </button>

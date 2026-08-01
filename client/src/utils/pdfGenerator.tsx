@@ -1,5 +1,6 @@
 // @refresh reset
 import { createRoot } from 'react-dom/client';
+import { useAppStore } from '../store/useAppStore';
 // @ts-ignore
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
 import { formatMoney } from './formatters';
@@ -144,7 +145,7 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
       </div>
 
       <div className="mt-16 text-center text-xs w-full" style={{ color: '#94a3b8' }}>
-         Powered by <span className="font-semibold">{profile?.name || 'BillReve'}</span>
+         Powered by <span className="font-semibold">{useAppStore.getState().isProUser ? (profile?.name || 'BillReve') : 'BillReve'}</span>
       </div>
     </div>
   );

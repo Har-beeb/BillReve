@@ -260,7 +260,7 @@ const MainLayout: React.FC = () => {
                 <Menu size={24} />
               </button>
             )}
-            <span className="font-bold text-xl text-[#9333ea] dark:text-[#a855f7] dark:text-purple-400 tracking-tight">BillReve</span>
+            <span className="font-bold text-xl text-purple-600 dark:text-purple-400 tracking-tight">BillReve</span>
           </div>
           <div className="flex-1 hidden md:flex">
             {/* Desktop search placeholder */}
@@ -441,7 +441,7 @@ const MainLayout: React.FC = () => {
           {/* Drawer */}
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
-              <span className="font-bold text-2xl text-[#9333ea] dark:text-[#a855f7]">BillReve</span>
+              <span className="font-bold text-2xl text-purple-600 dark:text-purple-400">BillReve</span>
               <button
                 type="button"
                 className="relative -m-2 inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -584,7 +584,7 @@ const MainLayout: React.FC = () => {
                 className={({ isActive }) =>
                   `flex flex-col items-center justify-center w-full h-full space-y-1 ${
                     isActive && !isMoreMenuOpen
-                      ? 'text-[#9333ea] dark:text-[#a855f7]'
+                      ? 'text-purple-600 dark:text-purple-400'
                       : 'text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'
                   }`
                 }
@@ -597,7 +597,7 @@ const MainLayout: React.FC = () => {
               onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
               className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
                 isMoreMenuOpen
-                  ? 'text-[#9333ea] dark:text-[#a855f7]'
+                  ? 'text-purple-600 dark:text-purple-400'
                   : 'text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400'
               }`}
             >

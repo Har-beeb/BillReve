@@ -5,6 +5,7 @@ import { draftAiEmail } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
 import { ProFeature } from './ui/ProFeature';
 import { db } from '../db/db';
+import { v4 as uuidv4 } from 'uuid';
 
 interface SendDocumentModalProps {
   isOpen: boolean;
@@ -138,6 +139,17 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       const result = await response.json();
       if (!result.success) throw new Error(result.message);
 
+      // Update status to SENT
+      if (documentType === 'Invoice') {
+        await db.invoices.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+        const updatedDoc = await db.invoices.get(documentId);
+        if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+      } else {
+        await db.quotes.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+        const updatedDoc = await db.quotes.get(documentId);
+        if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+      }
+
       alert(`${documentType} sent successfully!`);
       onClose();
     } catch (err) {
@@ -148,12 +160,28 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     }
   };
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     const defaultText = `Hi there,\n\nPlease find the link to your ${documentType} for the amount of ${amount} below:\n\n${publicLink}\n\nThank you!`;
     const messageToSend = customMessage.trim() ? `${customMessage.trim()}\n\n${publicLink}` : defaultText;
     const text = encodeURIComponent(messageToSend);
     // Using wa.me which will open WhatsApp app or web depending on device
     window.open(`https://wa.me/?text=${text}`, '_blank');
+    
+    try {
+      // Update status to SENT
+      if (documentType === 'Invoice') {
+        await db.invoices.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+        const updatedDoc = await db.invoices.get(documentId);
+        if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+      } else {
+        await db.quotes.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+        const updatedDoc = await db.quotes.get(documentId);
+        if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+      }
+    } catch (e) {
+      console.error('Failed to update status', e);
+    }
+
     onClose();
   };
 

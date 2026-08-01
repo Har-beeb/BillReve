@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Sparkles, Loader2 } from 'lucide-react';
 import { enhanceAiText } from '../api/ai';
+import { useAppStore } from '../store/useAppStore';
+import { ProFeature } from './ui/ProFeature';
 
 export interface LineItem {
   id: string;
@@ -24,6 +26,8 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
   onAddItem,
 }) => {
   const [enhancingId, setEnhancingId] = useState<string | null>(null);
+  const isProUser = useAppStore(state => state.isProUser);
+  const aiEnabled = import.meta.env.VITE_ENABLE_AI_FEATURES === 'true';
 
   const handleEnhance = async (id: string, text: string) => {
     if (!text.trim()) return;
@@ -66,14 +70,21 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
                   placeholder="Item description"
                   className="w-full p-3.5 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all font-medium text-sm shadow-sm md:shadow-none"
                 />
-                <button
-                  onClick={() => handleEnhance(item.id, item.description)}
-                  disabled={enhancingId === item.id || !item.description.trim()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-md transition-all opacity-0 group-hover/input:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  title="Enhance Description with AI"
-                >
-                  {enhancingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                </button>
+                {aiEnabled && (
+                  <ProFeature 
+                    isProUser={isProUser}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/input:opacity-100 transition-all"
+                  >
+                    <button
+                      onClick={() => handleEnhance(item.id, item.description)}
+                      disabled={enhancingId === item.id || !item.description.trim()}
+                      className="p-1.5 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      title="Enhance Description with AI"
+                    >
+                      {enhancingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    </button>
+                  </ProFeature>
+                )}
               </div>
             </div>
             

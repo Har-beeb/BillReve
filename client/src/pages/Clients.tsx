@@ -430,11 +430,11 @@ const Clients: React.FC = () => {
       {/* Simple Add Client Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-5 border-b border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="p-5 border-b border-slate-200 dark:border-slate-700 shrink-0">
               <h2 className="text-xl font-bold">{editingClient.localId ? 'Edit Client' : 'New Client'}</h2>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-sm font-medium mb-1">Company / Name *</label>
                 <input 

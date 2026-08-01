@@ -25,6 +25,7 @@ interface DocumentEditorProps {
 const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const navigate = useNavigate();
   const { businessProfile, taxSettings, user, isProUser } = useAppStore();
+  const aiEnabled = import.meta.env.VITE_ENABLE_AI_FEATURES === 'true';
   const clients = useLiveQuery(() => db.clients.filter(x => !x.deletedAt).toArray()) || [];
   const invoicesList = useLiveQuery(() => db.invoices.filter(x => !x.deletedAt).toArray()) || [];
   const quotesList = useLiveQuery(() => db.quotes.filter(x => !x.deletedAt).toArray()) || [];
@@ -125,10 +126,15 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     }));
   };
 
-  const handleSave = async (status: 'DRAFT' | 'SENT') => {
-    if (!clientId && !isCreatingClient) return alert('Please select a client');
-    
-    let finalClientId = clientId;
+  const handleSave = async (intendedStatus: 'DRAFT' | 'SENT') => {
+    try {
+      if (!clientId && !isCreatingClient) {
+        alert('Please select or create a client');
+        return;
+      }
+      
+      const finalStatus = intendedStatus === 'SENT' ? (initialDoc?.status || 'DRAFT') : intendedStatus;
+      let finalClientId = clientId;
     
     // Create client on the fly if needed
     if (isCreatingClient && newClientName) {
@@ -179,7 +185,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         quoteNumber: initialDoc?.quoteNumber || documentNumber,
         expiresAt: dueDate ? new Date(dueDate).toISOString() : undefined,
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        status: status as any,
+        status: finalStatus as any,
       };
       
       if (isEditing) {
@@ -204,7 +210,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         });
       }
       
-      if (status === 'SENT') {
+      if (intendedStatus === 'SENT') {
         setSavedDocumentId(docBase.localId);
         setSavedDocumentAmount(docBase.total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
         setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === finalClientId)?.email || '');
@@ -217,7 +223,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         ...docBase,
         invoiceNumber: initialDoc?.invoiceNumber || documentNumber,
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        status: status as any,
+        status: finalStatus as any,
         amountPaid: initialDoc?.amountPaid || 0,
         isRecurring: initialDoc?.isRecurring || false,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined
@@ -245,7 +251,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         });
       }
       
-      if (status === 'SENT') {
+      if (intendedStatus === 'SENT') {
         setSavedDocumentId(docBase.localId);
         setSavedDocumentAmount(docBase.total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
         setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === finalClientId)?.email || '');
@@ -253,6 +259,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       } else {
         navigate('/invoices');
       }
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -370,6 +379,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             <div>
                <div className="flex justify-between items-center mb-1.5">
                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Terms & Notes</label>
+                {aiEnabled && (
                  <ProFeature isProUser={isProUser} className="flex-shrink-0 ml-2">
                    <button
                      onClick={handleEnhanceNote}
@@ -381,6 +391,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
                      <span>AI Expand</span>
                    </button>
                  </ProFeature>
+                )}
                </div>
                <textarea 
                  rows={3}

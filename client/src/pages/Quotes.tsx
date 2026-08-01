@@ -487,7 +487,7 @@ const Quotes: React.FC = () => {
                 onLongPress={() => toggleSelect(quote.localId)}
                 onClick={() => setSelectedQuote(quote)}
                 style={{ animationDelay: `${index * 50}ms` }}
-                className={`group px-6 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(quote.localId) ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
+                className={`group px-6 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(quote.localId) || selectedQuote?.localId === quote.localId ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
               >
                 {/* --- MOBILE VIEW --- */}
                 <div className="flex md:hidden gap-3 items-start py-4">

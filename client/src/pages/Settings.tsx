@@ -306,7 +306,7 @@ const Settings: React.FC = () => {
                         className="text-purple-600 focus:ring-purple-500 w-4 h-4"
                       />
                       <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                        <div className="w-4 h-4 shrink-0 rounded-full bg-purple-600"></div>
+                        <div className="w-4 h-4 shrink-0 rounded-full bg-[#9333ea]"></div>
                         Vibrant Violet
                       </span>
                     </div>
