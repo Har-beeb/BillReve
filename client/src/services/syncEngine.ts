@@ -111,18 +111,10 @@ class SyncEngine {
         const payloadSnakeCase = toSnakeCase(item.payload);
         
         // We always use local_id to match rows in Supabase
-        if (item.action === 'CREATE') {
+        if (item.action === 'CREATE' || item.action === 'UPDATE') {
           const { error } = await supabase
             .from(tableName)
             .upsert({ ...payloadSnakeCase, user_id: session.user.id }, { onConflict: 'user_id, local_id' });
-            
-          if (error) throw error;
-          
-        } else if (item.action === 'UPDATE') {
-          const { error } = await supabase
-            .from(tableName)
-            .update({ ...payloadSnakeCase, user_id: session.user.id })
-            .eq('local_id', payloadSnakeCase.local_id);
             
           if (error) throw error;
           
