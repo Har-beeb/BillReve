@@ -3,6 +3,7 @@ import { Card } from '../components/ui';
 import { CircleDollarSign, Save, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 const Payments: React.FC = () => {
   const { businessProfile, updateBusinessProfile, user } = useAppStore();
@@ -67,10 +68,10 @@ const Payments: React.FC = () => {
 
       if (secretsError) throw secretsError;
 
-      alert('Payment settings saved successfully!');
+      toast.success('Payment settings saved successfully!');
     } catch (err) {
       console.error('Error saving payments:', err);
-      alert('Failed to save settings.');
+      toast.error('Failed to save settings.');
     } finally {
       setSaving(false);
     }

@@ -15,6 +15,7 @@ import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { useQuota } from '../hooks/useQuota';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import toast from 'react-hot-toast';
 
 /**
  * Clients Component
@@ -56,7 +57,7 @@ const Clients: React.FC = () => {
   const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedClients, (c) => c.localId);
 
   const handleSaveClient = async () => {
-    if (!editingClient.name) return alert('Name is required');
+    if (!editingClient.name) return toast.error('Name is required');
     if (editingClient.localId) {
        await db.clients.update(editingClient.localId, { ...editingClient, updatedAt: new Date().toISOString(), syncStatus: 'pending' });
        const updated = await db.clients.get(editingClient.localId);
@@ -139,7 +140,7 @@ const Clients: React.FC = () => {
 
   const handleBulkExportCsv = () => {
     if (selectedIds.size === 0) {
-      alert('Please select at least one client to export.');
+      toast.error('Please select at least one client to export.');
       return;
     }
     const selectedClients = clients.filter(c => selectedIds.has(c.localId));

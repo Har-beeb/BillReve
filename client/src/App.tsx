@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Quotes from './pages/Quotes';
@@ -109,6 +110,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="bottom-right" />
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />

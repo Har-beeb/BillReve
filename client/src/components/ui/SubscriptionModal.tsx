@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle2, Sparkles, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,8 +39,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
     'Priority Support'
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
         className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
@@ -96,7 +97,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
           
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

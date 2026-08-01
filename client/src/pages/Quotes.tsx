@@ -19,6 +19,7 @@ import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { useQuota } from '../hooks/useQuota';
+import toast from 'react-hot-toast';
 
 /**
  * Quotes Component
@@ -56,18 +57,7 @@ const Quotes: React.FC = () => {
   const [activeCard, setActiveCard] = useState(0);
   const carouselRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    const previewId = searchParams.get('preview');
-    if (previewId && quotes.length > 0) {
-      const q = quotes.find(q => q.localId === previewId);
-      if (q) {
-        setSelectedQuote(q);
-        // Clean up URL without triggering navigation
-        searchParams.delete('preview');
-        setSearchParams(searchParams, { replace: true });
-      }
-    }
-  }, [searchParams, quotes, setSearchParams]);
+
 
   const handleScroll = () => {
     if (carouselRef.current) {
@@ -98,13 +88,32 @@ const Quotes: React.FC = () => {
   const { currentPage, setCurrentPage, totalPages, paginatedItems: paginatedQuotes } = usePagination(filteredQuotes, 10);
   const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedQuotes, (q) => q.localId);
 
+  React.useEffect(() => {
+    const previewId = searchParams.get('preview');
+    if (previewId && quotes.length > 0) {
+      const q = quotes.find(q => q.localId === previewId);
+      if (q) {
+        setSelectedQuote(q);
+        setSelectedIds(new Set([q.localId]));
+        
+        const index = filteredQuotes.findIndex(i => i.localId === q.localId);
+        if (index !== -1) {
+          setCurrentPage(Math.ceil((index + 1) / 10));
+        }
+
+        searchParams.delete('preview');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, quotes, setSearchParams, setSelectedIds, setCurrentPage, filteredQuotes]);
+
   const handleDownloadPdf = async (quote: Quote) => {
     try {
       const client = clients.find(c => c.localId === quote.clientId);
       await generateDocumentPdf(quote, client, businessProfile, 'QUOTE', true);
     } catch (err) {
       console.error('Failed to generate PDF', err);
-      alert('Failed to generate PDF');
+      toast.error('Failed to generate PDF');
     }
   };
 
@@ -143,7 +152,7 @@ const Quotes: React.FC = () => {
 
   const handleBulkExportPdf = async () => {
     if (selectedIds.size === 0) {
-      alert('Please select at least one quote to export.');
+      toast.error('Please select at least one quote to export.');
       return;
     }
     for (const id of selectedIds) {
@@ -156,7 +165,7 @@ const Quotes: React.FC = () => {
 
   const handleBulkExportCsv = () => {
     if (selectedIds.size === 0) {
-      alert('Please select at least one quote to export.');
+      toast.error('Please select at least one quote to export.');
       return;
     }
     const selectedQuotes = quotes.filter(q => selectedIds.has(q.localId));
@@ -183,7 +192,7 @@ const Quotes: React.FC = () => {
 
   const handleConvertSelected = () => {
     if (selectedIds.size !== 1) {
-      alert('Please select exactly one quote to convert.');
+      toast.error('Please select exactly one quote to convert.');
       return;
     }
     const id = Array.from(selectedIds)[0];
@@ -534,7 +543,7 @@ const Quotes: React.FC = () => {
                           ] : []),
                           { label: 'Copy Link', onClick: () => {
                             navigator.clipboard.writeText(`${window.location.origin}/quote/${quote.localId}`);
-                            alert('Link copied to clipboard');
+                            toast.success('Link copied to clipboard');
                           } },
                           ...((quote.status === 'SENT' || quote.status === 'ACCEPTED') ? [{ label: 'Convert to Invoice', onClick: () => {
                             const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = quote;
@@ -599,7 +608,7 @@ const Quotes: React.FC = () => {
                          ] : []),
                          { label: 'Copy Link', onClick: () => {
                            navigator.clipboard.writeText(`${window.location.origin}/quote/${quote.localId}`);
-                           alert('Link copied to clipboard');
+                           toast.success('Link copied to clipboard');
                          } },
                          ...((quote.status === 'SENT' || quote.status === 'ACCEPTED') ? [{ label: 'Convert to Invoice', onClick: () => {
                             const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = quote;
@@ -670,7 +679,7 @@ const Quotes: React.FC = () => {
                 ] : []),
                 { label: 'Copy Link', onClick: () => {
                   navigator.clipboard.writeText(`${window.location.origin}/quote/${selectedQuote.localId}`);
-                  alert('Link copied to clipboard');
+                  toast.success('Link copied to clipboard');
                 } },
                 { label: 'Send / Share', onClick: () => { setQuoteToSend(selectedQuote); setSendModalOpen(true); setSelectedQuote(null); } }
               ]} 

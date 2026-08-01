@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { UploadCloud, CheckCircle, ArrowRight, Database } from 'lucide-react';
 import { parseCSV, downloadTemplate, type ImportType } from '../utils/csvParser';
 import { useAppStore } from '../store/useAppStore';
 import { v4 as uuidv4 } from 'uuid';
+import toast from 'react-hot-toast';
 
 interface CsvImportWizardProps {
   onClose: () => void;
@@ -31,10 +33,10 @@ export const CsvImportWizard: React.FC<CsvImportWizardProps> = ({ onClose, defau
         setHeaders(results.meta.fields || Object.keys(results.data[0]));
         setStep(2);
       } else {
-        alert('The CSV file appears to be empty.');
+        toast.error('The CSV file appears to be empty.');
       }
     } catch (err: any) {
-      alert('Error parsing CSV: ' + err.message);
+      toast.error('Error parsing CSV: ' + err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -97,17 +99,17 @@ export const CsvImportWizard: React.FC<CsvImportWizardProps> = ({ onClose, defau
         }
       }
       
-      alert(`Successfully imported ${importedCount} ${importType}!`);
+      toast.success(`Successfully imported ${importedCount} ${importType}!`);
       onClose();
     } catch (err: any) {
-      alert('Error during import: ' + err.message);
+      toast.error('Error during import: ' + err.message);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-200">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
@@ -227,6 +229,7 @@ export const CsvImportWizard: React.FC<CsvImportWizardProps> = ({ onClose, defau
               <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Ready to Import!</h3>
               <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">
                 You are about to import <strong className="text-slate-900 dark:text-white">{csvData.length}</strong> {importType} into your BillReve workspace.
+import toast from 'react-hot-toast';
               </p>
 
               <div className="flex justify-center gap-4">
@@ -243,6 +246,7 @@ export const CsvImportWizard: React.FC<CsvImportWizardProps> = ({ onClose, defau
 
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

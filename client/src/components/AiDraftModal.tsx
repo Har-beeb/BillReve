@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Wand2, UploadCloud, FileText, Loader2, Sparkles } from 'lucide-react';
 import { generateAiQuote } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
@@ -75,8 +76,8 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-purple-50/50 to-indigo-50/50 dark:from-slate-800/50 dark:to-slate-800/50">
@@ -206,6 +207,7 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

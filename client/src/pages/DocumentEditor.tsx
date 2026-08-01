@@ -10,6 +10,7 @@ import { DocumentItemsTable, type LineItem } from '../components/DocumentItemsTa
 import { DocumentPreview } from '../components/DocumentPreview';
 import { enhanceAiText } from '../api/ai';
 import { ProFeature } from '../components/ui/ProFeature';
+import toast from 'react-hot-toast';
 
 interface DocumentEditorProps {
   type: 'QUOTE' | 'INVOICE';
@@ -129,7 +130,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const handleSave = async (intendedStatus: 'DRAFT' | 'SENT') => {
     try {
       if (!clientId && !isCreatingClient) {
-        alert('Please select or create a client');
+        toast.error('Please select or create a client');
         return;
       }
       

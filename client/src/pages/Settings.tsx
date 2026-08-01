@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { ProFeature } from '../components/ui/ProFeature';
 import { CsvImportWizard } from '../components/CsvImportWizard';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import toast from 'react-hot-toast';
 
 const Settings: React.FC = () => {
   const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, syncStatus, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
@@ -80,19 +81,19 @@ const Settings: React.FC = () => {
           .eq('id', user.id);
           
         if (error) throw error;
-        alert('Profile saved successfully!');
+        toast.success('Profile saved successfully!');
       } catch (err: any) {
         console.error('Failed to save profile to DB:', err);
-        alert('Saved locally, but failed to sync to server: ' + err.message);
+        toast.error('Saved locally, but failed to sync to server: ' + err.message);
       }
     } else {
-      alert('Profile saved locally!');
+      toast.error('Profile saved locally!');
     }
   };
 
   const handleSaveTaxes = () => {
     updateTaxSettings(localTaxes);
-    alert('Tax settings saved successfully!');
+    toast.success('Tax settings saved successfully!');
   };
 
   const addTaxRule = () => {

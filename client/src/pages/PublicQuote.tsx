@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle2, Download, MessageSquare } from 'lucide-react
 import { formatMoney } from '../utils/formatters';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { db } from '../db/db';
+import toast from 'react-hot-toast';
 
 const PublicQuote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -191,7 +192,7 @@ const PublicQuote: React.FC = () => {
       await generateDocumentPdf(docData, profile, client, 'QUOTE', true);
     } catch (err) {
       console.error('Download failed:', err);
-      alert('Failed to generate PDF. Please try again.');
+      toast.error('Failed to generate PDF. Please try again.');
     } finally {
       setIsDownloading(false);
     }

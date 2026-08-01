@@ -4,6 +4,7 @@ import { db } from '../db/db';
 import { Mail, Send, Loader2, Sparkles, CheckSquare, Square } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { ProFeature } from '../components/ui/ProFeature';
+import toast from 'react-hot-toast';
 
 const Campaigns: React.FC = () => {
   const { businessProfile, isProUser } = useAppStore();
@@ -41,12 +42,12 @@ const Campaigns: React.FC = () => {
   const handleSendCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedClients.size === 0) {
-      alert('Please select at least one client to send the campaign to.');
+      toast.error('Please select at least one client to send the campaign to.');
       return;
     }
     
     if (!subject || !content) {
-      alert('Subject and content are required.');
+      toast.error('Subject and content are required.');
       return;
     }
 
@@ -57,7 +58,7 @@ const Campaigns: React.FC = () => {
         .map(c => c.email as string);
         
       if (selectedClientEmails.length === 0) {
-        alert('None of the selected clients have valid email addresses.');
+        toast.error('None of the selected clients have valid email addresses.');
         setIsSending(false);
         return;
       }
@@ -79,7 +80,7 @@ const Campaigns: React.FC = () => {
       const result = await response.json();
       if (!result.success) throw new Error(result.message);
 
-      alert(`Campaign sent successfully to ${selectedClientEmails.length} recipients!`);
+      toast.success(`Campaign sent successfully to ${selectedClientEmails.length} recipients!`);
       // Reset form
       setSubject('');
       setTitle('');
@@ -90,7 +91,7 @@ const Campaigns: React.FC = () => {
       setSelectedClients(new Set());
     } catch (err: any) {
       console.error('Failed to send campaign:', err);
-      alert(err.message || 'Failed to send campaign. Please try again.');
+      toast.error(err.message || 'Failed to send campaign. Please try again.');
     } finally {
       setIsSending(false);
     }
@@ -105,7 +106,7 @@ const Campaigns: React.FC = () => {
       setSubject('Exciting Updates from ' + (businessProfile.name || 'us'));
     } catch (err) {
       console.error('Failed to draft email:', err);
-      alert('Failed to generate draft.');
+      toast.error('Failed to generate draft.');
     } finally {
       setIsDrafting(false);
     }

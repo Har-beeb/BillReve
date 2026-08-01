@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, subMonths, subDays, isSameMonth, isSameDay, parseISO, isAfter, isBefore, startOfDay, endOfDay, subWeeks, subYears, differenceInDays } from 'date-fns';
 import { generateTaxReportCsv } from '../utils/csvGenerator';
 import { useAppStore } from '../store/useAppStore';
+import toast from 'react-hot-toast';
 
 type Timeframe = 'day' | 'week' | 'month' | '3month' | '6month' | 'year' | 'custom';
 
@@ -161,7 +162,7 @@ const Reports: React.FC = () => {
 
   const handleExportCsv = () => {
     if (invoices.length === 0 || clients.length === 0) {
-      alert("No data available to export.");
+      toast.error("No data available to export.");
       return;
     }
     generateTaxReportCsv(filteredInvoices, clients, businessProfile.country || 'NG');

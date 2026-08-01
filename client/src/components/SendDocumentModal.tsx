@@ -7,6 +7,7 @@ import { useAppStore } from '../store/useAppStore';
 import { ProFeature } from './ui/ProFeature';
 import { db } from '../db/db';
 import { v4 as uuidv4 } from 'uuid';
+import toast from 'react-hot-toast';
 
 interface SendDocumentModalProps {
   isOpen: boolean;
@@ -84,7 +85,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       }
     } catch (err) {
       console.error('Failed to draft email:', err);
-      alert('Failed to draft email.');
+      toast.error('Failed to draft email.');
     } finally {
       setIsDrafting(false);
     }
@@ -151,11 +152,11 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
         if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
       }
 
-      alert(`${documentType} sent successfully!`);
+      toast.success(`${documentType} sent successfully!`);
       onClose();
     } catch (err) {
       console.error('Failed to send email:', err);
-      alert('Failed to send email. Please try again.');
+      toast.error('Failed to send email. Please try again.');
     } finally {
       setIsSending(false);
     }

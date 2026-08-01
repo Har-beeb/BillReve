@@ -20,6 +20,7 @@ import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { useQuota } from '../hooks/useQuota';
+import toast from 'react-hot-toast';
 
 const Invoices: React.FC = () => {
   const navigate = useNavigate();
@@ -54,18 +55,7 @@ const Invoices: React.FC = () => {
   const [activeCard, setActiveCard] = useState(0);
   const carouselRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    const previewId = searchParams.get('preview');
-    if (previewId && invoices.length > 0) {
-      const inv = invoices.find(i => i.localId === previewId);
-      if (inv) {
-        setSelectedInvoice(inv);
-        // Clean up URL without triggering navigation
-        searchParams.delete('preview');
-        setSearchParams(searchParams, { replace: true });
-      }
-    }
-  }, [searchParams, invoices, setSearchParams]);
+
 
   React.useEffect(() => {
     const checkOverdue = async () => {
@@ -124,13 +114,31 @@ const Invoices: React.FC = () => {
   const { currentPage, setCurrentPage, totalPages, paginatedItems: paginatedInvoices } = usePagination(filteredInvoices, 10);
   const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedInvoices, (i) => i.localId);
 
+  React.useEffect(() => {
+    const previewId = searchParams.get('preview');
+    if (previewId && invoices.length > 0) {
+      const inv = invoices.find(i => i.localId === previewId);
+      if (inv) {
+        setSelectedInvoice(inv);
+        setSelectedIds(new Set([inv.localId]));
+        
+        const index = filteredInvoices.findIndex(i => i.localId === inv.localId);
+        if (index !== -1) {
+          setCurrentPage(Math.ceil((index + 1) / 10));
+        }
+
+        searchParams.delete('preview');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, invoices, setSearchParams, setSelectedIds, setCurrentPage, filteredInvoices]);
   const handleDownloadPdf = async (invoice: Invoice) => {
     try {
       const client = clients.find(c => c.localId === invoice.clientId);
       await generateDocumentPdf(invoice, client, businessProfile, 'INVOICE', true);
     } catch (err) {
       console.error('Failed to generate PDF', err);
-      alert('Failed to generate PDF');
+      toast.error('Failed to generate PDF');
     }
   };
 
@@ -169,7 +177,7 @@ const Invoices: React.FC = () => {
 
   const handleBulkExportPdf = async () => {
     if (selectedIds.size === 0) {
-      alert('Please select at least one invoice to export.');
+      toast.error('Please select at least one invoice to export.');
       return;
     }
     for (const id of selectedIds) {
@@ -182,7 +190,7 @@ const Invoices: React.FC = () => {
 
   const handleBulkExportCsv = () => {
     if (selectedIds.size === 0) {
-      alert('Please select at least one invoice to export.');
+      toast.error('Please select at least one invoice to export.');
       return;
     }
     const selectedInvoices = invoices.filter(i => selectedIds.has(i.localId));
@@ -526,7 +534,7 @@ const Invoices: React.FC = () => {
                           { label: invoice.status === 'OVERDUE' ? 'Send Reminder' : 'Send / Share', onClick: () => { setInvoiceToSend(invoice); setSendModalOpen(true); } },
                           { label: 'Copy Payment Link', onClick: () => {
                             navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.localId}`);
-                            alert('Payment link copied!');
+                            toast.success('Payment link copied!');
                           }},
                           { label: 'Delete', onClick: () => { setInvoiceToDelete(invoice.localId); setDeleteModalOpen(true); }, variant: 'danger' }
                         ]} />
@@ -585,7 +593,7 @@ const Invoices: React.FC = () => {
                          { label: invoice.status === 'OVERDUE' ? 'Send Reminder' : 'Send / Share', onClick: () => { setInvoiceToSend(invoice); setSendModalOpen(true); } },
                          { label: 'Copy Payment Link', onClick: () => {
                            navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.localId}`);
-                           alert('Payment link copied!');
+                           toast.success('Payment link copied!');
                          }},
                          { label: 'Delete', onClick: () => { setInvoiceToDelete(invoice.localId); setDeleteModalOpen(true); }, variant: 'danger' }
                        ]} />
@@ -641,7 +649,7 @@ const Invoices: React.FC = () => {
                 ...((selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'OVERDUE' || selectedInvoice.status === 'SENT') ? [
                   { label: 'Copy Payment Link', onClick: () => {
                     navigator.clipboard.writeText(`${window.location.origin}/pay/${selectedInvoice.localId}`);
-                    alert('Payment link copied to clipboard');
+                    toast.success('Payment link copied to clipboard');
                   } },
                   { label: 'Send / Share', onClick: () => { setInvoiceToSend(selectedInvoice); setSendModalOpen(true); setSelectedInvoice(null); } }
                 ] : [])

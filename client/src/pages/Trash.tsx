@@ -23,11 +23,11 @@ const Trash: React.FC = () => {
     try {
       if (type === 'restore') {
         if (entity === 'CLIENT') {
-          await db.clients.update(localId, { deletedAt: undefined, syncStatus: 'pending' });
+          await db.clients.update(localId, { deletedAt: '', syncStatus: 'pending' });
         } else if (entity === 'INVOICE') {
-          await db.invoices.update(localId, { deletedAt: undefined, syncStatus: 'pending' });
+          await db.invoices.update(localId, { deletedAt: '', syncStatus: 'pending' });
         } else if (entity === 'QUOTE') {
-          await db.quotes.update(localId, { deletedAt: undefined, syncStatus: 'pending' });
+          await db.quotes.update(localId, { deletedAt: '', syncStatus: 'pending' });
         }
 
         await db.syncQueue.add({

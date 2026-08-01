@@ -8,6 +8,7 @@ import { formatMoney } from '../utils/formatters';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { db } from '../db/db';
 import { useAppStore } from '../store/useAppStore';
+import toast from 'react-hot-toast';
 
 const PublicInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -133,7 +134,7 @@ const PublicInvoice: React.FC = () => {
       await generateDocumentPdf(docData, profile, client, 'INVOICE', true);
     } catch (err) {
       console.error('Download failed:', err);
-      alert('Failed to generate PDF. Please try again.');
+      toast.error('Failed to generate PDF. Please try again.');
     } finally {
       setIsDownloading(false);
     }

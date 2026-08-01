@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, DollarSign } from 'lucide-react';
 import type { Invoice } from '../types';
+import toast from 'react-hot-toast';
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -25,11 +27,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const handleConfirm = async () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      alert("Please enter a valid amount.");
+      toast.error("Please enter a valid amount.");
       return;
     }
     if (numAmount > balanceDue) {
-      alert("Amount cannot exceed the balance due.");
+      toast.error("Amount cannot exceed the balance due.");
       return;
     }
     setIsSubmitting(true);
@@ -41,8 +43,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
       
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm relative z-10 p-6">
@@ -92,6 +94,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
