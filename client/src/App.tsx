@@ -14,6 +14,7 @@ import ResetPassword from './pages/ResetPassword';
 import PublicInvoice from './pages/PublicInvoice';
 import PublicQuote from './pages/PublicQuote';
 import Reports from './pages/Reports';
+import Campaigns from './pages/Campaigns';
 import Trash from './pages/Trash';
 import Payments from './pages/Payments';
 import About from './pages/About';
@@ -125,6 +126,7 @@ function App() {
           <Route path="invoices" element={<Invoices />} />
           <Route path="invoices/new" element={<DocumentEditor type="INVOICE" />} />
           <Route path="clients" element={<Clients />} />
+          <Route path="campaigns" element={<Campaigns />} />
           <Route path="settings" element={<Settings />} />
           <Route path="reports" element={<Reports />} />
           <Route path="trash" element={<Trash />} />

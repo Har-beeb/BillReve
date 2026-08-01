@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Mail, MessageCircle, Loader2, Sparkles } from 'lucide-react';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { draftAiEmail } from '../api/ai';
@@ -185,8 +186,8 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
@@ -257,7 +258,8 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FileText, FileSignature, Users, Settings, 
   RefreshCw, CheckCircle2, Clock, XCircle, 
   Sun, Moon, LogOut, User, CreditCard,
-  BarChart3, WalletCards, Info, Crown, Menu, Bell, Check, MoreHorizontal, Trash2
+  BarChart3, WalletCards, Info, Crown, Menu, Bell, Check, MoreHorizontal, Trash2, Mail
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { syncEngine } from '../services/syncEngine';
@@ -127,6 +127,7 @@ const MainLayout: React.FC = () => {
     { name: 'Quotes', path: '/quotes', icon: <FileSignature size={20} /> },
     { name: 'Invoices', path: '/invoices', icon: <FileText size={20} /> },
     { name: 'Clients', path: '/clients', icon: <Users size={20} /> },
+    { name: 'Campaigns', path: '/campaigns', icon: <Mail size={20} />, isPro: true },
     { name: 'Reports', path: '/reports', icon: <BarChart3 size={20} />, isPro: true },
     { name: 'Payments', path: '/payments', icon: <WalletCards size={20} />, isPro: true },
     { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
