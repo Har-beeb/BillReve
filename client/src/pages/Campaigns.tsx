@@ -4,6 +4,7 @@ import { db } from '../db/db';
 import { Mail, Send, Loader2, Sparkles, CheckSquare, Square } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { ProFeature } from '../components/ui/ProFeature';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 const Campaigns: React.FC = () => {
@@ -63,22 +64,26 @@ const Campaigns: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/email/send-marketing`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // 1. Construct HTML for the marketing campaign
+      const htmlContent = `
+        <div style="font-family: sans-serif; max-w-xl mx-auto p-6 border border-gray-200 rounded-lg shadow-sm">
+          ${title ? `<h1 style="color: #4F46E5; margin-bottom: 20px;">${title}</h1>` : ''}
+          <div style="color: #374151; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${content}</div>
+          ${ctaText && ctaLink ? `<div style="margin-top: 30px; text-align: center;"><a href="${ctaLink}" style="background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">${ctaText}</a></div>` : ''}
+        </div>
+      `;
+
+      // 2. Send to Supabase Edge Function
+      const { data: result, error } = await supabase.functions.invoke('send-email', {
+        body: {
           to: selectedClientEmails,
           subject,
-          title: title || undefined,
-          previewText: previewText || undefined,
-          content,
-          ctaText: ctaText || undefined,
-          ctaLink: ctaLink || undefined
-        })
+          html: htmlContent
+        }
       });
 
-      const result = await response.json();
-      if (!result.success) throw new Error(result.message);
+      if (error) throw new Error(error.message);
+      if (!result?.success) throw new Error(result?.error?.message || 'Failed to send campaign');
 
       toast.success(`Campaign sent successfully to ${selectedClientEmails.length} recipients!`);
       // Reset form

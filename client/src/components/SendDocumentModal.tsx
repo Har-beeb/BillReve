@@ -4,6 +4,7 @@ import { X, Mail, MessageCircle, Loader2, Sparkles } from 'lucide-react';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { draftAiEmail } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
+import { supabase } from '../lib/supabase';
 import { ProFeature } from './ui/ProFeature';
 import { db } from '../db/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -111,35 +112,37 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
 
       // 2. Generate PDF as base64
       const pdfBase64 = await generateDocumentPdf(document, client, businessProfile, documentType.toUpperCase() as any, false);
+      if (!pdfBase64) throw new Error('Failed to generate PDF document');
       
-      // 3. Send to backend
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/email/send-document`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // 3. Construct HTML
+      const htmlContent = `
+        <div style="font-family: sans-serif; max-w-xl mx-auto p-4 border border-gray-200 rounded-lg shadow-sm">
+          <h2 style="color: #4F46E5;">Your ${documentType} from ${businessProfile.name || 'BillReve'}</h2>
+          <p>Hi ${client?.name || 'Client'},</p>
+          <p>Please find your ${documentType.toLowerCase()} attached.</p>
+          <p><strong>Amount:</strong> ${amount}</p>
+          ${(document as any).dueDate ? `<p><strong>Due Date:</strong> ${new Date((document as any).dueDate).toLocaleDateString()}</p>` : ''}
+          ${customMessage ? `<p style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #8b5cf6;">${customMessage}</p>` : ''}
+          ${documentType === 'Invoice' && publicLink ? `<div style="margin-top: 24px;"><a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">View & Pay Online</a></div>` : ''}
+        </div>
+      `;
+
+      // 4. Send to Supabase Edge Function
+      const { data: result, error } = await supabase.functions.invoke('send-email', {
+        body: {
           to: clientEmail,
           subject: `Your ${documentType} from ${businessProfile.name || 'BillReve'}`,
-          documentData: {
-            type: documentType.toUpperCase(),
-            documentNumber: (document as any).invoiceNumber || (document as any).quoteNumber || documentId.slice(0,8),
-            clientName: client?.name || 'Client',
-            amount: amount,
-            dueDate: (document as any).dueDate ? new Date((document as any).dueDate).toLocaleDateString() : undefined,
-            businessName: businessProfile.name || 'BillReve',
-            paymentLink: documentType === 'Invoice' ? publicLink : undefined,
-            customMessage: customMessage.trim() || undefined
-          },
+          html: htmlContent,
           attachments: [
             {
               filename: `${documentType.toLowerCase()}-${(document as any).invoiceNumber || (document as any).quoteNumber || documentId.slice(0,8)}.pdf`,
-              content: pdfBase64
+              content: pdfBase64.split('base64,')[1] || pdfBase64 // Ensure only raw base64 data without URI prefix
             }
           ]
-        })
+        }
       });
-
-      const result = await response.json();
-      if (!result.success) throw new Error(result.message);
+      if (error) throw new Error(error.message);
+      if (!result?.success) throw new Error(result?.error?.message || 'Failed to send email');
 
       // Update status to SENT
       if (documentType === 'Invoice') {
