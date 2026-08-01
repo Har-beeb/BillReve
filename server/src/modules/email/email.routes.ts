@@ -12,10 +12,11 @@ const sendDocumentSchema = z.object({
     type: z.enum(['QUOTE', 'INVOICE']).optional(),
     documentNumber: z.string().optional(),
     clientName: z.string().optional(),
-    amount: z.number().optional(),
+    amount: z.union([z.string(), z.number()]).optional(),
     dueDate: z.string().optional(),
     businessName: z.string().optional(),
     paymentLink: z.string().optional(),
+    customMessage: z.string().optional(),
   }),
   attachments: z.array(z.any()).optional()
 });
