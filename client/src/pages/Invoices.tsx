@@ -502,26 +502,28 @@ const Invoices: React.FC = () => {
                     />
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex justify-between items-start">
-                      <div className="font-bold text-base text-slate-900 dark:text-slate-100">
-                        {invoice.invoiceNumber || invoice.localId.slice(0, 8)}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="font-bold text-base text-slate-900 dark:text-slate-100">
+                          {invoice.invoiceNumber || invoice.localId.slice(0, 8)}
+                        </div>
+                        <div className="text-slate-400 text-xs mt-0.5">
+                          {formatDate(invoice.issuedAt)}
+                        </div>
                       </div>
                       <div className="font-bold text-base text-slate-900 dark:text-slate-100">
                          {formatMoney(invoice.total, invoice.currency)}
                       </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <div className="text-slate-600 dark:text-slate-400 font-medium truncate pr-4">
-                        {clients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
-                      </div>
-                      <div>
+                    <div className="flex justify-between items-center mt-1">
+                      <div className="flex items-center gap-3">
+                        <div className="text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px] sm:max-w-[200px]">
+                          {clients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
+                        </div>
                         <Badge variant={invoice.status.toLowerCase() as any}>
                           {invoice.status === 'PARTIAL' ? 'Partial' : invoice.status}
                         </Badge>
                       </div>
-                    </div>
-                    <div className="flex justify-between items-center mt-1 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <div className="text-slate-500 text-xs">{formatDate(invoice.issuedAt)}</div>
                       <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                         <ActionMenu items={[
                           { label: 'Download PDF', onClick: () => handleDownloadPdf(invoice) },

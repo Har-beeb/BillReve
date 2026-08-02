@@ -219,10 +219,10 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
                 <button
                   onClick={handleDraftEmail}
                   disabled={isDrafting || !documentDetails}
-                  className="flex-1 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-medium rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-none px-3 py-1.5 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-medium rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Draft a professional message using AI"
                 >
-                  {isDrafting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  {isDrafting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                   {documentType === 'Invoice' && documentDetails?.dueDate && new Date(documentDetails.dueDate) < new Date() 
                     ? 'AI Draft Reminder' 
                     : 'AI Draft Message'}

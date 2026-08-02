@@ -181,7 +181,7 @@ const MainLayout: React.FC = () => {
             }`}
         />
 
-        <div className={`p-6 font-bold text-2xl text-[#9333ea] dark:text-[#a855f7] flex items-center justify-start h-20`}>
+        <div className={`p-6 font-bold text-2xl text-[#9333ea] flex items-center justify-start h-20`}>
           {/* Logo Placeholder (Geometric Shape) */}
           <div className="w-8 h-8 rounded-lg bg-[#9333ea] flex items-center justify-center flex-shrink-0">
              <div className="w-3 h-3 bg-white rounded-sm transform rotate-45" />
@@ -207,7 +207,7 @@ const MainLayout: React.FC = () => {
                 className={({ isActive }) =>
                   `flex items-center px-4 py-3 rounded-lg transition-colors justify-between group ${
                     isActive && !isLocked
-                      ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
+                      ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                   } ${isLocked ? 'cursor-pointer' : ''}`
                 }
@@ -261,7 +261,7 @@ const MainLayout: React.FC = () => {
                 <Menu size={24} />
               </button>
             )}
-            <span className="font-bold text-xl text-purple-600 dark:text-purple-400 tracking-tight">BillReve</span>
+            <span className="font-bold text-xl text-[#9333ea] tracking-tight">BillReve</span>
           </div>
           <div className="flex-1 hidden md:flex">
             {/* Desktop search placeholder */}
@@ -442,7 +442,7 @@ const MainLayout: React.FC = () => {
           {/* Drawer */}
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
-              <span className="font-bold text-2xl text-purple-600 dark:text-purple-400">BillReve</span>
+              <span className="font-bold text-2xl text-[#9333ea]">BillReve</span>
               <button
                 type="button"
                 className="relative -m-2 inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -471,7 +471,7 @@ const MainLayout: React.FC = () => {
                     className={({ isActive }) =>
                       `flex items-center px-4 py-3 rounded-lg transition-colors gap-4 ${
                         isActive && !isLocked
-                          ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
+                          ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                       }`
                     }
@@ -535,7 +535,7 @@ const MainLayout: React.FC = () => {
                     className={({ isActive }) =>
                       `flex items-center px-4 py-3.5 rounded-xl transition-colors gap-4 ${
                         isActive && !isLocked
-                          ? 'bg-purple-50 dark:bg-purple-900/30 text-[#9333ea] dark:text-[#a855f7] font-medium' 
+                          ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium' 
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                       }`
                     }

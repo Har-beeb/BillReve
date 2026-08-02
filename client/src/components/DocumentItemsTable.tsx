@@ -27,7 +27,7 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
 }) => {
   const [enhancingId, setEnhancingId] = useState<string | null>(null);
   const isProUser = useAppStore(state => state.isProUser);
-  const aiEnabled = import.meta.env.VITE_ENABLE_AI_FEATURES === 'true';
+  const aiEnabled = true;
 
   const handleEnhance = async (id: string, text: string) => {
     if (!text.trim()) return;
@@ -68,12 +68,12 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
                   value={item.description}
                   onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
                   placeholder="Item description"
-                  className="w-full p-3.5 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all font-medium text-sm shadow-sm md:shadow-none"
+                  className="w-full py-3.5 pr-3.5 pl-10 md:py-2.5 md:pr-2.5 md:pl-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all font-medium text-sm shadow-sm md:shadow-none"
                 />
                 {aiEnabled && (
                   <ProFeature 
                     isProUser={isProUser}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/input:opacity-100 transition-all"
+                    className="absolute left-1.5 md:left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/input:opacity-100 transition-all"
                   >
                     <button
                       onClick={() => handleEnhance(item.id, item.description)}
