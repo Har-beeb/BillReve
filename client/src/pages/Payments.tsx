@@ -152,7 +152,7 @@ const Payments: React.FC = () => {
             <InstructionNote type="info" title="Webhook Setup" className="mt-4">
               To automatically mark invoices as PAID, copy and paste this Webhook URL into your Paystack Dashboard:
               <br />
-              <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs">
+              <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs break-all">
                 {webhookUrl}/paystack
               </code>
             </InstructionNote>
@@ -198,7 +198,7 @@ const Payments: React.FC = () => {
             <InstructionNote type="info" title="Webhook Setup" className="mt-4">
               To automatically mark invoices as PAID, copy and paste this Webhook URL into your Flutterwave Dashboard:
               <br />
-              <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs">
+              <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs break-all">
                 {webhookUrl}/flutterwave
               </code>
             </InstructionNote>

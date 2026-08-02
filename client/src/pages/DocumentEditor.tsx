@@ -26,7 +26,7 @@ interface DocumentEditorProps {
 const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const navigate = useNavigate();
   const { businessProfile, taxSettings, user, isProUser } = useAppStore();
-  const aiEnabled = import.meta.env.VITE_ENABLE_AI_FEATURES === 'true';
+  const aiEnabled = import.meta.env.VITE_ENABLE_AI_FEATURES !== 'false';
   const clients = useLiveQuery(() => db.clients.filter(x => !x.deletedAt).toArray()) || [];
   const invoicesList = useLiveQuery(() => db.invoices.filter(x => !x.deletedAt).toArray()) || [];
   const quotesList = useLiveQuery(() => db.quotes.filter(x => !x.deletedAt).toArray()) || [];

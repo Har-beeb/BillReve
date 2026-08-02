@@ -101,6 +101,20 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    // Handle color theme
+    const root = document.documentElement;
+    root.classList.remove('theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
+    
+    if (colorTheme !== 'default') {
+      root.classList.add(`theme-${colorTheme}`);
+    }
+
+    if (colorTheme === 'custom') {
+      root.style.setProperty('--color-purple-600', useAppStore.getState().customColor);
+    } else {
+      root.style.removeProperty('--color-purple-600');
+    }
   }, [theme, colorTheme]);
 
   if (isInitializing) {
