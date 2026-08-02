@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PaystackButton } from 'react-paystack';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { CheckCircle2, AlertCircle, Download, MessageSquare } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Download } from 'lucide-react';
 import { formatMoney } from '../utils/formatters';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { db } from '../db/db';
@@ -21,12 +21,7 @@ const PublicInvoice: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS' | 'FAILED'>('PENDING');
-  const [showCounterModal, setShowCounterModal] = useState(false);
   const { fontFamily, fontSize } = useAppStore();
-  const [counterAmount, setCounterAmount] = useState<number | ''>('');
-  const [counterMessage, setCounterMessage] = useState('');
-  const [isSubmittingCounter, setIsSubmittingCounter] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
@@ -161,34 +156,6 @@ const PublicInvoice: React.FC = () => {
   }
 
   const isPaid = invoice.status === 'PAID' || paymentStatus === 'SUCCESS';
-  const isCountered = invoice.status === 'COUNTERED';
-
-  const handleCounterOffer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!counterAmount || isSubmittingCounter) return;
-    
-    setIsSubmittingCounter(true);
-    try {
-      const amount = Number(counterAmount);
-      const { error } = await supabase.rpc('update_invoice_status_public', {
-        p_local_id: id,
-        p_status: 'COUNTERED',
-        p_amount_paid: invoice.amount_paid || 0,
-        p_counter_amount: amount,
-        p_client_message: counterMessage
-      });
-
-      if (error) throw error;
-      setInvoice({ ...invoice, status: 'COUNTERED', counterAmount: amount, clientMessage: counterMessage });
-      setStatusMessage({ type: 'success', text: 'Counter offer submitted successfully! The business owner will be notified.' });
-      setShowCounterModal(false);
-    } catch (err) {
-      console.error("Failed to submit counter offer", err);
-      setStatusMessage({ type: 'error', text: 'Failed to submit counter offer. Please try again.' });
-    } finally {
-      setIsSubmittingCounter(false);
-    }
-  };
   
   // Paystack configuration
   const componentProps = profile?.paystack_public_key ? {
@@ -254,12 +221,7 @@ const PublicInvoice: React.FC = () => {
           </button>
         </div>
         
-        {statusMessage && (
-          <div className={`${statusMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'} border rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm`}>
-            {statusMessage.type === 'success' ? <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" /> : <AlertCircle className="w-12 h-12 text-red-500 mb-3" />}
-            <p className="font-medium text-lg">{statusMessage.text}</p>
-          </div>
-        )}
+
 
         {paymentStatus === 'SUCCESS' && (
           <div className="bg-green-50 border border-green-200 text-green-800 rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
@@ -399,15 +361,7 @@ const PublicInvoice: React.FC = () => {
                  )}
              
              <div className="w-full md:w-auto mt-4 md:mt-0 flex flex-col items-center md:items-end gap-3">
-               {!isPaid && !isCountered && (invoice.allow_counter_offer || invoice.allowCounterOffer) && (
-                 <button 
-                   onClick={() => setShowCounterModal(true)}
-                   className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
-                 >
-                   <MessageSquare size={18} />
-                   Counter Offer
-                 </button>
-               )}
+
                {!isPaid && (
                  <>
                    {/* Conditionally render Paystack for African currencies */}
@@ -448,58 +402,7 @@ const PublicInvoice: React.FC = () => {
              </div>
           </div>
           
-          {showCounterModal && (
-            <div className="mt-8 p-6 bg-slate-50 rounded-xl border border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">Make a Counter Offer</h3>
-              <form onSubmit={handleCounterOffer} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Proposed Total Amount</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">
-                      {invoice.currency || profile?.defaultCurrency || '$'}
-                    </span>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.01"
-                      value={counterAmount}
-                      onChange={(e) => setCounterAmount(Number(e.target.value) || '')}
-                      className="w-full pl-8 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="e.g. 5000"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Message (Optional)</label>
-                  <textarea
-                    rows={3}
-                    value={counterMessage}
-                    onChange={(e) => setCounterMessage(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="Briefly explain your counter offer..."
-                  />
-                </div>
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowCounterModal(false)}
-                    className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors font-medium text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmittingCounter || !counterAmount}
-                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm disabled:opacity-50"
-                  >
-                    {isSubmittingCounter ? 'Submitting...' : 'Submit Offer'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-          
+
           <div className="mt-12 text-center text-xs text-slate-400">
              Powered by <span className="font-semibold">{profile?.is_pro ? (profile?.name || 'BillReve Inc.') : 'BillReve Inc.'}</span>
           </div>

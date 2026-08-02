@@ -506,24 +506,26 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           </div>
 
           {/* Document Settings */}
-          <div className="space-y-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-            <h2 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Document Settings</h2>
-            
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <div className="relative inline-block w-10 h-6">
-                <input 
-                  type="checkbox"
-                  checked={allowCounterOffer}
-                  onChange={(e) => setAllowCounterOffer(e.target.checked)}
-                  className="peer appearance-none w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full checked:bg-purple-600 dark:checked:bg-purple-500 cursor-pointer transition-colors"
-                />
-                <span className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4 shadow-sm pointer-events-none"></span>
-              </div>
-              <span className="font-medium text-sm text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
-                Allow client to make a counter offer
-              </span>
-            </label>
-          </div>
+          {type === 'QUOTE' && (
+            <div className="space-y-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+              <h2 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Document Settings</h2>
+              
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative inline-block w-10 h-6">
+                  <input 
+                    type="checkbox"
+                    checked={allowCounterOffer}
+                    onChange={(e) => setAllowCounterOffer(e.target.checked)}
+                    className="peer appearance-none w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full checked:bg-purple-600 dark:checked:bg-purple-500 cursor-pointer transition-colors"
+                  />
+                  <span className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4 shadow-sm pointer-events-none"></span>
+                </div>
+                <span className="font-medium text-sm text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                  Allow client to make a counter offer
+                </span>
+              </label>
+            </div>
+          )}
           
           {/* Bottom spacing for mobile to ensure scrollability past FAB */}
           <div className="h-20 md:hidden"></div>

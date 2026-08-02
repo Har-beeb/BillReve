@@ -74,6 +74,7 @@ const Settings: React.FC = () => {
             name: localProfile.name,
             phone: localProfile.phone,
             address: localProfile.address,
+            logo_url: localProfile.logoUrl || null,
             bank_name: localProfile.bankAccounts?.[0]?.bankName || null,
             account_name: localProfile.bankAccounts?.[0]?.accountName || null,
             account_number: localProfile.bankAccounts?.[0]?.accountNumber || null,

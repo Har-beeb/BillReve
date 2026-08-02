@@ -123,7 +123,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
           <p><strong>Amount:</strong> ${amount}</p>
           ${(document as any).dueDate ? `<p><strong>Due Date:</strong> ${new Date((document as any).dueDate).toLocaleDateString()}</p>` : ''}
           ${customMessage ? `<p style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #8b5cf6;">${customMessage}</p>` : ''}
-          ${documentType === 'Invoice' && publicLink ? `<div style="margin-top: 24px;"><a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">View & Pay Online</a></div>` : ''}
+          ${publicLink ? `<div style="margin-top: 24px;"><a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">${documentType === 'Invoice' ? (isProUser ? 'View & Pay Online' : 'View Invoice Online') : 'View Quote Online'}</a></div>` : ''}
         </div>
       `;
 
