@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui';
 import { CircleDollarSign, Save, Loader2 } from 'lucide-react';
+import { InstructionNote } from '../components/ui';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -15,10 +16,15 @@ const Payments: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
 
   useEffect(() => {
     setPaystackPubKey(businessProfile.paystackPublicKey || '');
     setFlutterwavePubKey(businessProfile.flutterwavePublicKey || '');
+    
+    // Set the webhook URL based on the current domain
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.billreve.app/v1';
+    setWebhookUrl(apiUrl.replace('/api/v1', '') + '/api/v1/payments/webhook');
   }, [businessProfile.paystackPublicKey, businessProfile.flutterwavePublicKey]);
 
   useEffect(() => {
@@ -55,6 +61,17 @@ const Payments: React.FC = () => {
         paystackPublicKey: paystackPubKey,
         flutterwavePublicKey: flutterwavePubKey
       });
+
+      // Update Public Keys in Supabase DB
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          paystack_public_key: paystackPubKey,
+          flutterwave_public_key: flutterwavePubKey
+        })
+        .eq('id', user.id);
+        
+      if (profileError) throw profileError;
 
       // Update Secret Keys in user_secrets
       const { error: secretsError } = await supabase
@@ -98,7 +115,8 @@ const Payments: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Paystack Card */}
-        <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t-4 border-t-teal-500">
+        <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t-4 border-t-teal-500 flex flex-col h-full">
+          <div className="flex-1">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-teal-100 text-teal-600 dark:bg-teal-900/50 dark:text-teal-400 rounded-full flex items-center justify-center">
               <CircleDollarSign size={20} />
@@ -130,11 +148,21 @@ const Payments: React.FC = () => {
               />
               <p className="text-xs text-slate-500 mt-2">Find these in Paystack Dashboard &gt; Settings &gt; API Keys &amp; Webhooks.</p>
             </div>
+            
+            <InstructionNote type="info" title="Webhook Setup" className="mt-4">
+              To automatically mark invoices as PAID, copy and paste this Webhook URL into your Paystack Dashboard:
+              <br />
+              <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs">
+                {webhookUrl}/paystack
+              </code>
+            </InstructionNote>
+          </div>
           </div>
         </Card>
 
         {/* Flutterwave Card */}
-        <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t-4 border-t-amber-500">
+        <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t-4 border-t-amber-500 flex flex-col h-full">
+          <div className="flex-1">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400 rounded-full flex items-center justify-center">
               <CircleDollarSign size={20} />
@@ -166,6 +194,15 @@ const Payments: React.FC = () => {
               />
               <p className="text-xs text-slate-500 mt-2">Find these in Flutterwave Dashboard &gt; Settings &gt; API &amp; Webhooks.</p>
             </div>
+            
+            <InstructionNote type="info" title="Webhook Setup" className="mt-4">
+              To automatically mark invoices as PAID, copy and paste this Webhook URL into your Flutterwave Dashboard:
+              <br />
+              <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs">
+                {webhookUrl}/flutterwave
+              </code>
+            </InstructionNote>
+          </div>
           </div>
         </Card>
       </div>

@@ -325,8 +325,8 @@ const MainLayout: React.FC = () => {
                             onClick={() => {
                               if (!notification.is_read) markAsRead(notification.id);
                               setIsNotificationsOpen(false);
-                              if (notification.type.startsWith('QUOTE')) navigate('/quotes');
-                              if (notification.type.startsWith('INVOICE')) navigate('/invoices');
+                              if (notification.type.startsWith('QUOTE')) navigate(`/quotes?preview=${notification.entity_id}`);
+                              if (notification.type.startsWith('INVOICE')) navigate(`/invoices?preview=${notification.entity_id}`);
                             }}
                             className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors flex gap-3 ${!notification.is_read ? 'bg-purple-50/30 dark:bg-purple-900/10' : ''}`}
                           >

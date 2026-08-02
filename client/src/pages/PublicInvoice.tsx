@@ -343,8 +343,15 @@ const PublicInvoice: React.FC = () => {
             </div>
           </div>
 
-              <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
-                 {invoice?.bankAccountId && profile?.bankAccounts?.find((b: any) => b.id === invoice.bankAccountId) && (
+          {invoice.notes && (
+            <div className="mt-8 bg-amber-50 text-amber-800 p-4 rounded-xl text-sm border border-amber-100 w-full text-left">
+              <span className="font-bold block mb-1">Notes / Terms:</span>
+              <span className="whitespace-pre-wrap">{invoice.notes}</span>
+            </div>
+          )}
+
+          <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
+             {invoice?.bankAccountId && profile?.bankAccounts?.find((b: any) => b.id === invoice.bankAccountId) && (
                    <div className="text-sm">
                      <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
                      {(() => {

@@ -332,10 +332,10 @@ const PublicQuote: React.FC = () => {
           </div>
 
           {quote.notes && (
-             <div className="mt-8 pt-8 border-t border-slate-100">
-               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Terms & Notes</p>
-               <p className="text-slate-600 whitespace-pre-wrap text-sm">{quote.notes}</p>
-             </div>
+            <div className="mt-8 bg-amber-50 text-amber-800 p-4 rounded-xl text-sm border border-amber-100 w-full text-left">
+              <span className="font-bold block mb-1">Notes / Terms:</span>
+              <span className="whitespace-pre-wrap">{quote.notes}</span>
+            </div>
           )}
 
           {!isAccepted && !isDeclined && !isCountered && (
