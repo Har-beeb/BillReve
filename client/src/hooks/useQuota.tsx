@@ -2,6 +2,7 @@ import { useAppStore } from '../store/useAppStore';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const FREE_TIER_LIMITS = {
   invoices: 10,
@@ -39,10 +40,23 @@ export const useQuota = () => {
     }
 
     if (current >= limit) {
-      const confirmUpgrade = window.confirm(`You've reached the free limit of ${limit} ${type}s. Upgrade to Pro for unlimited access.`);
-      if (confirmUpgrade) {
-        navigate('/upgrade');
-      }
+      toast((t) => (
+        <div className="flex flex-col gap-2">
+          <span className="font-semibold text-slate-900 dark:text-white">Limit Reached</span>
+          <span className="text-sm text-slate-600 dark:text-slate-400">
+            You've reached the free limit of {limit} {type}s.
+          </span>
+          <button 
+            onClick={() => {
+              toast.dismiss(t.id);
+              navigate('/upgrade');
+            }} 
+            className="mt-1 bg-purple-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-purple-700 transition-colors w-max"
+          >
+            Upgrade to Pro
+          </button>
+        </div>
+      ), { duration: 5000, style: { minWidth: '300px', border: '1px solid #e2e8f0' } });
       return false;
     }
 

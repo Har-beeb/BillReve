@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Plus, Mail, Phone, MapPin, Download, FileText, Users } from 'lucide-react';
-import { Badge, EmptyState } from '../components/ui';
 import { formatMoney } from '../utils/formatters';
+import { Badge, EmptyState, ActionMenu, LongPressable } from '../components/ui';
 import { Pagination } from '../components/Pagination';
 import { PreviewPanel } from '../components/PreviewPanel';
-import { useAppStore } from '../store/useAppStore';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { Client } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { ActionMenu, LongPressable } from '../components/ui';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { useQuota } from '../hooks/useQuota';
@@ -24,7 +22,7 @@ import toast from 'react-hot-toast';
  * Allows creating new clients and viewing detailed histories.
  */
 const Clients: React.FC = () => {
-  const { invoices } = useAppStore();
+  const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
   const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);

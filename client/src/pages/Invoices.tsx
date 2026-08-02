@@ -516,7 +516,7 @@ const Invoices: React.FC = () => {
                       </div>
                       <div>
                         <Badge variant={invoice.status.toLowerCase() as any}>
-                          {invoice.status === 'PARTIAL' ? `${Math.round(((invoice.amountPaid || 0) / invoice.total) * 100)}% Paid` : invoice.status}
+                          {invoice.status === 'PARTIAL' ? 'Partial' : invoice.status}
                         </Badge>
                       </div>
                     </div>
@@ -575,7 +575,7 @@ const Invoices: React.FC = () => {
                   
                   <div className="col-span-2 flex items-center">
                     <Badge variant={invoice.status.toLowerCase() as any}>
-                      {invoice.status === 'PARTIAL' ? `${Math.round(((invoice.amountPaid || 0) / invoice.total) * 100)}% Paid` : invoice.status}
+                      {invoice.status === 'PARTIAL' ? 'Partial' : invoice.status}
                     </Badge>
                   </div>
 
@@ -663,7 +663,7 @@ const Invoices: React.FC = () => {
             <div className="text-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Badge variant={selectedInvoice.status.toLowerCase() as any}>
-                  {selectedInvoice.status === 'PARTIAL' ? `${Math.round(((selectedInvoice.amountPaid || 0) / selectedInvoice.total) * 100)}% Paid` : selectedInvoice.status}
+                  {selectedInvoice.status === 'PARTIAL' ? 'Partial' : selectedInvoice.status}
                 </Badge>
                 {selectedInvoice.dueDate && new Date(selectedInvoice.dueDate) < new Date() && selectedInvoice.status !== 'PAID' && (
                   <Badge variant="overdue" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Overdue</Badge>

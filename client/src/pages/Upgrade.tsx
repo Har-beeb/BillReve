@@ -10,7 +10,8 @@ const Upgrade: React.FC = () => {
   // The SaaS Master Key (Read from environment variables)
   const SAAS_PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_YOUR_SAAS_MASTER_KEY';
   
-  const PRO_PRICE = 3000;
+  const PRO_PRICE = 3500;
+  const ORIGINAL_PRICE = 5000;
 
   const componentProps = {
     email: user?.email || 'user@example.com',
@@ -21,6 +22,7 @@ const Upgrade: React.FC = () => {
          { display_name: "Payment Type", variable_name: "type", value: "saas_subscription" }
       ]
     },
+    bearer: "account" as any,
     publicKey: SAAS_PAYSTACK_PUBLIC_KEY,
     text: "Upgrade to Pro Now",
     onSuccess: (reference: any) => {
@@ -37,7 +39,8 @@ const Upgrade: React.FC = () => {
     { icon: <FileSpreadsheet className="text-emerald-400 w-6 h-6" />, title: "Advanced CSV & Excel Exports", desc: "Export your financial data cleanly for accounting and migrations." },
     { icon: <Palette className="text-pink-400 w-6 h-6" />, title: "Custom Brand Colors & Logos", desc: "Remove BillReve branding and fully customize your documents." },
     { icon: <Zap className="text-amber-400 w-6 h-6" />, title: "Unlimited Clients & Invoices", desc: "No caps. Grow your business without restrictions." },
-    { icon: <Send className="text-blue-400 w-6 h-6" />, title: "Automated Email Reminders", desc: "Never chase payments manually again. We handle it." }
+    { icon: <Send className="text-blue-400 w-6 h-6" />, title: "Automated Email Reminders", desc: "Never chase payments manually again. We handle it." },
+    { icon: <Star className="text-yellow-400 w-6 h-6" />, title: "Email Campaigns", desc: "Send targeted promotional campaigns to your clients." }
   ];
 
   return (
@@ -102,11 +105,21 @@ const Upgrade: React.FC = () => {
                 <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-4">Pro Subscription</h3>
                 <p className="text-slate-500 dark:text-slate-400 mb-8 font-medium">Everything you need to scale.</p>
                 
-                <div className="mb-10 flex items-end justify-center gap-1">
-                  <span className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-                    ₦{PRO_PRICE.toLocaleString()}
-                  </span>
-                  <span className="text-lg text-slate-500 dark:text-slate-400 mb-2 font-medium">/mo</span>
+                <div className="mb-8 flex flex-col items-center justify-center gap-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg text-slate-400 dark:text-slate-500 line-through decoration-red-500/50 decoration-2 font-bold">
+                      ₦{ORIGINAL_PRICE.toLocaleString()}
+                    </span>
+                    <span className="text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      30% Off
+                    </span>
+                  </div>
+                  <div className="flex items-end justify-center gap-1">
+                    <span className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                      ₦{PRO_PRICE.toLocaleString()}
+                    </span>
+                    <span className="text-lg text-slate-500 dark:text-slate-400 mb-2 font-medium">/mo</span>
+                  </div>
                 </div>
 
                 <div className="w-full space-y-4 mb-10 text-left">
