@@ -173,7 +173,7 @@ const PublicInvoice: React.FC = () => {
       const { error } = await supabase.rpc('update_invoice_status_public', {
         p_local_id: id,
         p_status: 'COUNTERED',
-        p_amount_paid: null,
+        p_amount_paid: invoice.amount_paid || 0,
         p_counter_amount: amount,
         p_client_message: counterMessage
       });
