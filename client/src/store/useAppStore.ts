@@ -21,7 +21,7 @@ interface AppState {
   theme: Theme;
   colorTheme: 'default' | 'wine' | 'ocean' | 'emerald' | 'slate' | 'sunset' | 'mustard' | 'cherry' | 'custom';
   customColor: string;
-  fontFamily: 'Inter' | 'Roboto' | 'Playfair Display' | 'monospace';
+  fontFamily: 'Inter' | 'Roboto' | 'Playfair Display' | 'monospace' | 'Outfit' | 'Plus Jakarta Sans' | 'Lora' | 'Fira Code';
   fontSize: 'small' | 'medium' | 'large';
   mobileNavStyle: 'drawer' | 'bottom';
   clients: Client[];

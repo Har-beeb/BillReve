@@ -39,6 +39,7 @@ const Quotes: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isProUser = useAppStore((state) => state.isProUser);
   const businessProfile = useAppStore((state) => state.businessProfile);
+  const mobileNavStyle = useAppStore((state) => state.mobileNavStyle);
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
@@ -643,7 +644,7 @@ const Quotes: React.FC = () => {
       {createPortal(
         <button 
           onClick={handleNewQuote}
-          className="md:hidden fixed bottom-24 right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 hover:scale-110 active:scale-95 transition-all duration-300"
+          className={`md:hidden fixed ${mobileNavStyle === 'bottom' ? 'bottom-24' : 'bottom-6'} right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 hover:scale-110 active:scale-95 transition-all duration-300`}
         >
           <Plus size={24} />
         </button>,

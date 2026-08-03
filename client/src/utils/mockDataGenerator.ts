@@ -128,22 +128,17 @@ export const generateMockData = async (userId: string) => {
       status: 'pending'
     })));
 
-    alert("Successfully generated mock data and queued it for cloud upload! Refreshing page to load...");
-    window.location.reload();
+    return { success: true };
   } catch (error) {
     console.error("Failed to generate mock data", error);
-    alert("Error generating mock data.");
+    throw new Error("Error generating mock data.");
   }
 };
 
 export const clearAllData = async (userId: string) => {
   if (!userId) {
-    alert("You must be logged in to clear data.");
-    return;
+    throw new Error("You must be logged in to clear data.");
   }
-  
-  const confirmClear = window.confirm("Are you sure you want to permanently delete ALL clients, invoices, and quotes from both your device and the cloud? This action cannot be undone.");
-  if (!confirmClear) return;
 
   try {
     // 1. Clear Local IndexedDB
@@ -162,10 +157,9 @@ export const clearAllData = async (userId: string) => {
       supabase.from('clients').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     ]);
 
-    alert("Successfully cleared all data from local storage and the cloud.");
-    window.location.reload();
+    return { success: true };
   } catch (error) {
     console.error("Failed to clear data", error);
-    alert("Error clearing data. Please try again.");
+    throw new Error("Error clearing data. Please try again.");
   }
 };

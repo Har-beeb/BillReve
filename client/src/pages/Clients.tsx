@@ -14,6 +14,7 @@ import { usePagination } from '../hooks/usePagination';
 import { useQuota } from '../hooks/useQuota';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import toast from 'react-hot-toast';
+import { useAppStore } from '../store/useAppStore';
 
 /**
  * Clients Component
@@ -22,6 +23,7 @@ import toast from 'react-hot-toast';
  * Allows creating new clients and viewing detailed histories.
  */
 const Clients: React.FC = () => {
+  const mobileNavStyle = useAppStore(state => state.mobileNavStyle);
   const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
   const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
   const [search, setSearch] = useState('');
@@ -248,43 +250,42 @@ const Clients: React.FC = () => {
                 className={`group px-6 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(client.localId) ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
               >
                 {/* --- MOBILE VIEW --- */}
-                <div className="flex md:hidden gap-3 items-start py-4">
-                  <div className="flex-shrink-0 pt-1">
+                <div className="flex md:hidden flex-col gap-2 py-3">
+                  {/* Row 1: Checkbox, Avatar, Name, Total, Menu */}
+                  <div className="flex items-center gap-3 w-full">
                     <input 
                       type="checkbox"
                       checked={selectedIds.has(client.localId)}
                       onChange={(e) => { e.stopPropagation(); toggleSelect(client.localId); }}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                      className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
                     />
+                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex flex-shrink-0 items-center justify-center text-slate-600 dark:text-slate-400 font-bold text-sm">
+                       {client.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="font-bold text-slate-900 dark:text-slate-100 truncate flex-1 text-base">
+                      {client.name}
+                    </div>
+                    <div className="font-bold text-slate-900 dark:text-slate-100 text-sm whitespace-nowrap">
+                       {formatMoney(metrics.totalInvoiced)}
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()} className="shrink-0 -mr-2">
+                      <ActionMenu items={[
+                        { label: 'Edit', onClick: () => { setEditingClient(client); setIsModalOpen(true); } },
+                        { label: 'Delete', onClick: () => { setClientToDelete(client.localId); setDeleteModalOpen(true); }, variant: 'danger' }
+                      ]} />
+                    </div>
                   </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex justify-between items-start">
-                      <div className="font-medium text-slate-900 dark:text-slate-100 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex flex-shrink-0 items-center justify-center text-slate-600 dark:text-slate-400 font-bold">
-                           {client.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-base font-bold">{client.name}</span>
-                      </div>
-                      <div className="font-bold text-base text-slate-900 dark:text-slate-100">
-                         {formatMoney(metrics.totalInvoiced)}
-                      </div>
-                    </div>
-                    <div className="text-slate-500 text-sm mt-1">
-                      {client.email ? (
-                        <div className="flex items-center gap-2"><Mail size={14} className="text-slate-400" /> <span className="truncate">{client.email}</span></div>
-                      ) : (
-                        <div className="italic text-slate-400">No email</div>
-                      )}
-                    </div>
-                    <div className="flex justify-end mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <ActionMenu items={[
-                          { label: 'Edit', onClick: () => { setEditingClient(client); setIsModalOpen(true); } },
-                          { label: 'Delete', onClick: () => { setClientToDelete(client.localId); setDeleteModalOpen(true); }, variant: 'danger' }
-                        ]} />
-                      </div>
-                    </div>
+                  
+                  {/* Row 2: Email / Phone */}
+                  <div className="flex items-center text-slate-500 text-sm pl-11 pr-2">
+                    {client.email ? (
+                      <div className="flex items-center gap-1.5 truncate"><Mail size={13} className="text-slate-400 shrink-0" /> <span className="truncate">{client.email}</span></div>
+                    ) : client.phone ? (
+                      <div className="flex items-center gap-1.5 truncate"><Phone size={13} className="text-slate-400 shrink-0" /> <span className="truncate">{client.phone}</span></div>
+                    ) : (
+                      <div className="italic text-slate-400 text-xs">No contact info</div>
+                    )}
                   </div>
                 </div>
 
@@ -356,7 +357,7 @@ const Clients: React.FC = () => {
       
       {/* Mobile Floating Action Button */}
       {createPortal(
-        <button onClick={openNewClientModal} className="md:hidden fixed bottom-24 right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 hover:scale-110 active:scale-95 transition-all duration-300">
+        <button onClick={openNewClientModal} className={`md:hidden fixed ${mobileNavStyle === 'bottom' ? 'bottom-24' : 'bottom-6'} right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 hover:scale-110 active:scale-95 transition-all duration-300`}>
           <Plus size={24} />
         </button>,
         document.body
@@ -461,7 +462,7 @@ const Clients: React.FC = () => {
                   autoFocus
                   value={editingClient.name || ''}
                   onChange={e => setEditingClient({...editingClient, name: e.target.value})}
-                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-500" 
+                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-600" 
                 />
               </div>
               <div>
@@ -470,7 +471,7 @@ const Clients: React.FC = () => {
                   type="email" 
                   value={editingClient.email || ''}
                   onChange={e => setEditingClient({...editingClient, email: e.target.value})}
-                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-500" 
+                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-600" 
                 />
               </div>
               <div>
@@ -479,7 +480,7 @@ const Clients: React.FC = () => {
                   type="text" 
                   value={editingClient.phone || ''}
                   onChange={e => setEditingClient({...editingClient, phone: e.target.value})}
-                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-500" 
+                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-600" 
                 />
               </div>
               <div>
@@ -488,7 +489,7 @@ const Clients: React.FC = () => {
                   rows={2}
                   value={editingClient.address || ''}
                   onChange={e => setEditingClient({...editingClient, address: e.target.value})}
-                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-500" 
+                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-600" 
                 />
               </div>
             </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
-import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Database, Settings as SettingsIcon, Cloud, RefreshCw, FileUp } from 'lucide-react';
+import { Save, Upload, Trash2, Plus, Building2, Receipt, User, Database, Settings as SettingsIcon, Cloud, RefreshCw, FileUp, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { BusinessProfile, TaxSetting } from '../types';
 import { syncEngine } from '../services/syncEngine';
@@ -17,6 +17,9 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'taxes' | 'sync' | 'preferences'>('account');
   const { enableCsvImport } = useFeatureFlags();
   const [showImportWizard, setShowImportWizard] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isGeneratingData, setIsGeneratingData] = useState(false);
+  const [isClearingData, setIsClearingData] = useState(false);
   
   const [localProfile, setLocalProfile] = useState<BusinessProfile>(businessProfile);
   const [localTaxes, setLocalTaxes] = useState<TaxSetting[]>(taxSettings);
@@ -507,8 +510,12 @@ const Settings: React.FC = () => {
                         className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:text-white"
                       >
                         <option value="Inter">Inter (Default)</option>
+                        <option value="Outfit">Outfit</option>
+                        <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
                         <option value="Roboto">Roboto</option>
+                        <option value="Lora">Lora (Serif)</option>
                         <option value="Playfair Display">Playfair Display (Serif)</option>
+                        <option value="Fira Code">Fira Code (Monospace)</option>
                         <option value="monospace">Monospace</option>
                       </select>
                       <p className="mt-2 text-xs text-slate-500">Affects your dashboard, invoices, and quotes.</p>
@@ -840,26 +847,33 @@ const Settings: React.FC = () => {
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
                     <button 
-                      onClick={async () => {
-                        if (!user) return;
-                        const { clearAllData } = await import('../utils/mockDataGenerator');
-                        await clearAllData(user.id);
-                      }}
-                      className="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-red-600 border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto"
+                      onClick={() => setShowClearConfirm(true)}
+                      disabled={isClearingData || isGeneratingData}
+                      className="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-red-600 border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto disabled:opacity-50"
                     >
-                      <Trash2 size={16} />
-                      Clear Data
+                      {isClearingData ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      {isClearingData ? 'Clearing...' : 'Clear Data'}
                     </button>
                     <button 
                       onClick={async () => {
                         if (!user) return;
-                        const { generateMockData } = await import('../utils/mockDataGenerator');
-                        await generateMockData(user.id);
+                        setIsGeneratingData(true);
+                        try {
+                          const { generateMockData } = await import('../utils/mockDataGenerator');
+                          await generateMockData(user.id);
+                          toast.success('Successfully generated mock data!');
+                          window.location.reload();
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to generate mock data.');
+                        } finally {
+                          setIsGeneratingData(false);
+                        }
                       }}
-                      className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto"
+                      disabled={isClearingData || isGeneratingData}
+                      className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto disabled:opacity-50"
                     >
-                      <Database size={16} />
-                      Generate Mock Data
+                      {isGeneratingData ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
+                      {isGeneratingData ? 'Generating...' : 'Generate Mock Data'}
                     </button>
                   </div>
                 </div>
@@ -892,6 +906,48 @@ const Settings: React.FC = () => {
       
       {showImportWizard && (
         <CsvImportWizard onClose={() => setShowImportWizard(false)} />
+      )}
+
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-800 animate-slide-up">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Clear All Data</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              Are you sure you want to permanently delete ALL clients, invoices, and quotes from both your device and the cloud? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                disabled={isClearingData}
+                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!user) return;
+                  setIsClearingData(true);
+                  try {
+                    const { clearAllData } = await import('../utils/mockDataGenerator');
+                    await clearAllData(user.id);
+                    toast.success('Successfully cleared all data.');
+                    window.location.reload();
+                  } catch (err: any) {
+                    toast.error(err.message || 'Error clearing data.');
+                  } finally {
+                    setIsClearingData(false);
+                    setShowClearConfirm(false);
+                  }
+                }}
+                disabled={isClearingData}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {isClearingData && <Loader2 size={16} className="animate-spin" />}
+                {isClearingData ? 'Deleting...' : 'Yes, Delete Everything'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

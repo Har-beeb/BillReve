@@ -35,7 +35,7 @@ const Payments: React.FC = () => {
           .from('user_secrets')
           .select('paystack_secret_key, flutterwave_secret_key')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
           
         if (data) {
           setPaystackSecKey(data.paystack_secret_key || '');

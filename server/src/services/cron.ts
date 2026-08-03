@@ -137,4 +137,87 @@ export const startCronJobs = () => {
       console.error("⏰ Welcome Cron job failed:", err);
     }
   });
+  // Check daily at 8:00 AM for overdue invoices
+  cron.schedule('0 8 * * *', async () => {
+    console.log("⏰ Running Overdue Invoice Check...");
+    try {
+      // Find invoices that are exactly 1 day overdue to avoid spamming every day
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+      const { data: overdueInvoices, error } = await supabaseAdmin
+        .from('invoices')
+        .select('*')
+        .lt('due_date', oneDayAgo.toISOString())
+        .gt('due_date', twoDaysAgo.toISOString())
+        .in('status', ['SENT', 'VIEWED', 'PARTIAL']);
+
+      if (error) {
+        console.error("Cron Database Error (Overdue Invoices):", error);
+        return;
+      }
+
+      if (!overdueInvoices || overdueInvoices.length === 0) {
+        return;
+      }
+
+      for (const invoice of overdueInvoices) {
+        if (invoice.sync_status === 'deleted') continue;
+
+        // Fetch client details
+        const { data: clients } = await supabaseAdmin
+          .from('clients')
+          .select('*')
+          .eq('local_id', invoice.client_id)
+          .eq('user_id', invoice.user_id)
+          .limit(1);
+          
+        const client = clients?.[0];
+        if (!client || !client.email) continue;
+
+        // Fetch business profile
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('id', invoice.user_id)
+          .single();
+          
+        const businessName = profile?.name || 'BillReve';
+
+        console.log(`Sending Overdue Reminder to ${client.email} for Invoice ${invoice.invoice_number}`);
+        
+        try {
+          // Note: Since this is server-side and we don't have the generated PDF readily available without regenerating it,
+          // we send a reminder email with a link to the public invoice page.
+          const publicLink = `${env.FRONTEND_URL || 'https://billreve.app'}/pay/${invoice.local_id}`;
+          
+          await emailService.sendMarketingEmail({
+            to: client.email,
+            subject: `Reminder: Invoice ${invoice.invoice_number} from ${businessName} is overdue`,
+            html: `
+              <div style="font-family: sans-serif; max-w-xl mx-auto p-4 border border-gray-200 rounded-lg shadow-sm">
+                <h2 style="color: #4F46E5;">Payment Reminder</h2>
+                <p>Hi ${client.name},</p>
+                <p>This is a friendly reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${invoice.total}</strong> was due on ${new Date(invoice.due_date).toLocaleDateString()} and is now overdue.</p>
+                <p>If you have already made this payment, please disregard this message.</p>
+                <div style="margin-top: 24px;">
+                  <a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">View & Pay Online</a>
+                </div>
+                <p style="margin-top: 24px; color: #6b7280; font-size: 14px;">Best regards,<br/>${businessName}</p>
+              </div>
+            `
+          });
+          
+          console.log(`✅ Overdue reminder sent to: ${client.email}`);
+        } catch (emailErr) {
+          console.error(`❌ Failed to send overdue reminder to ${client.email}`, emailErr);
+        }
+      }
+    } catch (err) {
+      console.error("⏰ Overdue Invoices Cron job failed:", err);
+    }
+  });
 };

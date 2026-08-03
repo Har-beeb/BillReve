@@ -62,26 +62,26 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
           <div key={item.id} className="relative flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center p-4 md:p-2 md:-mx-2 bg-slate-50 hover:bg-slate-100 md:bg-transparent dark:bg-slate-800/50 md:dark:bg-transparent rounded-xl md:rounded-none group transition-colors">
             <div className="md:col-span-5 relative">
               <label className="md:hidden text-xs font-medium text-slate-500 mb-1.5 block">Description</label>
-              <div className="relative group/input">
+              <div className="flex items-center gap-2">
                 <input 
                   type="text" 
                   value={item.description}
                   onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
                   placeholder="Item description"
-                  className="w-full py-3.5 pr-3.5 pl-10 md:py-2.5 md:pr-2.5 md:pl-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all font-medium text-sm shadow-sm md:shadow-none"
+                  className="w-full py-3.5 px-3.5 md:py-2.5 md:px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all font-medium text-sm shadow-sm md:shadow-none"
                 />
                 {aiEnabled && (
                   <ProFeature 
                     isProUser={isProUser}
-                    className="absolute left-1.5 md:left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/input:opacity-100 transition-all"
+                    className="flex-shrink-0"
                   >
                     <button
                       onClick={() => handleEnhance(item.id, item.description)}
                       disabled={enhancingId === item.id || !item.description.trim()}
-                      className="p-1.5 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      className="p-2 text-purple-500 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors border border-purple-100 dark:border-purple-800/30"
                       title="Enhance Description with AI"
                     >
-                      {enhancingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                      {enhancingId === item.id ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
                     </button>
                   </ProFeature>
                 )}

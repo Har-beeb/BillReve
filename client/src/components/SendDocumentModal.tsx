@@ -98,6 +98,8 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     ? `${window.location.origin}/pay/${documentId}`
     : `${window.location.origin}/quote/${documentId}`;
 
+  const isOverdue = documentDetails && documentType === 'Invoice' && documentDetails.dueDate && new Date(documentDetails.dueDate) < new Date();
+
   const handleSendEmail = async () => {
     setIsSending(true);
     try {
@@ -115,11 +117,17 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       if (!pdfBase64) throw new Error('Failed to generate PDF document');
       
       // 3. Construct HTML
+      const subject = isOverdue 
+        ? `Reminder: Your ${documentType} from ${businessProfile.name || 'BillReve'} is overdue`
+        : `Your ${documentType} from ${businessProfile.name || 'BillReve'}`;
+        
       const htmlContent = `
         <div style="font-family: sans-serif; max-w-xl mx-auto p-4 border border-gray-200 rounded-lg shadow-sm">
-          <h2 style="color: #4F46E5;">Your ${documentType} from ${businessProfile.name || 'BillReve'}</h2>
+          <h2 style="color: #4F46E5;">${isOverdue ? 'Payment Reminder' : `Your ${documentType} from ${businessProfile.name || 'BillReve'}`}</h2>
           <p>Hi ${client?.name || 'Client'},</p>
-          <p>Please find your ${documentType.toLowerCase()} attached.</p>
+          <p>${isOverdue 
+            ? `This is a friendly reminder that your ${documentType.toLowerCase()} is now overdue. Please find it attached.` 
+            : `Please find your ${documentType.toLowerCase()} attached.`}</p>
           <p><strong>Amount:</strong> ${amount}</p>
           ${(document as any).dueDate ? `<p><strong>Due Date:</strong> ${new Date((document as any).dueDate).toLocaleDateString()}</p>` : ''}
           ${customMessage ? `<p style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #8b5cf6;">${customMessage}</p>` : ''}
@@ -131,7 +139,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       const { data: result, error } = await supabase.functions.invoke('send-email', {
         body: {
           to: clientEmail,
-          subject: `Your ${documentType} from ${businessProfile.name || 'BillReve'}`,
+          subject,
           html: htmlContent,
           attachments: [
             {
@@ -155,7 +163,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
         if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
       }
 
-      toast.success(`${documentType} sent successfully!`);
+      toast.success(isOverdue ? 'Reminder sent successfully!' : `${documentType} sent successfully!`);
       onClose();
     } catch (err) {
       console.error('Failed to send email:', err);
