@@ -15,7 +15,7 @@ interface Message {
 }
 
 export const RevenueChat: React.FC = () => {
-  const { isProUser } = useAppStore();
+  const { isProUser, mobileNavStyle } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -115,7 +115,7 @@ export const RevenueChat: React.FC = () => {
   return createPortal(
     <>
       {/* Floating Button */}
-      <div className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-[60] flex items-center justify-center transition-all duration-300">
+      <div className={`fixed right-4 md:right-6 z-[60] flex items-center justify-center transition-all duration-300 ${mobileNavStyle === 'bottom' ? 'bottom-24' : 'bottom-6'} md:bottom-6`}>
         {!isOpen && <div className="absolute inset-0 bg-purple-400 rounded-full animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>}
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -127,7 +127,7 @@ export const RevenueChat: React.FC = () => {
 
       {/* Chat Panel */}
       <div 
-        className={`fixed bottom-[110px] md:bottom-[88px] right-4 md:right-6 w-[360px] h-[550px] max-h-[70vh] md:max-h-[85vh] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col z-50 transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}
+        className={`fixed right-4 md:right-6 w-[360px] h-[550px] max-h-[70vh] md:max-h-[85vh] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col z-50 transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${mobileNavStyle === 'bottom' ? 'bottom-[110px]' : 'bottom-[88px]'} md:bottom-[88px]`}
       >
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800 rounded-t-2xl">

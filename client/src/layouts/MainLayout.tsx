@@ -182,10 +182,7 @@ const MainLayout: React.FC = () => {
         />
 
         <div className={`p-6 font-bold text-2xl text-[#9333ea] flex items-center justify-start h-20`}>
-          {/* Logo Placeholder (Geometric Shape) */}
-          <div className="w-8 h-8 rounded-lg bg-[#9333ea] flex items-center justify-center flex-shrink-0">
-             <div className="w-3 h-3 bg-white rounded-sm transform rotate-45" />
-          </div>
+          <img src="/pwa-192x192.png" alt="BillReve Logo" className="w-8 h-8 rounded-xl flex-shrink-0 shadow-sm" />
           <span className={`overflow-hidden whitespace-nowrap text-lg transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-4'}`}>
             BillReve
           </span>
@@ -261,7 +258,10 @@ const MainLayout: React.FC = () => {
                 <Menu size={24} />
               </button>
             )}
-            <span className="font-bold text-xl text-[#9333ea] tracking-tight">BillReve</span>
+            <div className="flex items-center gap-2">
+              <img src="/pwa-192x192.png" alt="BillReve Logo" className="w-7 h-7 rounded-lg shadow-sm" />
+              <span className="font-bold text-xl text-[#9333ea] tracking-tight">BillReve</span>
+            </div>
           </div>
           <div className="flex-1 hidden md:flex">
             {/* Desktop search placeholder */}
@@ -442,7 +442,10 @@ const MainLayout: React.FC = () => {
           {/* Drawer */}
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
-              <span className="font-bold text-2xl text-[#9333ea]">BillReve</span>
+              <div className="flex items-center gap-2">
+                <img src="/pwa-192x192.png" alt="BillReve Logo" className="w-8 h-8 rounded-xl shadow-sm" />
+                <span className="font-bold text-2xl text-[#9333ea]">BillReve</span>
+              </div>
               <button
                 type="button"
                 className="relative -m-2 inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
