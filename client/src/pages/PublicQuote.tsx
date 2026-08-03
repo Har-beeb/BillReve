@@ -32,9 +32,7 @@ const PublicQuote: React.FC = () => {
         let quoteData;
         try {
           const { data, error: quoteError } = await supabase
-            .from('quotes')
-            .select('*')
-            .eq('local_id', id)
+            .rpc('get_public_quote', { p_local_id: id })
             .maybeSingle();
             
           if (quoteError) throw quoteError;
@@ -63,9 +61,7 @@ const PublicQuote: React.FC = () => {
         let clientData;
         try {
           const { data } = await supabase
-            .from('clients')
-            .select('*')
-            .eq('local_id', quoteData.client_id)
+            .rpc('get_public_client', { p_local_id: quoteData.client_id })
             .maybeSingle();
           if (data) clientData = data;
           else throw new Error('Client not found');
@@ -79,9 +75,7 @@ const PublicQuote: React.FC = () => {
         let profileData;
         try {
           const { data } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', quoteData.user_id)
+            .rpc('get_public_profile', { p_id: quoteData.user_id })
             .maybeSingle();
           if (data) profileData = data;
           else throw new Error('Profile not found');

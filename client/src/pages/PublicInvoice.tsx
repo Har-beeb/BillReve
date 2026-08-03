@@ -32,9 +32,7 @@ const PublicInvoice: React.FC = () => {
         let invoiceData;
         try {
           const { data, error: invoiceError } = await supabase
-            .from('invoices')
-            .select('*')
-            .eq('local_id', id)
+            .rpc('get_public_invoice', { p_local_id: id })
             .maybeSingle();
             
           if (invoiceError) throw invoiceError;
@@ -64,9 +62,7 @@ const PublicInvoice: React.FC = () => {
         let clientData;
         try {
           const { data } = await supabase
-            .from('clients')
-            .select('*')
-            .eq('local_id', invoiceData.client_id)
+            .rpc('get_public_client', { p_local_id: invoiceData.client_id })
             .maybeSingle();
           if (data) clientData = data;
           else throw new Error('Client not found');
@@ -80,9 +76,7 @@ const PublicInvoice: React.FC = () => {
         let profileData;
         try {
           const { data } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', invoiceData.user_id)
+            .rpc('get_public_profile', { p_id: invoiceData.user_id })
             .maybeSingle();
           if (data) profileData = data;
           else throw new Error('Profile not found');

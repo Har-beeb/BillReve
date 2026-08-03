@@ -162,11 +162,13 @@ class SyncEngine {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
+    const userId = session.user.id;
+
     // Pull everything from Supabase for this user
     const [clientsRes, invoicesRes, quotesRes] = await Promise.all([
-      supabase.from('clients').select('*'),
-      supabase.from('invoices').select('*'),
-      supabase.from('quotes').select('*')
+      supabase.from('clients').select('*').eq('user_id', userId),
+      supabase.from('invoices').select('*').eq('user_id', userId),
+      supabase.from('quotes').select('*').eq('user_id', userId)
     ]);
 
     if (clientsRes.data) {
