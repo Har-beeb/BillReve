@@ -43,8 +43,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
         <div className="max-w-md w-full mx-auto">
           {/* Brand */}
           <div className="flex items-center gap-3 mb-4">
-            <img src="/pwa-192x192.png" alt="BillReve Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-purple-600/20" />
-            <span className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">BillReve</span>
+            <img src="/logo.svg" alt="BillReve Logo" className="w-10 h-10" />
+            <span className="font-['Outfit'] font-black text-3xl tracking-tight text-slate-900 dark:text-white mt-1">BillReve</span>
           </div>
 
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">{title}</h2>

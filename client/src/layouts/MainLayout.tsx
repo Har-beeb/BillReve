@@ -182,8 +182,8 @@ const MainLayout: React.FC = () => {
         />
 
         <div className={`p-6 font-bold text-2xl text-[#9333ea] flex items-center justify-start h-20`}>
-          <img src="/pwa-192x192.png" alt="BillReve Logo" className="w-8 h-8 rounded-xl flex-shrink-0 shadow-sm" />
-          <span className={`overflow-hidden whitespace-nowrap text-lg transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-4'}`}>
+          <img src="/logo.svg" alt="BillReve Logo" className="w-8 h-8 flex-shrink-0" />
+          <span className={`font-['Outfit'] font-black overflow-hidden whitespace-nowrap text-2xl transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-4'}`}>
             BillReve
           </span>
         </div>
@@ -259,8 +259,12 @@ const MainLayout: React.FC = () => {
               </button>
             )}
             <div className="flex items-center gap-2">
-              <img src="/pwa-192x192.png" alt="BillReve Logo" className="w-7 h-7 rounded-lg shadow-sm" />
-              <span className="font-bold text-xl text-[#9333ea] tracking-tight">BillReve</span>
+              {mobileNavStyle === 'bottom' && (
+                <img src="/logo.svg" alt="BillReve Logo" className="w-8 h-8" />
+              )}
+              {mobileNavStyle === 'drawer' && (
+                <span className="font-['Outfit'] font-black text-2xl text-[#9333ea] tracking-tight mt-0.5">BillReve</span>
+              )}
             </div>
           </div>
           <div className="flex-1 hidden md:flex">
@@ -443,8 +447,8 @@ const MainLayout: React.FC = () => {
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-2">
-                <img src="/pwa-192x192.png" alt="BillReve Logo" className="w-8 h-8 rounded-xl shadow-sm" />
-                <span className="font-bold text-2xl text-[#9333ea]">BillReve</span>
+                <img src="/logo.svg" alt="BillReve Logo" className="w-8 h-8" />
+                <span className="font-['Outfit'] font-black text-2xl text-[#9333ea] mt-0.5">BillReve</span>
               </div>
               <button
                 type="button"
