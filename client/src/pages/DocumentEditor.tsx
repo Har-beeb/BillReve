@@ -380,8 +380,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             <div>
                <div className="flex justify-between items-center mb-1.5">
                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Terms & Notes</label>
-                {aiEnabled && (
-                 <ProFeature isProUser={isProUser} className="flex-shrink-0 ml-2">
+                {aiEnabled && isProUser && (
                    <button
                      onClick={handleEnhanceNote}
                      disabled={isEnhancingNote || !notes.trim()}
@@ -391,7 +390,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
                      {isEnhancingNote ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                      <span>AI Expand</span>
                    </button>
-                 </ProFeature>
                 )}
                </div>
                <textarea 
