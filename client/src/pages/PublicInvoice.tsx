@@ -29,7 +29,7 @@ const PublicInvoice: React.FC = () => {
       if (!id) return;
       try {
         // 1. Fetch Invoice
-        let invoiceData;
+        let invoiceData: any;
         try {
           const { data, error: invoiceError } = await supabase
             .rpc('get_public_invoice', { p_local_id: id })
@@ -59,7 +59,7 @@ const PublicInvoice: React.FC = () => {
         setInvoice(invoiceData);
 
         // 2. Fetch Client
-        let clientData;
+        let clientData: any;
         try {
           const { data } = await supabase
             .rpc('get_public_client', { p_local_id: invoiceData.client_id })
@@ -73,7 +73,7 @@ const PublicInvoice: React.FC = () => {
         setClient(clientData);
 
         // 3. Fetch MSME Profile
-        let profileData;
+        let profileData: any;
         try {
           const { data } = await supabase
             .rpc('get_public_profile', { p_id: invoiceData.user_id })

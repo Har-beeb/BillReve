@@ -29,7 +29,7 @@ const PublicQuote: React.FC = () => {
       if (!id) return;
       try {
         // 1. Fetch Quote
-        let quoteData;
+        let quoteData: any;
         try {
           const { data, error: quoteError } = await supabase
             .rpc('get_public_quote', { p_local_id: id })
@@ -58,7 +58,7 @@ const PublicQuote: React.FC = () => {
         setQuote(quoteData);
 
         // 2. Fetch Client
-        let clientData;
+        let clientData: any;
         try {
           const { data } = await supabase
             .rpc('get_public_client', { p_local_id: quoteData.client_id })
@@ -72,7 +72,7 @@ const PublicQuote: React.FC = () => {
         setClient(clientData);
 
         // 3. Fetch MSME Profile
-        let profileData;
+        let profileData: any;
         try {
           const { data } = await supabase
             .rpc('get_public_profile', { p_id: quoteData.user_id })
