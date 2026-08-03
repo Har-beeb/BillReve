@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Plus, Sparkles, Loader2 } from 'lucide-react';
 import { enhanceAiText } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
-import { ProFeature } from './ui/ProFeature';
 
 export interface LineItem {
   id: string;
@@ -70,20 +69,15 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
                   placeholder="Item description"
                   className="w-full py-3.5 px-3.5 md:py-2.5 md:px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all font-medium text-sm shadow-sm md:shadow-none"
                 />
-                {aiEnabled && (
-                  <ProFeature 
-                    isProUser={isProUser}
-                    className="flex-shrink-0"
+                {aiEnabled && isProUser && (
+                  <button
+                    onClick={() => handleEnhance(item.id, item.description)}
+                    disabled={enhancingId === item.id || !item.description.trim()}
+                    className="flex-shrink-0 p-2 text-purple-500 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors border border-purple-100 dark:border-purple-800/30"
+                    title="Enhance Description with AI"
                   >
-                    <button
-                      onClick={() => handleEnhance(item.id, item.description)}
-                      disabled={enhancingId === item.id || !item.description.trim()}
-                      className="p-2 text-purple-500 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors border border-purple-100 dark:border-purple-800/30"
-                      title="Enhance Description with AI"
-                    >
-                      {enhancingId === item.id ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                    </button>
-                  </ProFeature>
+                    {enhancingId === item.id ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                  </button>
                 )}
               </div>
             </div>
