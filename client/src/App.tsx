@@ -20,6 +20,9 @@ import Trash from './pages/Trash';
 import Payments from './pages/Payments';
 import About from './pages/About';
 import Upgrade from './pages/Upgrade';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import Splash from './pages/Splash';
 import { useAppStore } from './store/useAppStore';
 import { supabase } from './lib/supabase';
 
@@ -37,7 +40,7 @@ function App() {
   const setSession = useAppStore(state => state.setSession);
   const theme = useAppStore(state => state.theme);
   const colorTheme = useAppStore(state => state.colorTheme);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async (sessionUser: any) => {
@@ -82,7 +85,6 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       fetchProfile(session?.user);
-      setIsInitializing(false);
     });
 
     // Listen for auth changes (login, logout, refresh)
@@ -117,23 +119,24 @@ function App() {
     }
   }, [theme, colorTheme]);
 
-  if (isInitializing) {
-    return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>;
+  if (showSplash) {
+    return <Splash onComplete={() => setShowSplash(false)} />;
   }
 
   return (
     <BrowserRouter>
       <Toaster position="bottom-right" />
       <Routes>
-        {/* Public Routes */}
+        {/* Fully Open Routes */}
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/pay/:id" element={<PublicInvoice />} />
+        <Route path="/quote/:id" element={<PublicQuote />} />
+        {/* Auth Routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/pay/:id" element={<PublicInvoice />} />
-        <Route path="/quote/:id" element={<PublicQuote />} />
 
         {/* Private Routes */}
         <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>

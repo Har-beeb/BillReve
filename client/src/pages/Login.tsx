@@ -67,6 +67,7 @@ const Login: React.FC = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
           placeholder="Enter your email"
         />
 
@@ -76,6 +77,7 @@ const Login: React.FC = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="current-password"
           placeholder="••••••••"
         />
 

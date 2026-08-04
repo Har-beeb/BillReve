@@ -208,10 +208,14 @@ const PublicInvoice: React.FC = () => {
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg shadow-sm hover:bg-purple-700 transition-colors text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+            className={`flex items-center gap-2 px-5 py-2.5 text-white rounded-lg shadow-sm transition-colors text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed ${
+              isPaid
+                ? 'bg-emerald-600 hover:bg-emerald-700'
+                : 'bg-purple-600 hover:bg-purple-700'
+            }`}
           >
             <Download size={16} />
-            {isDownloading ? 'Downloading...' : 'Download PDF'}
+            {isDownloading ? 'Generating...' : isPaid ? 'Download Receipt (PDF)' : 'Download PDF'}
           </button>
         </div>
         

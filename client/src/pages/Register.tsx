@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/auth/AuthLayout';
 import AuthInput from '../components/auth/AuthInput';
 import OAuthButton from '../components/auth/OAuthButton';
+import PasswordStrengthMeter, { isPasswordValid } from '../components/auth/PasswordStrengthMeter';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +20,12 @@ const Register: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (!isPasswordValid(password)) {
+      setError('Please ensure your password meets all requirements.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -124,6 +131,7 @@ const Register: React.FC = () => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
+          autoComplete="name"
           placeholder="John Doe"
         />
         
@@ -133,6 +141,7 @@ const Register: React.FC = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
           placeholder="Enter your email"
         />
 
@@ -143,10 +152,10 @@ const Register: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={8}
+            autoComplete="new-password"
             placeholder="••••••••"
           />
-          <p className="mt-2 text-xs text-slate-500">Must be at least 8 characters long.</p>
+          <PasswordStrengthMeter password={password} />
         </div>
 
         <button

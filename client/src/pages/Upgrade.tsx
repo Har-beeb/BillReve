@@ -22,7 +22,8 @@ const Upgrade: React.FC = () => {
          { display_name: "Payment Type", variable_name: "type", value: "saas_subscription" }
       ]
     },
-    bearer: "account" as any,
+    // 'account' = merchant bears the fee, user pays exactly ₦3,500
+    bearer: 'account' as 'account' | 'subaccount',
     publicKey: SAAS_PAYSTACK_PUBLIC_KEY,
     text: "Upgrade to Pro Now",
     onSuccess: (reference: any) => {
