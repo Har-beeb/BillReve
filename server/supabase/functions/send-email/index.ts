@@ -27,7 +27,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: Deno.env.get("EMAIL_FROM") || "BillReve Support <support@billreve.app>",
+        from: Deno.env.get("EMAIL_FROM") || "BillReve <hello@billreve.app>",
         to: Array.isArray(to) ? to : [to],
         reply_to: "support@billreve.app",
         subject: subject || "Update from BillReve",

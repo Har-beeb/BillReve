@@ -49,12 +49,15 @@ function App() {
       if (sessionUser) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_pro, name, email, phone, address, bank_name, account_name, account_number, country, currency, logo_url')
+          .select('is_pro, pro_expires_at, name, email, phone, address, bank_name, account_name, account_number, country, currency, logo_url')
           .eq('id', sessionUser.id)
           .single();
           
         if (profile) {
-          useAppStore.getState().setProUser(profile.is_pro || false);
+          // Determine actual Pro status: is_pro must be true AND subscription must not be expired
+          const isExpired = profile.pro_expires_at ? new Date(profile.pro_expires_at) < new Date() : false;
+          const isActuallyPro = (profile.is_pro || false) && !isExpired;
+          useAppStore.getState().setProUser(isActuallyPro);
           
           // Hydrate business profile from database
           const store = useAppStore.getState();

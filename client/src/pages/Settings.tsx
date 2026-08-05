@@ -33,37 +33,45 @@ const Settings: React.FC = () => {
     setLocalTaxes(taxSettings);
   }, [taxSettings]);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          const MAX_WIDTH = 800;
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-            setLocalProfile({ ...localProfile, logoUrl: compressedBase64 });
-          } else {
-            setLocalProfile({ ...localProfile, logoUrl: reader.result as string });
-          }
-        };
-        img.src = reader.result as string;
-      };
-      reader.readAsDataURL(file);
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    // Validate file type and size (max 2MB)
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be smaller than 2MB.');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const filePath = `${user.id}/logo.${file.name.split('.').pop()}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`; // bust cache
+
+      setLocalProfile({ ...localProfile, logoUrl: publicUrl });
+      toast.success('Logo uploaded! Save your profile to apply it.');
+    } catch (err: any) {
+      console.error('Logo upload failed:', err);
+      toast.error('Failed to upload logo. Please try again.');
+    } finally {
+      setIsUploadingLogo(false);
     }
   };
 
@@ -556,12 +564,12 @@ const Settings: React.FC = () => {
                     )}
                   </div>
                   <div className="flex-1 space-y-2">
-                    <label className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors w-max font-medium text-sm">
-                      <Upload size={16} />
-                      Upload Logo
-                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                    <label className={`flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors w-max font-medium text-sm ${isUploadingLogo ? 'opacity-60 pointer-events-none' : ''}`}>
+                      {isUploadingLogo ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                      {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={isUploadingLogo} />
                     </label>
-                    <p className="text-xs text-slate-500">Recommended size: 256x256px. PNG, JPG or SVG.</p>
+                    <p className="text-xs text-slate-500">Max 2MB. PNG, JPG, WebP or GIF.</p>
                     {localProfile.logoUrl && (
                       <button 
                         onClick={() => setLocalProfile({ ...localProfile, logoUrl: undefined })}
