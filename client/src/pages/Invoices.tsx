@@ -527,9 +527,8 @@ const Invoices: React.FC = () => {
                       </div>
                       <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                         <ActionMenu items={[
-                          { label: 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
+                          { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
                           ...(invoice.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }] : []),
-                          ...(invoice.status === 'PAID' ? [{ label: 'Receipt', onClick: () => handleDownloadPdf(invoice) }] : []),
                           ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT' || invoice.status === 'DRAFT') ? [
                             { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
                             { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
@@ -586,9 +585,8 @@ const Invoices: React.FC = () => {
                      {formatMoney(invoice.total, invoice.currency)}
                      <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                        <ActionMenu items={[
-                         { label: 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
+                         { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
                          ...(invoice.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }] : []),
-                         ...(invoice.status === 'PAID' ? [{ label: 'Receipt', onClick: () => handleDownloadPdf(invoice) }] : []),
                          ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT' || invoice.status === 'DRAFT') ? [
                            { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
                            { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
@@ -645,7 +643,7 @@ const Invoices: React.FC = () => {
           selectedInvoice && (
             <ActionMenu 
               items={[
-                { label: 'Download PDF', onClick: () => handleDownloadPdf(selectedInvoice) },
+                { label: selectedInvoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(selectedInvoice) },
                 ...(selectedInvoice.status === 'DRAFT' ? [{ label: 'Edit Invoice', onClick: () => { navigate('/invoices/new', { state: { invoice: selectedInvoice } }); setSelectedInvoice(null); } }] : []),
                 ...((selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'OVERDUE' || selectedInvoice.status === 'SENT' || selectedInvoice.status === 'DRAFT') ? [
                   { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(selectedInvoice) }

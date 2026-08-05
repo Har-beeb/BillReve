@@ -7,3 +7,4 @@ export { LongPressable } from './LongPressable';
 export { EmptyState } from './EmptyState';
 export { cn } from '../../utils/cn';
 export * from './InstructionNote';
+export * from './InfoNote';

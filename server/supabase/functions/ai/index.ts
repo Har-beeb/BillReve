@@ -223,7 +223,7 @@ Draft a polite but firm payment reminder email. Ask them to process the payment 
 Thank them for their business and provide a brief friendly note.`;
   }
 
-  prompt += `\n\nReturn ONLY the email body text. Do not include a subject line. Keep it concise, warm, and professional. Sign off politely as "${businessName}".`;
+  prompt += `\n\nReturn ONLY the email body text. Do not include a subject line. Do not start with a greeting like "Hello [Client]" or "Dear [Client]", just write the core message itself. Keep it concise, warm, and professional. Sign off politely as "${businessName}".`;
 
   const response = await aiClient.models.generateContent({
     model: "gemini-3.5-flash-lite",

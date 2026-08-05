@@ -55,6 +55,10 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
 
   const handleDraftEmail = async () => {
     if (!documentDetails || !clientDetails) return;
+    if (!navigator.onLine) {
+      toast.error('You need to be online to draft emails with AI.');
+      return;
+    }
     
     setIsDrafting(true);
     try {
@@ -101,6 +105,10 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
   const isOverdue = documentDetails && documentType === 'Invoice' && documentDetails.dueDate && new Date(documentDetails.dueDate) < new Date();
 
   const handleSendEmail = async () => {
+    if (!navigator.onLine) {
+      toast.error('You need to be online to send emails.');
+      return;
+    }
     setIsSending(true);
     try {
       // 1. Get the document and client from IndexedDB
@@ -118,8 +126,8 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       
       // 3. Construct HTML
       const subject = isOverdue 
-        ? `Reminder: Your ${documentType} from ${businessProfile.name || 'BillReve'} is overdue`
-        : `Your ${documentType} from ${businessProfile.name || 'BillReve'}`;
+        ? `Payment Reminder: ${documentType} ${(document as any).invoiceNumber || (document as any).quoteNumber || ''} from ${businessProfile.name || 'BillReve'}`
+        : `${documentType} ${(document as any).invoiceNumber || (document as any).quoteNumber || ''} from ${businessProfile.name || 'BillReve'}`;
         
       const htmlContent = `
         <div style="font-family: sans-serif; max-w-xl mx-auto p-4 border border-gray-200 rounded-lg shadow-sm">

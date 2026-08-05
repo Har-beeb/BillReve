@@ -164,10 +164,18 @@ const PublicInvoice: React.FC = () => {
     publicKey: profile.paystack_public_key,
     text: "Pay Securely with Paystack",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onSuccess: (reference: any) => {
+    onSuccess: async (reference: any) => {
       console.log('Payment Success:', reference);
       setPaymentStatus('SUCCESS');
-      // Optimistic update
+      try {
+        await supabase.rpc('update_invoice_status_public', {
+          p_local_id: id,
+          p_status: 'PAID',
+          p_amount_paid: invoice.total
+        });
+      } catch (err) {
+        console.error('Failed to update invoice status in Supabase:', err);
+      }
     },
     onClose: () => {
       console.log('Payment closed');
@@ -278,9 +286,9 @@ const PublicInvoice: React.FC = () => {
           </div>
 
           <div className="flex-1">
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="bg-slate-50  rounded-xl overflow-hidden border border-slate-200 ">
               <table className="w-full text-sm text-left">
-                <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-slate-100  text-slate-600  border-b border-slate-200 ">
                   <tr>
                     <th className="px-6 py-4 font-semibold">Description</th>
                     <th className="px-6 py-4 font-semibold text-right">Qty</th>
@@ -288,15 +296,15 @@ const PublicInvoice: React.FC = () => {
                     <th className="px-6 py-4 font-semibold text-right">Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-slate-100 ">
                   {invoice.items && invoice.items.length > 0 ? (
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     invoice.items.map((i: any, idx: number) => (
-                      <tr key={idx} className="bg-white dark:bg-slate-900 hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 text-slate-900 dark:text-slate-100 font-medium">{i.description}</td>
-                        <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400">{i.quantity}</td>
-                        <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400">{i.unitPrice?.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right text-slate-900 dark:text-slate-100 font-bold">{i.amount?.toLocaleString()}</td>
+                      <tr key={idx} className="bg-white  hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 text-slate-900  font-medium">{i.description}</td>
+                        <td className="px-6 py-4 text-right text-slate-600 ">{i.quantity}</td>
+                        <td className="px-6 py-4 text-right text-slate-600 ">{i.unitPrice?.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right text-slate-900  font-bold">{i.amount?.toLocaleString()}</td>
                       </tr>
                     ))
                   ) : (
@@ -307,20 +315,20 @@ const PublicInvoice: React.FC = () => {
                 </tbody>
               </table>
 
-              <div className="bg-white dark:bg-slate-900 p-6 flex justify-end border-t border-slate-200 dark:border-slate-700">
+              <div className="bg-white  p-6 flex justify-end border-t border-slate-200 ">
                 <div className="w-full md:w-1/2 lg:w-1/3 space-y-3">
-                  <div className="flex justify-between text-slate-600 dark:text-slate-400 text-sm">
+                  <div className="flex justify-between text-slate-600  text-sm">
                     <span>Subtotal</span>
                     <span>{formatMoney(invoice.subtotal, invoice.currency)}</span>
                   </div>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {invoice.taxes?.map((t: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-slate-600 dark:text-slate-400 text-sm">
+                    <div key={idx} className="flex justify-between text-slate-600  text-sm">
                       <span>{t.name}</span>
                       <span>{t.isDeduction ? '-' : ''}{formatMoney(t.amount, invoice.currency)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between font-bold text-xl text-slate-900 dark:text-white pt-4 border-t border-slate-200 dark:border-slate-700 mt-2">
+                  <div className="flex justify-between font-bold text-xl text-slate-900  pt-4 border-t border-slate-200  mt-2">
                     <span>Total</span>
                     <span>{formatMoney(invoice.total, invoice.currency)}</span>
                   </div>
@@ -331,7 +339,7 @@ const PublicInvoice: React.FC = () => {
                     </div>
                   )}
                   {invoice.amount_paid > 0 && invoice.total - invoice.amount_paid > 0 && (
-                    <div className="flex justify-between font-bold text-lg text-slate-900 dark:text-white pt-2">
+                    <div className="flex justify-between font-bold text-lg text-slate-900  pt-2">
                       <span>Balance Due</span>
                       <span>{formatMoney(invoice.total - invoice.amount_paid, invoice.currency)}</span>
                     </div>
@@ -384,10 +392,19 @@ const PublicInvoice: React.FC = () => {
                        <button 
                          onClick={() => {
                             handleFlutterwavePayment({
-                              callback: (response) => {
+                              callback: async (response) => {
                                 console.log("Flutterwave payment response:", response);
                                 if (response.status === 'successful') {
                                   setPaymentStatus('SUCCESS');
+                                  try {
+                                    await supabase.rpc('update_invoice_status_public', {
+                                      p_local_id: id,
+                                      p_status: 'PAID',
+                                      p_amount_paid: invoice.total
+                                    });
+                                  } catch (err) {
+                                    console.error('Failed to update invoice status in Supabase:', err);
+                                  }
                                 }
                                 closePaymentModal();
                               },

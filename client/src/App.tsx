@@ -25,6 +25,7 @@ import Terms from './pages/Terms';
 import Splash from './pages/Splash';
 import { useAppStore } from './store/useAppStore';
 import { supabase } from './lib/supabase';
+import { syncEngine } from './services/syncEngine';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
@@ -40,6 +41,7 @@ function App() {
   const setSession = useAppStore(state => state.setSession);
   const theme = useAppStore(state => state.theme);
   const colorTheme = useAppStore(state => state.colorTheme);
+  const fontSize = useAppStore(state => state.fontSize);
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
@@ -91,9 +93,24 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       fetchProfile(session?.user);
+      if (session) {
+        syncEngine.start();
+      } else {
+        syncEngine.stop();
+      }
     });
 
-    return () => subscription.unsubscribe();
+    // Start sync engine if already have session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        syncEngine.start();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      syncEngine.stop();
+    };
   }, [setSession]);
 
   useEffect(() => {
@@ -117,7 +134,16 @@ function App() {
     } else {
       root.style.removeProperty('--color-purple-600');
     }
-  }, [theme, colorTheme]);
+
+    // Apply font size globally
+    if (fontSize === 'small') {
+      root.style.fontSize = '14px';
+    } else if (fontSize === 'large') {
+      root.style.fontSize = '18px';
+    } else {
+      root.style.fontSize = '16px';
+    }
+  }, [theme, colorTheme, fontSize]);
 
   if (showSplash) {
     return <Splash onComplete={() => setShowSplash(false)} />;
