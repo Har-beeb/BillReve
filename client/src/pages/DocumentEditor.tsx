@@ -43,7 +43,18 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const defaultNote = 'Thank you for your business! Please note that products in good condition are not returnable after 7 days. Payment is due within the specified terms.';
   const [description, setDescription] = useState<string>(initialDoc?.description || '');
   const [notes, setNotes] = useState<string>(initialDoc?.notes !== undefined ? initialDoc.notes : defaultNote);
-  const [dueDate, setDueDate] = useState<string>(initialDoc?.dueDate || initialDoc?.expiresAt ? new Date(initialDoc.dueDate || initialDoc.expiresAt).toISOString().split('T')[0] : '');
+  const getInitialDate = () => {
+    try {
+      const d = initialDoc?.dueDate || initialDoc?.expiresAt;
+      if (!d) return '';
+      const dateObj = new Date(d);
+      if (isNaN(dateObj.getTime())) return '';
+      return dateObj.toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
+  const [dueDate, setDueDate] = useState<string>(getInitialDate());
   
   // Bank Account Selection
   const defaultBankId = businessProfile.bankAccounts?.find(b => b.isDefault)?.id || businessProfile.bankAccounts?.[0]?.id || '';
@@ -57,6 +68,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
 
   const handleEnhanceNote = async () => {
     if (!notes.trim()) return;
+    if (!navigator.onLine) {
+      toast.error('AI features require an internet connection.');
+      return;
+    }
     try {
       setIsEnhancingNote(true);
       const enhanced = await enhanceAiText({ text: notes, mode: 'note' });

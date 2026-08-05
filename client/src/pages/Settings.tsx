@@ -8,6 +8,7 @@ import { syncEngine } from '../services/syncEngine';
 import { supabase } from '../lib/supabase';
 import { ProFeature } from '../components/ui/ProFeature';
 import { CsvImportWizard } from '../components/CsvImportWizard';
+import InfoNote from '../components/ui/InfoNote';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import toast from 'react-hot-toast';
 
@@ -650,9 +651,12 @@ const Settings: React.FC = () => {
                 <div className="flex justify-between items-center mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Bank Accounts</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
                       Add your bank details for manual transfers. You can choose which account to display on an invoice.
                     </p>
+                    <InfoNote title="How Bank Accounts Appear on Invoices" variant="info" defaultExpanded={true}>
+                      When you generate a public link or PDF, only the selected default bank account (or the one you specifically choose when creating the document) will be visible to your client for payment.
+                    </InfoNote>
                   </div>
                 </div>
 

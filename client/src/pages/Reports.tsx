@@ -9,6 +9,7 @@ import { format, subMonths, subDays, isSameMonth, isSameDay, parseISO, isAfter, 
 import { generateTaxReportCsv } from '../utils/csvGenerator';
 import { useAppStore } from '../store/useAppStore';
 import toast from 'react-hot-toast';
+import { RevenueChat } from '../components/RevenueChat';
 
 type Timeframe = 'day' | 'week' | 'month' | '3month' | '6month' | 'year' | 'custom';
 
@@ -311,6 +312,8 @@ const Reports: React.FC = () => {
           )}
         </Card>
       </div>
+      
+      <RevenueChat />
     </div>
   );
 };

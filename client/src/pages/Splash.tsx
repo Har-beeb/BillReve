@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
+import { Logo } from '../components/ui/Logo';
+
 interface SplashProps {
   onComplete: () => void;
 }
@@ -36,13 +38,10 @@ const Splash: React.FC<SplashProps> = ({ onComplete }) => {
           ${stage === 2 ? 'opacity-0 scale-105 -translate-y-4' : ''}
         `}
       >
-        <div className="relative mb-6">
+        <div className="relative">
           <div className="absolute inset-0 bg-[#a855f7] rounded-2xl blur-xl opacity-30 animate-pulse"></div>
-          <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl flex items-center justify-center border border-slate-100 dark:border-slate-700 relative z-10 transform transition-transform hover:scale-105 duration-300">
-            {/* The abstract logo mark */}
-            <div className="w-12 h-12 bg-gradient-to-br from-[#9333ea] to-[#4f46e5] rounded-xl transform rotate-45 flex items-center justify-center">
-               <div className="w-4 h-4 bg-white rounded-sm transform -rotate-45" />
-            </div>
+          <div className="relative z-10 transform transition-transform hover:scale-105 duration-300">
+             <Logo size="xl" className="!mb-6" />
           </div>
         </div>
         

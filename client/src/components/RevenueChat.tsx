@@ -71,6 +71,11 @@ export const RevenueChat: React.FC = () => {
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
+    
+    if (!navigator.onLine) {
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: 'You must be online to use the AI Revenue Chat feature.', timestamp: new Date() }]);
+      return;
+    }
 
     const userMsg = input.trim();
     setInput('');
