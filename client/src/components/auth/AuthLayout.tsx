@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Badge } from '../ui';
 import { Building2, CheckCircle2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -17,7 +17,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
   useEffect(() => {
     const interval = setInterval(() => {
       setWordIndex((prev) => (prev + 1) % WORDS.length);
-    }, 2500); // Change word every 2.5 seconds
+    }, 2500);
 
     return () => clearInterval(interval);
   }, []);
@@ -41,67 +41,74 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
         </div>
       </div>
 
+      {/* Right side: Decorative */}
       <div className="hidden lg:flex w-1/2 relative overflow-hidden items-center justify-center bg-slate-50">
         
-        {/* Animated Background Gradients inspired by /upgrade */}
+        {/* Animated Background Gradients */}
         <motion.div 
-          animate={{ rotate: 360, scale: [1, 1.1, 1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-0 left-1/4 w-[40rem] h-[40rem] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" 
+          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-32 -left-32 w-[50rem] h-[50rem] bg-purple-500/20 rounded-full blur-[100px] pointer-events-none" 
         />
         <motion.div 
-          animate={{ rotate: -360, scale: [1, 1.2, 1] }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-0 right-1/4 w-[35rem] h-[35rem] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" 
+          animate={{ rotate: -360, scale: [1, 1.3, 1] }}
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-32 -right-32 w-[45rem] h-[45rem] bg-indigo-500/20 rounded-full blur-[100px] pointer-events-none" 
         />
         
-        {/* Decorative central rotated gradient blob */}
-        <motion.div 
-          animate={{ rotate: [0, 5, 0, -5, 0] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute inset-0 m-auto w-3/4 h-3/4 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-[3rem] opacity-5 blur-sm mix-blend-multiply pointer-events-none" 
-        />
-
-        {/* Content Box */}
-        <div className="relative z-10 w-full max-w-xl px-8 lg:px-12 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+        {/* Content Area - No Card, Just Text */}
+        <div className="relative z-10 w-full max-w-xl px-8 lg:px-12">
           
-          <div className="bg-white/60 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/50 p-10 transform transition-all">
-            <Badge className="bg-purple-100 text-purple-700 border-purple-200 mb-6">Offline-First Invoicing</Badge>
-            
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight tracking-tight min-h-[120px] md:min-h-[144px] text-slate-900">
-               Manage your <br />
-               business{' '}
-               <span key={WORDS[wordIndex]} className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 inline-block animate-fade-in-up">
-                  {WORDS[wordIndex]}
-               </span>
-            </h2>
-            
-            <p className="text-slate-600 text-lg mb-8 leading-relaxed font-light">
-               BillReve is the premier offline-first invoicing platform designed for modern SMEs and enterprises. Create quotes, manage clients, and track payments without worrying about internet connectivity.
-            </p>
+          <Badge className="bg-purple-100 text-purple-700 border-purple-200 mb-6 shadow-sm">Offline-First Invoicing</Badge>
+          
+          {/* The title with framer-motion text replacement */}
+          <h2 className="text-5xl font-bold mb-6 leading-[1.2] tracking-tight text-slate-900 min-h-[120px]">
+             Manage your <br />
+             <span className="whitespace-nowrap inline-flex items-center gap-3">
+               business
+               <div className="relative inline-block w-[250px] h-[60px]">
+                 <AnimatePresence mode="popLayout">
+                   <motion.span
+                     key={wordIndex}
+                     initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+                     animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                     exit={{ opacity: 0, y: -20, filter: "blur(4px)" }}
+                     transition={{ duration: 0.4, ease: "easeOut" }}
+                     className="absolute left-0 top-0 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 inline-block"
+                   >
+                     {WORDS[wordIndex]}
+                   </motion.span>
+                 </AnimatePresence>
+               </div>
+             </span>
+          </h2>
+          
+          <p className="text-slate-600 text-lg mb-10 leading-relaxed font-light max-w-lg">
+             BillReve is the premier offline-first invoicing platform designed for modern SMEs and enterprises. Create quotes, manage clients, and track payments without worrying about internet connectivity.
+          </p>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 bg-white/80 p-4 rounded-xl border border-slate-100 shadow-sm">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
-                   <CheckCircle2 size={20} />
-                </div>
-                <div>
-                   <h4 className="font-bold text-slate-900 text-sm">Full Offline Capabilities</h4>
-                   <p className="text-xs text-slate-500 mt-0.5">Work seamlessly without a connection.</p>
-                </div>
+          <div className="space-y-5 max-w-md">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-green-600 shadow-sm border border-slate-100">
+                 <CheckCircle2 size={24} />
               </div>
-              
-              <div className="flex items-center gap-4 bg-white/80 p-4 rounded-xl border border-slate-100 shadow-sm">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
-                   <Building2 size={20} />
-                </div>
-                <div>
-                   <h4 className="font-bold text-slate-900 text-sm">Enterprise Ready</h4>
-                   <p className="text-xs text-slate-500 mt-0.5">Built to scale with your growing operations.</p>
-                </div>
+              <div>
+                 <h4 className="font-bold text-slate-900">Full Offline Capabilities</h4>
+                 <p className="text-sm text-slate-500 mt-0.5">Work seamlessly without a connection.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-purple-600 shadow-sm border border-slate-100">
+                 <Building2 size={24} />
+              </div>
+              <div>
+                 <h4 className="font-bold text-slate-900">Enterprise Ready</h4>
+                 <p className="text-sm text-slate-500 mt-0.5">Built to scale with your growing operations.</p>
               </div>
             </div>
           </div>
+          
         </div>
       </div>
     </div>
