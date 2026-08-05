@@ -9,24 +9,30 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
+-- Drop policies if they exist so we can recreate them safely
+DROP POLICY IF EXISTS "Users can upload their own logo" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own logo" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own logo" ON storage.objects;
+DROP POLICY IF EXISTS "Logos are publicly readable" ON storage.objects;
+
 -- RLS: Allow authenticated users to upload/update their own logo
-CREATE POLICY IF NOT EXISTS "Users can upload their own logo"
+CREATE POLICY "Users can upload their own logo"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'logos' AND (storage.foldername(name))[1] = auth.uid()::text);
 
-CREATE POLICY IF NOT EXISTS "Users can update their own logo"
+CREATE POLICY "Users can update their own logo"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (bucket_id = 'logos' AND (storage.foldername(name))[1] = auth.uid()::text);
 
-CREATE POLICY IF NOT EXISTS "Users can delete their own logo"
+CREATE POLICY "Users can delete their own logo"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'logos' AND (storage.foldername(name))[1] = auth.uid()::text);
 
 -- Allow anyone to read logos (they appear on public invoices/quotes)
-CREATE POLICY IF NOT EXISTS "Logos are publicly readable"
+CREATE POLICY "Logos are publicly readable"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'logos');
