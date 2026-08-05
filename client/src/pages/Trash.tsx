@@ -3,16 +3,20 @@ import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { Trash2, RefreshCw } from 'lucide-react';
-import { EmptyState } from '../components/ui';
+import { EmptyState, LongPressable } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
+import { useSelection } from '../hooks/useSelection';
 
 const Trash: React.FC = () => {
   const deletedClients = useLiveQuery(() => db.clients.filter(c => !!c.deletedAt).toArray()) || [];
   const deletedInvoices = useLiveQuery(() => db.invoices.filter(i => !!i.deletedAt).toArray()) || [];
   const deletedQuotes = useLiveQuery(() => db.quotes.filter(q => !!q.deletedAt).toArray()) || [];
 
+  const allItems = [...deletedClients, ...deletedInvoices, ...deletedQuotes];
+  const { selectedIds, toggleSelect, clearSelection, setSelectedIds } = useSelection(allItems, (item: any) => item.localId);
+
   const [processingId, setProcessingId] = React.useState<string | null>(null);
-  const [modalConfig, setModalConfig] = React.useState<{ isOpen: boolean, type: 'restore' | 'delete', entity: 'CLIENT' | 'INVOICE' | 'QUOTE', localId: string, itemName: string } | null>(null);
+  const [modalConfig, setModalConfig] = React.useState<{ isOpen: boolean, type: 'restore' | 'delete', entity: 'CLIENT' | 'INVOICE' | 'QUOTE' | 'BULK', localId: string, itemName: string } | null>(null);
 
   const confirmAction = async () => {
     if (!modalConfig) return;
@@ -21,36 +25,47 @@ const Trash: React.FC = () => {
     setModalConfig(null);
 
     try {
-      if (type === 'restore') {
-        if (entity === 'CLIENT') {
-          await db.clients.update(localId, { deletedAt: '', syncStatus: 'pending' });
-        } else if (entity === 'INVOICE') {
-          await db.invoices.update(localId, { deletedAt: '', syncStatus: 'pending' });
-        } else if (entity === 'QUOTE') {
-          await db.quotes.update(localId, { deletedAt: '', syncStatus: 'pending' });
+      if (entity === 'BULK') {
+        const itemsToProcess = allItems.filter(item => selectedIds.has(item.localId));
+        for (const item of itemsToProcess) {
+          const itemEntity = 'invoiceNumber' in item ? 'INVOICE' : 'quoteNumber' in item ? 'QUOTE' : 'CLIENT';
+          const table = itemEntity === 'INVOICE' ? db.invoices : itemEntity === 'QUOTE' ? db.quotes : db.clients;
+          
+          if (type === 'restore') {
+            await table.update(item.localId, { deletedAt: '', syncStatus: 'pending' });
+            await db.syncQueue.add({
+              id: uuidv4(), action: 'UPDATE', entity: itemEntity,
+              payload: { local_id: item.localId, deleted_at: null }, status: 'pending', createdAt: new Date().toISOString()
+            });
+          } else if (type === 'delete') {
+            await table.delete(item.localId);
+            await db.syncQueue.add({
+              id: uuidv4(), action: 'DELETE', entity: itemEntity,
+              payload: { local_id: item.localId }, status: 'pending', createdAt: new Date().toISOString()
+            });
+          }
         }
+        clearSelection();
+      } else {
+        if (type === 'restore') {
+          if (entity === 'CLIENT') await db.clients.update(localId, { deletedAt: '', syncStatus: 'pending' });
+          else if (entity === 'INVOICE') await db.invoices.update(localId, { deletedAt: '', syncStatus: 'pending' });
+          else if (entity === 'QUOTE') await db.quotes.update(localId, { deletedAt: '', syncStatus: 'pending' });
 
-        await db.syncQueue.add({
-          id: uuidv4(),
-          action: 'UPDATE',
-          entity,
-          payload: { local_id: localId, deleted_at: null },
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        });
-      } else if (type === 'delete') {
-        if (entity === 'CLIENT') await db.clients.delete(localId);
-        else if (entity === 'INVOICE') await db.invoices.delete(localId);
-        else if (entity === 'QUOTE') await db.quotes.delete(localId);
+          await db.syncQueue.add({
+            id: uuidv4(), action: 'UPDATE', entity,
+            payload: { local_id: localId, deleted_at: null }, status: 'pending', createdAt: new Date().toISOString()
+          });
+        } else if (type === 'delete') {
+          if (entity === 'CLIENT') await db.clients.delete(localId);
+          else if (entity === 'INVOICE') await db.invoices.delete(localId);
+          else if (entity === 'QUOTE') await db.quotes.delete(localId);
 
-        await db.syncQueue.add({
-          id: uuidv4(),
-          action: 'DELETE',
-          entity,
-          payload: { local_id: localId },
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        });
+          await db.syncQueue.add({
+            id: uuidv4(), action: 'DELETE', entity,
+            payload: { local_id: localId }, status: 'pending', createdAt: new Date().toISOString()
+          });
+        }
       }
     } catch (err) {
       console.error(`Failed to ${type}:`, err);
@@ -59,7 +74,89 @@ const Trash: React.FC = () => {
     }
   };
 
-  const isEmpty = deletedClients.length === 0 && deletedInvoices.length === 0 && deletedQuotes.length === 0;
+  const isEmpty = allItems.length === 0;
+
+  const renderItem = (item: any, type: 'CLIENT' | 'INVOICE' | 'QUOTE', identifier: string, dateStr: string) => {
+    return (
+      <LongPressable
+        key={item.id}
+        onLongPress={() => toggleSelect(item.localId)}
+        onClick={() => { if (selectedIds.size > 0) toggleSelect(item.localId); }}
+        className={`group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 transition-colors gap-2 md:gap-0 ${selectedIds.has(item.localId) ? 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-l-purple-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 border-transparent'}`}
+      >
+        <div className="flex md:hidden items-start gap-3 w-full">
+          <div className={`pt-1 transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'w-6 opacity-100 mr-2' : 'w-0 opacity-0 m-0'}`}>
+            <input 
+              type="checkbox"
+              checked={selectedIds.has(item.localId)}
+              onChange={(e) => { e.stopPropagation(); toggleSelect(item.localId); }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+            />
+          </div>
+          <div className="flex flex-col gap-2 w-full min-w-0">
+            <div className="flex items-center gap-3 w-full">
+              <span className="text-xs font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-700/50 rounded text-slate-600 dark:text-slate-400 uppercase tracking-wider flex-shrink-0">{type.charAt(0) + type.slice(1).toLowerCase()}</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100 text-base truncate min-w-0">{identifier}</span>
+            </div>
+            <div className="flex justify-between items-center md:hidden w-full mt-1">
+              <span className="text-sm text-slate-500 font-medium">{dateStr}</span>
+              <div className="flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setModalConfig({ isOpen: true, type: 'restore', entity: type, localId: item.localId, itemName: identifier })}} 
+                  disabled={processingId === item.localId}
+                  className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50 transition-colors"
+                  title="Restore"
+                >
+                  <RefreshCw size={18} className={processingId === item.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setModalConfig({ isOpen: true, type: 'delete', entity: type, localId: item.localId, itemName: identifier })}}
+                  disabled={processingId === item.localId}
+                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 transition-colors"
+                  title="Delete permanently"
+                >
+                  <Trash2 size={18} className={processingId === item.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="hidden md:flex items-center md:col-span-1">
+          <input 
+            type="checkbox"
+            checked={selectedIds.has(item.localId)}
+            onChange={(e) => { e.stopPropagation(); toggleSelect(item.localId); }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+          />
+        </div>
+        <div className="hidden md:block md:col-span-2 font-medium text-slate-700 dark:text-slate-300">{type.charAt(0) + type.slice(1).toLowerCase()}</div>
+        <div className="hidden md:block md:col-span-4 text-slate-900 dark:text-slate-100">{identifier}</div>
+        <div className="hidden md:block md:col-span-3 text-slate-600 dark:text-slate-400">{dateStr}</div>
+        
+        <div className="hidden md:flex justify-end gap-2 md:col-span-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setModalConfig({ isOpen: true, type: 'restore', entity: type, localId: item.localId, itemName: identifier })}} 
+            disabled={processingId === item.localId}
+            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50 transition-colors"
+            title="Restore"
+          >
+            <RefreshCw size={18} className={processingId === item.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); setModalConfig({ isOpen: true, type: 'delete', entity: type, localId: item.localId, itemName: identifier })}}
+            disabled={processingId === item.localId}
+            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 transition-colors"
+            title="Delete permanently"
+          >
+            <Trash2 size={18} className={processingId === item.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
+          </button>
+        </div>
+      </LongPressable>
+    );
+  };
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -82,10 +179,12 @@ const Trash: React.FC = () => {
               </button>
               <button 
                 onClick={confirmAction} 
-                className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+                className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2 ${
                   modalConfig.type === 'restore' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'
                 }`}
+                disabled={processingId !== null}
               >
+                {processingId && <RefreshCw size={16} className="animate-spin" />}
                 {modalConfig.type === 'restore' ? 'Yes, Restore' : 'Yes, Delete'}
               </button>
             </div>
@@ -94,7 +193,7 @@ const Trash: React.FC = () => {
         document.body
       )}
 
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Trash2 className="text-red-500" /> Trash
@@ -103,6 +202,23 @@ const Trash: React.FC = () => {
             Manage your recently deleted items.
           </p>
         </div>
+
+        {selectedIds.size > 0 && (
+          <div className="flex gap-2 animate-in fade-in slide-in-from-bottom-2">
+            <button 
+              onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'BULK', localId: 'bulk', itemName: `${selectedIds.size} selected items` })}
+              className="px-3 md:px-4 py-2 bg-white dark:bg-slate-800 text-blue-600 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
+            >
+              Restore ({selectedIds.size})
+            </button>
+            <button 
+              onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'BULK', localId: 'bulk', itemName: `${selectedIds.size} selected items` })}
+              className="px-3 md:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
+            >
+              Delete ({selectedIds.size})
+            </button>
+          </div>
+        )}
       </div>
 
       {isEmpty ? (
@@ -112,110 +228,34 @@ const Trash: React.FC = () => {
           description="You haven't deleted any items yet."
         />
       ) : (
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-          <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
+          <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl items-center">
+            <div className="col-span-1">
+              <input 
+                type="checkbox"
+                checked={selectedIds.size > 0 && selectedIds.size === allItems.length}
+                ref={input => {
+                  if (input) {
+                    input.indeterminate = selectedIds.size > 0 && selectedIds.size < allItems.length;
+                  }
+                }}
+                onChange={(e) => {
+                  if (e.target.checked) setSelectedIds(new Set(allItems.map(i => i.localId)));
+                  else clearSelection();
+                }}
+                className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+              />
+            </div>
             <div className="col-span-2">Type</div>
-            <div className="col-span-5">Name / Identifier</div>
+            <div className="col-span-4">Name / Identifier</div>
             <div className="col-span-3">Deleted On</div>
             <div className="col-span-2 text-right pr-4">Actions</div>
           </div>
           
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {deletedClients.map(client => (
-              <div key={client.id} className="group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors gap-3 md:gap-0">
-                <div className="flex md:hidden justify-between items-center w-full">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">Client</span>
-                  <span className="text-xs text-slate-500">{new Date(client.deletedAt as string).toLocaleDateString()}</span>
-                </div>
-                
-                <div className="hidden md:block md:col-span-2 font-medium text-slate-700 dark:text-slate-300">Client</div>
-                <div className="md:col-span-5 text-slate-900 dark:text-slate-100 font-semibold md:font-normal text-lg md:text-base">{client.name}</div>
-                <div className="hidden md:block md:col-span-3 text-slate-600 dark:text-slate-400">{new Date(client.deletedAt as string).toLocaleDateString()}</div>
-                
-                <div className="md:col-span-2 flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1 md:mt-0">
-                  <button 
-                    onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'CLIENT', localId: client.localId, itemName: client.name })} 
-                    disabled={processingId === client.localId}
-                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50 transition-colors"
-                    title="Restore"
-                  >
-                    <RefreshCw size={18} className={processingId === client.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
-                  </button>
-                  <button 
-                    onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'CLIENT', localId: client.localId, itemName: client.name })}
-                    disabled={processingId === client.localId}
-                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 transition-colors"
-                    title="Delete permanently"
-                  >
-                    <Trash2 size={18} className={processingId === client.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            
-            {deletedInvoices.map(invoice => (
-              <div key={invoice.id} className="group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors gap-3 md:gap-0">
-                <div className="flex md:hidden justify-between items-center w-full">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">Invoice</span>
-                  <span className="text-xs text-slate-500">{new Date(invoice.deletedAt as string).toLocaleDateString()}</span>
-                </div>
-                
-                <div className="hidden md:block md:col-span-2 font-medium text-slate-700 dark:text-slate-300">Invoice</div>
-                <div className="md:col-span-5 text-slate-900 dark:text-slate-100 font-semibold md:font-normal text-lg md:text-base">{invoice.invoiceNumber || 'Draft'}</div>
-                <div className="hidden md:block md:col-span-3 text-slate-600 dark:text-slate-400">{new Date(invoice.deletedAt as string).toLocaleDateString()}</div>
-                
-                <div className="md:col-span-2 flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1 md:mt-0">
-                  <button 
-                    onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'INVOICE', localId: invoice.localId, itemName: invoice.invoiceNumber || 'Invoice' })}
-                    disabled={processingId === invoice.localId}
-                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50 transition-colors"
-                    title="Restore"
-                  >
-                    <RefreshCw size={18} className={processingId === invoice.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
-                  </button>
-                  <button 
-                    onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'INVOICE', localId: invoice.localId, itemName: invoice.invoiceNumber || 'Invoice' })}
-                    disabled={processingId === invoice.localId}
-                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 transition-colors"
-                    title="Delete permanently"
-                  >
-                    <Trash2 size={18} className={processingId === invoice.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {deletedQuotes.map(quote => (
-              <div key={quote.id} className="group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors gap-3 md:gap-0">
-                <div className="flex md:hidden justify-between items-center w-full">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">Quote</span>
-                  <span className="text-xs text-slate-500">{new Date(quote.deletedAt as string).toLocaleDateString()}</span>
-                </div>
-                
-                <div className="hidden md:block md:col-span-2 font-medium text-slate-700 dark:text-slate-300">Quote</div>
-                <div className="md:col-span-5 text-slate-900 dark:text-slate-100 font-semibold md:font-normal text-lg md:text-base">{quote.quoteNumber || 'Draft'}</div>
-                <div className="hidden md:block md:col-span-3 text-slate-600 dark:text-slate-400">{new Date(quote.deletedAt as string).toLocaleDateString()}</div>
-                
-                <div className="md:col-span-2 flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1 md:mt-0">
-                  <button 
-                    onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'QUOTE', localId: quote.localId, itemName: quote.quoteNumber || 'Quote' })}
-                    disabled={processingId === quote.localId}
-                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50 transition-colors"
-                    title="Restore"
-                  >
-                    <RefreshCw size={18} className={processingId === quote.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
-                  </button>
-                  <button 
-                    onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'QUOTE', localId: quote.localId, itemName: quote.quoteNumber || 'Quote' })}
-                    disabled={processingId === quote.localId}
-                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 transition-colors"
-                    title="Delete permanently"
-                  >
-                    <Trash2 size={18} className={processingId === quote.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
-                  </button>
-                </div>
-              </div>
-            ))}
+            {deletedClients.map(client => renderItem(client, 'CLIENT', client.name, new Date(client.deletedAt as string).toLocaleDateString()))}
+            {deletedInvoices.map(invoice => renderItem(invoice, 'INVOICE', invoice.invoiceNumber || 'Draft', new Date(invoice.deletedAt as string).toLocaleDateString()))}
+            {deletedQuotes.map(quote => renderItem(quote, 'QUOTE', quote.quoteNumber || 'Draft', new Date(quote.deletedAt as string).toLocaleDateString()))}
           </div>
         </div>
       )}
@@ -224,5 +264,3 @@ const Trash: React.FC = () => {
 };
 
 export default Trash;
-
-
