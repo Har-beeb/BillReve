@@ -404,13 +404,15 @@ const MainLayout: React.FC = () => {
                       <User size={16} className="text-slate-400" />
                       Profile & Settings
                     </button>
-                    <button 
-                      onClick={() => { setIsUserMenuOpen(false); navigate('/settings'); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors text-left"
-                    >
-                      <CreditCard size={16} className="text-slate-400" />
-                      Billing (Pro)
-                    </button>
+                    {!isProUser && (
+                      <button 
+                        onClick={() => { setIsUserMenuOpen(false); navigate('/upgrade'); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors text-left"
+                      >
+                        <CreditCard size={16} className="text-slate-400" />
+                        Billing (Pro)
+                      </button>
+                    )}
                   </div>
                   
                   <div className="p-1 border-t border-slate-100 dark:border-slate-700/50">

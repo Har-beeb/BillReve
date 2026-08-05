@@ -25,8 +25,8 @@ const Splash: React.FC<SplashProps> = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center overflow-hidden z-50">
       {/* Dynamic Background */}
-      <div className="absolute top-0 left-1/4 w-[40rem] h-[40rem] bg-purple-600/10 dark:bg-purple-900/20 rounded-full blur-[100px] pointer-events-none animate-pulse duration-1000" />
-      <div className="absolute bottom-0 right-1/4 w-[40rem] h-[40rem] bg-indigo-600/10 dark:bg-indigo-900/20 rounded-full blur-[100px] pointer-events-none animate-pulse duration-1000 delay-500" />
+      <div className="absolute top-0 left-1/4 w-[40rem] h-[40rem] bg-[#9333ea]/10 dark:bg-[#9333ea]/20 rounded-full blur-[100px] pointer-events-none animate-pulse duration-1000" />
+      <div className="absolute bottom-0 right-1/4 w-[40rem] h-[40rem] bg-[#4f46e5]/10 dark:bg-[#4f46e5]/20 rounded-full blur-[100px] pointer-events-none animate-pulse duration-1000 delay-500" />
 
       {/* Main Content */}
       <div 
@@ -37,10 +37,10 @@ const Splash: React.FC<SplashProps> = ({ onComplete }) => {
         `}
       >
         <div className="relative mb-6">
-          <div className="absolute inset-0 bg-purple-500 rounded-2xl blur-xl opacity-30 animate-pulse"></div>
+          <div className="absolute inset-0 bg-[#a855f7] rounded-2xl blur-xl opacity-30 animate-pulse"></div>
           <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl flex items-center justify-center border border-slate-100 dark:border-slate-700 relative z-10 transform transition-transform hover:scale-105 duration-300">
             {/* The abstract logo mark */}
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl transform rotate-45 flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#9333ea] to-[#4f46e5] rounded-xl transform rotate-45 flex items-center justify-center">
                <div className="w-4 h-4 bg-white rounded-sm transform -rotate-45" />
             </div>
           </div>
@@ -55,7 +55,7 @@ const Splash: React.FC<SplashProps> = ({ onComplete }) => {
 
         {/* Loading Bar */}
         <div className="mt-12 w-48 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full animate-progress"></div>
+          <div className="h-full bg-gradient-to-r from-[#9333ea] to-[#4f46e5] rounded-full animate-progress"></div>
         </div>
       </div>
       
