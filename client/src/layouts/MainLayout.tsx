@@ -9,6 +9,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { syncEngine } from '../services/syncEngine';
 import { useNotifications } from '../hooks/useNotifications';
+import { Logo } from '../components/ui/Logo';
 
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -182,7 +183,7 @@ const MainLayout: React.FC = () => {
         />
 
         <div className={`p-6 font-bold text-2xl text-[#9333ea] flex items-center justify-start h-20`}>
-          <img src="/logo.png" alt="BillReve Logo" className="w-8 h-8 rounded-lg bg-white flex-shrink-0 shadow-sm" />
+          <Logo size="sm" className="!mb-0 flex-shrink-0" />
           <span className={`font-['Outfit'] font-black overflow-hidden whitespace-nowrap text-2xl transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-4'}`}>
             BillReve
           </span>
@@ -260,7 +261,7 @@ const MainLayout: React.FC = () => {
             )}
             <div className="flex items-center gap-2">
               {mobileNavStyle === 'bottom' && (
-                <img src="/logo.png" alt="BillReve Logo" className="w-8 h-8 rounded-lg bg-white shadow-sm" />
+                <Logo size="sm" className="!mb-0 flex-shrink-0" />
               )}
               {mobileNavStyle === 'drawer' && (
                 <span className="font-['Outfit'] font-black text-2xl text-[#9333ea] tracking-tight mt-0.5">BillReve</span>
@@ -449,7 +450,7 @@ const MainLayout: React.FC = () => {
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="BillReve Logo" className="w-8 h-8 rounded-lg bg-white shadow-sm" />
+                <Logo size="sm" className="!mb-0 flex-shrink-0" />
                 <span className="font-['Outfit'] font-black text-2xl text-[#9333ea] mt-0.5">BillReve</span>
               </div>
               <button

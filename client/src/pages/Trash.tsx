@@ -112,94 +112,111 @@ const Trash: React.FC = () => {
           description="You haven't deleted any items yet."
         />
       ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                <th className="p-4 font-semibold text-slate-600 dark:text-slate-300">Type</th>
-                <th className="p-4 font-semibold text-slate-600 dark:text-slate-300">Name / Identifier</th>
-                <th className="p-4 font-semibold text-slate-600 dark:text-slate-300">Deleted On</th>
-                <th className="p-4 font-semibold text-slate-600 dark:text-slate-300 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-              {deletedClients.map(client => (
-                <tr key={client.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="p-4 text-slate-700 dark:text-slate-300 font-medium">Client</td>
-                  <td className="p-4 text-slate-600 dark:text-slate-400">{client.name}</td>
-                  <td className="p-4 text-slate-500 dark:text-slate-500">{new Date(client.deletedAt as string).toLocaleDateString()}</td>
-                  <td className="p-4 text-right whitespace-nowrap space-x-2">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'CLIENT', localId: client.localId, itemName: client.name })} 
-                        disabled={processingId === client.localId}
-                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50"
-                      >
-                        <RefreshCw size={18} className={processingId === client.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
-                      </button>
-                      <button 
-                        onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'CLIENT', localId: client.localId, itemName: client.name })}
-                        disabled={processingId === client.localId}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50"
-                      >
-                        <Trash2 size={18} className={processingId === client.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {deletedInvoices.map(invoice => (
-                <tr key={invoice.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="p-4 text-slate-700 dark:text-slate-300 font-medium">Invoice</td>
-                  <td className="p-4 text-slate-600 dark:text-slate-400">{invoice.invoiceNumber || 'Draft'}</td>
-                  <td className="p-4 text-slate-500 dark:text-slate-500">{new Date(invoice.deletedAt as string).toLocaleDateString()}</td>
-                  <td className="p-4 text-right whitespace-nowrap space-x-2">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'INVOICE', localId: invoice.localId, itemName: invoice.invoiceNumber || 'Invoice' })}
-                        disabled={processingId === invoice.localId}
-                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50"
-                      >
-                        <RefreshCw size={18} className={processingId === invoice.localId ? 'animate-spin' : ''} />
-                      </button>
-                      <button 
-                        onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'INVOICE', localId: invoice.localId, itemName: invoice.invoiceNumber || 'Invoice' })}
-                        disabled={processingId === invoice.localId}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50"
-                      >
-                        <Trash2 size={18} className={processingId === invoice.localId ? 'animate-bounce' : ''} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {deletedQuotes.map(quote => (
-                <tr key={quote.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="p-4 text-slate-700 dark:text-slate-300 font-medium">Quote</td>
-                  <td className="p-4 text-slate-600 dark:text-slate-400">{quote.quoteNumber || 'Draft'}</td>
-                  <td className="p-4 text-slate-500 dark:text-slate-500">{new Date(quote.deletedAt as string).toLocaleDateString()}</td>
-                  <td className="p-4 text-right whitespace-nowrap space-x-2">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'QUOTE', localId: quote.localId, itemName: quote.quoteNumber || 'Quote' })}
-                        disabled={processingId === quote.localId}
-                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50"
-                      >
-                        <RefreshCw size={18} className={processingId === quote.localId ? 'animate-spin' : ''} />
-                      </button>
-                      <button 
-                        onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'QUOTE', localId: quote.localId, itemName: quote.quoteNumber || 'Quote' })}
-                        disabled={processingId === quote.localId}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50"
-                      >
-                        <Trash2 size={18} className={processingId === quote.localId ? 'animate-bounce' : ''} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+          <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl">
+            <div className="col-span-2">Type</div>
+            <div className="col-span-5">Name / Identifier</div>
+            <div className="col-span-3">Deleted On</div>
+            <div className="col-span-2 text-right pr-4">Actions</div>
+          </div>
+          
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {deletedClients.map(client => (
+              <div key={client.id} className="group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors gap-3 md:gap-0">
+                <div className="flex md:hidden justify-between items-center w-full">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">Client</span>
+                  <span className="text-xs text-slate-500">{new Date(client.deletedAt as string).toLocaleDateString()}</span>
+                </div>
+                
+                <div className="hidden md:block md:col-span-2 font-medium text-slate-700 dark:text-slate-300">Client</div>
+                <div className="md:col-span-5 text-slate-900 dark:text-slate-100 font-semibold md:font-normal text-lg md:text-base">{client.name}</div>
+                <div className="hidden md:block md:col-span-3 text-slate-600 dark:text-slate-400">{new Date(client.deletedAt as string).toLocaleDateString()}</div>
+                
+                <div className="md:col-span-2 flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1 md:mt-0">
+                  <button 
+                    onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'CLIENT', localId: client.localId, itemName: client.name })} 
+                    disabled={processingId === client.localId}
+                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50 transition-colors"
+                    title="Restore"
+                  >
+                    <RefreshCw size={18} className={processingId === client.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
+                  </button>
+                  <button 
+                    onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'CLIENT', localId: client.localId, itemName: client.name })}
+                    disabled={processingId === client.localId}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 transition-colors"
+                    title="Delete permanently"
+                  >
+                    <Trash2 size={18} className={processingId === client.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            
+            {deletedInvoices.map(invoice => (
+              <div key={invoice.id} className="group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors gap-3 md:gap-0">
+                <div className="flex md:hidden justify-between items-center w-full">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">Invoice</span>
+                  <span className="text-xs text-slate-500">{new Date(invoice.deletedAt as string).toLocaleDateString()}</span>
+                </div>
+                
+                <div className="hidden md:block md:col-span-2 font-medium text-slate-700 dark:text-slate-300">Invoice</div>
+                <div className="md:col-span-5 text-slate-900 dark:text-slate-100 font-semibold md:font-normal text-lg md:text-base">{invoice.invoiceNumber || 'Draft'}</div>
+                <div className="hidden md:block md:col-span-3 text-slate-600 dark:text-slate-400">{new Date(invoice.deletedAt as string).toLocaleDateString()}</div>
+                
+                <div className="md:col-span-2 flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1 md:mt-0">
+                  <button 
+                    onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'INVOICE', localId: invoice.localId, itemName: invoice.invoiceNumber || 'Invoice' })}
+                    disabled={processingId === invoice.localId}
+                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50 transition-colors"
+                    title="Restore"
+                  >
+                    <RefreshCw size={18} className={processingId === invoice.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
+                  </button>
+                  <button 
+                    onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'INVOICE', localId: invoice.localId, itemName: invoice.invoiceNumber || 'Invoice' })}
+                    disabled={processingId === invoice.localId}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 transition-colors"
+                    title="Delete permanently"
+                  >
+                    <Trash2 size={18} className={processingId === invoice.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {deletedQuotes.map(quote => (
+              <div key={quote.id} className="group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors gap-3 md:gap-0">
+                <div className="flex md:hidden justify-between items-center w-full">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">Quote</span>
+                  <span className="text-xs text-slate-500">{new Date(quote.deletedAt as string).toLocaleDateString()}</span>
+                </div>
+                
+                <div className="hidden md:block md:col-span-2 font-medium text-slate-700 dark:text-slate-300">Quote</div>
+                <div className="md:col-span-5 text-slate-900 dark:text-slate-100 font-semibold md:font-normal text-lg md:text-base">{quote.quoteNumber || 'Draft'}</div>
+                <div className="hidden md:block md:col-span-3 text-slate-600 dark:text-slate-400">{new Date(quote.deletedAt as string).toLocaleDateString()}</div>
+                
+                <div className="md:col-span-2 flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1 md:mt-0">
+                  <button 
+                    onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'QUOTE', localId: quote.localId, itemName: quote.quoteNumber || 'Quote' })}
+                    disabled={processingId === quote.localId}
+                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg disabled:opacity-50 transition-colors"
+                    title="Restore"
+                  >
+                    <RefreshCw size={18} className={processingId === quote.localId && modalConfig?.type === 'restore' ? 'animate-spin' : ''} />
+                  </button>
+                  <button 
+                    onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'QUOTE', localId: quote.localId, itemName: quote.quoteNumber || 'Quote' })}
+                    disabled={processingId === quote.localId}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 transition-colors"
+                    title="Delete permanently"
+                  >
+                    <Trash2 size={18} className={processingId === quote.localId && modalConfig?.type === 'delete' ? 'animate-bounce' : ''} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

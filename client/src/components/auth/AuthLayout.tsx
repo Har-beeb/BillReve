@@ -71,28 +71,25 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
              </span>
           </Badge>
           
-          <h2 className="text-5xl xl:text-6xl font-extrabold mb-6 leading-[1.1] tracking-tight text-white min-h-[140px]">
-             Manage your <br />
-             <div className="flex items-center gap-4 mt-2 whitespace-nowrap">
-               <span>business</span>
-               <div className="relative h-[80px] w-[280px]">
-                 <AnimatePresence mode="wait">
-                   <motion.span
-                     key={wordIndex}
-                     initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-                     animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                     exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
-                     transition={{ duration: 0.4, ease: "easeInOut" }}
-                     className="absolute left-0 top-0 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400"
-                   >
-                     {WORDS[wordIndex]}
-                   </motion.span>
-                 </AnimatePresence>
-               </div>
-             </div>
+          <h2 className="text-4xl xl:text-5xl font-extrabold mb-4 leading-tight tracking-tight text-white min-h-[100px]">
+             Manage your business{' '}
+             <span className="inline-flex min-w-[220px]">
+               <AnimatePresence mode="wait">
+                 <motion.span
+                   key={wordIndex}
+                   initial={{ opacity: 0, y: 15, filter: "blur(5px)" }}
+                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                   exit={{ opacity: 0, y: -15, filter: "blur(5px)" }}
+                   transition={{ duration: 0.3, ease: "easeOut" }}
+                   className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400 inline-block origin-bottom"
+                 >
+                   {WORDS[wordIndex]}
+                 </motion.span>
+               </AnimatePresence>
+             </span>
           </h2>
           
-          <p className="text-slate-300 text-lg mb-12 leading-relaxed font-light max-w-lg">
+          <p className="text-slate-300 text-base mb-10 leading-relaxed font-light max-w-lg">
              BillReve is the premier offline-first invoicing platform designed for modern SMEs and enterprises. Create quotes, manage clients, and track payments without worrying about internet connectivity.
           </p>
 
