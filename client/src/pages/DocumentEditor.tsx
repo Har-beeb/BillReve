@@ -10,6 +10,7 @@ import { DocumentItemsTable, type LineItem } from '../components/DocumentItemsTa
 import { DocumentPreview } from '../components/DocumentPreview';
 import { enhanceAiText } from '../api/ai';
 import toast from 'react-hot-toast';
+import { syncEngine } from '../services/syncEngine';
 
 interface DocumentEditorProps {
   type: 'QUOTE' | 'INVOICE';
@@ -260,6 +261,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         navigate('/invoices');
       }
       }
+      
+      // Force sync immediately so public links can be viewed right away
+      syncEngine.sync();
     } catch (err) {
       console.error(err);
     }
