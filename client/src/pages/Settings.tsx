@@ -16,7 +16,7 @@ const Settings: React.FC = () => {
   const { businessProfile, taxSettings, updateBusinessProfile, updateTaxSettings, user, syncStatus, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'taxes' | 'sync' | 'preferences'>('account');
-  const { enableCsvImport } = useFeatureFlags();
+  const { enableCsvImport, enableMockData } = useFeatureFlags();
   const [showImportWizard, setShowImportWizard] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isGeneratingData, setIsGeneratingData] = useState(false);
@@ -842,45 +842,47 @@ const Settings: React.FC = () => {
                 </div>
                 
                 {/* Developer Tools for Mocking Data */}
-                <div className="w-full bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/50 rounded-lg p-4 mt-2 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 text-left">
-                  <div>
-                    <div className="text-sm font-medium text-purple-700 dark:text-purple-400">Developer Tools</div>
-                    <div className="text-xs text-purple-600/80 dark:text-purple-400/80 mt-1">
-                      Instantly populate your account with 15 clients, 25 invoices, and 10 quotes for testing.
+                {enableMockData && (
+                  <div className="w-full bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/50 rounded-lg p-4 mt-2 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 text-left">
+                    <div>
+                      <div className="text-sm font-medium text-purple-700 dark:text-purple-400">Developer Tools</div>
+                      <div className="text-xs text-purple-600/80 dark:text-purple-400/80 mt-1">
+                        Instantly populate your account with 15 clients, 25 invoices, and 10 quotes for testing.
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
+                      <button 
+                        onClick={() => setShowClearConfirm(true)}
+                        disabled={isClearingData || isGeneratingData}
+                        className="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-red-600 border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto disabled:opacity-50"
+                      >
+                        {isClearingData ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        {isClearingData ? 'Clearing...' : 'Clear Data'}
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (!user) return;
+                          setIsGeneratingData(true);
+                          try {
+                            const { generateMockData } = await import('../utils/mockDataGenerator');
+                            await generateMockData(user.id);
+                            toast.success('Successfully generated mock data!');
+                            window.location.reload();
+                          } catch (err: any) {
+                            toast.error(err.message || 'Failed to generate mock data.');
+                          } finally {
+                            setIsGeneratingData(false);
+                          }
+                        }}
+                        disabled={isClearingData || isGeneratingData}
+                        className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto disabled:opacity-50"
+                      >
+                        {isGeneratingData ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
+                        {isGeneratingData ? 'Generating...' : 'Generate Mock Data'}
+                      </button>
                     </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
-                    <button 
-                      onClick={() => setShowClearConfirm(true)}
-                      disabled={isClearingData || isGeneratingData}
-                      className="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-red-600 border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto disabled:opacity-50"
-                    >
-                      {isClearingData ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                      {isClearingData ? 'Clearing...' : 'Clear Data'}
-                    </button>
-                    <button 
-                      onClick={async () => {
-                        if (!user) return;
-                        setIsGeneratingData(true);
-                        try {
-                          const { generateMockData } = await import('../utils/mockDataGenerator');
-                          await generateMockData(user.id);
-                          toast.success('Successfully generated mock data!');
-                          window.location.reload();
-                        } catch (err: any) {
-                          toast.error(err.message || 'Failed to generate mock data.');
-                        } finally {
-                          setIsGeneratingData(false);
-                        }
-                      }}
-                      disabled={isClearingData || isGeneratingData}
-                      className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto disabled:opacity-50"
-                    >
-                      {isGeneratingData ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
-                      {isGeneratingData ? 'Generating...' : 'Generate Mock Data'}
-                    </button>
-                  </div>
-                </div>
+                )}
 
                 {/* Data Migration */}
                 {enableCsvImport && (

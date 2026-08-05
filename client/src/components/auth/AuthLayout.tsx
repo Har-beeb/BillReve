@@ -71,22 +71,24 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
              </span>
           </Badge>
           
-          {/* Fixed the title wrapping by breaking it naturally and using wait mode */}
           <h2 className="text-5xl xl:text-6xl font-extrabold mb-6 leading-[1.1] tracking-tight text-white min-h-[140px]">
-             Manage your business <br />
-             <div className="relative h-[80px] mt-2 block w-full">
-               <AnimatePresence mode="wait">
-                 <motion.span
-                   key={wordIndex}
-                   initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                   exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
-                   transition={{ duration: 0.4, ease: "easeInOut" }}
-                   className="absolute left-0 top-0 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400"
-                 >
-                   {WORDS[wordIndex]}
-                 </motion.span>
-               </AnimatePresence>
+             Manage your <br />
+             <div className="flex items-center gap-4 mt-2 whitespace-nowrap">
+               <span>business</span>
+               <div className="relative h-[80px] w-[280px]">
+                 <AnimatePresence mode="wait">
+                   <motion.span
+                     key={wordIndex}
+                     initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+                     animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                     exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
+                     transition={{ duration: 0.4, ease: "easeInOut" }}
+                     className="absolute left-0 top-0 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400"
+                   >
+                     {WORDS[wordIndex]}
+                   </motion.span>
+                 </AnimatePresence>
+               </div>
              </div>
           </h2>
           
