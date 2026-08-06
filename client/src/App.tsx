@@ -49,7 +49,7 @@ function App() {
       if (sessionUser) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_pro, pro_expires_at, name, email, phone, address, bank_name, account_name, account_number, country, currency, logo_url')
+          .select('is_pro, pro_expires_at, name, email, phone, address, bank_accounts, bank_name, account_name, account_number, country, currency, logo_url')
           .eq('id', sessionUser.id)
           .single();
           
@@ -61,6 +61,21 @@ function App() {
           
           // Hydrate business profile from database
           const store = useAppStore.getState();
+          
+          // Use JSONB bank_accounts if available, otherwise fallback to old columns
+          let fetchedBankAccounts = profile.bank_accounts;
+          if (!fetchedBankAccounts || fetchedBankAccounts.length === 0) {
+            fetchedBankAccounts = profile.bank_name ? [
+              {
+                id: '1',
+                bankName: profile.bank_name || '',
+                accountName: profile.account_name || '',
+                accountNumber: profile.account_number || '',
+                isDefault: true
+              }
+            ] : [];
+          }
+
           store.updateBusinessProfile({
             ...store.businessProfile,
             name: profile.name || store.businessProfile.name,
@@ -70,15 +85,7 @@ function App() {
             country: profile.country || store.businessProfile.country,
             currency: profile.currency || store.businessProfile.currency,
             logoUrl: profile.logo_url || store.businessProfile.logoUrl,
-            bankAccounts: profile.bank_name ? [
-              {
-                id: '1',
-                bankName: profile.bank_name || '',
-                accountName: profile.account_name || '',
-                accountNumber: profile.account_number || '',
-                isDefault: true
-              }
-            ] : []
+            bankAccounts: fetchedBankAccounts
           });
         }
       } else {
