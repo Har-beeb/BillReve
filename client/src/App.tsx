@@ -23,6 +23,7 @@ import Upgrade from './pages/Upgrade';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Splash from './pages/Splash';
+import LandingPage from './pages/LandingPage';
 import { useAppStore } from './store/useAppStore';
 import { supabase } from './lib/supabase';
 import { syncEngine } from './services/syncEngine';
@@ -34,7 +35,7 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
-  return !isAuthenticated ? <>{children}</> : <Navigate to="/" />;
+  return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" />;
 };
 
 function App() {
@@ -159,16 +160,17 @@ function App() {
         <Route path="/pay/:id" element={<PublicInvoice />} />
         <Route path="/quote/:id" element={<PublicQuote />} />
         {/* Auth Routes */}
+        <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Private Routes */}
-        <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-          <Route index element={<Dashboard />} />
-          <Route path="quotes" element={<Quotes />} />
-          <Route path="quotes/new" element={<DocumentEditor type="QUOTE" />} />
+        <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/quotes" element={<Quotes />} />
+          <Route path="/quotes/new" element={<DocumentEditor type="QUOTE" />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="invoices/new" element={<DocumentEditor type="INVOICE" />} />
           <Route path="clients" element={<Clients />} />

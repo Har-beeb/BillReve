@@ -65,7 +65,7 @@ const Register: React.FC = () => {
       
       if (verifyError) throw verifyError;
       
-      navigate('/'); // Verified successfully
+      navigate('/dashboard'); // Verified successfully
     } catch (err: any) {
       setError(err.message || 'Invalid or expired code. Please try again.');
     } finally {

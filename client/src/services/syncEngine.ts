@@ -37,6 +37,7 @@ const toCamelCase = (obj: any): any => {
 
 class SyncEngine {
   private isSyncing = false;
+  private hasPendingSync = false;
   private channel: ReturnType<typeof supabase.channel> | null = null;
   private retryCount = 0;
   private maxRetries = 5;
@@ -74,7 +75,12 @@ class SyncEngine {
   }
 
   async sync() {
-    if (this.isSyncing || !navigator.onLine) return;
+    if (this.isSyncing) {
+      this.hasPendingSync = true;
+      return;
+    }
+    if (!navigator.onLine) return;
+    
     this.isSyncing = true;
     useAppStore.getState().setSyncStatus('syncing');
 
@@ -95,6 +101,10 @@ class SyncEngine {
       }
     } finally {
       this.isSyncing = false;
+      if (this.hasPendingSync) {
+        this.hasPendingSync = false;
+        setTimeout(() => this.sync(), 100);
+      }
     }
   }
 

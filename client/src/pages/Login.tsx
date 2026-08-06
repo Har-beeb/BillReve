@@ -26,7 +26,7 @@ const Login: React.FC = () => {
       
       if (signInError) throw signInError;
       
-      navigate('/'); // Redirect to dashboard on success
+      navigate('/dashboard'); // Redirect to dashboard on success
     } catch (err: any) {
       setError(err.message || 'Failed to connect to server. Please try again.');
     } finally {

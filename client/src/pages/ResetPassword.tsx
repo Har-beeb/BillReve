@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
 import AuthLayout from '../components/auth/AuthLayout';
 import AuthInput from '../components/auth/AuthInput';
 import PasswordStrengthMeter, { isPasswordValid } from '../components/auth/PasswordStrengthMeter';
@@ -29,8 +30,8 @@ const ResetPassword: React.FC = () => {
       
       if (updateError) throw updateError;
       
-      // On success, the user is already authenticated.
-      navigate('/');
+      toast.success('Password updated successfully');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to update password. Please try again.');
     } finally {

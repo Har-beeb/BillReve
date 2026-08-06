@@ -124,7 +124,7 @@ const MainLayout: React.FC = () => {
   }, [location.pathname]);
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
+    { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Quotes', path: '/quotes', icon: <FileSignature size={20} /> },
     { name: 'Invoices', path: '/invoices', icon: <FileText size={20} /> },
     { name: 'Clients', path: '/clients', icon: <Users size={20} /> },
