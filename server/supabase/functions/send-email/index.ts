@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -15,6 +16,58 @@ serve(async (req) => {
   try {
     if (!RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not set");
+    }
+
+    // Auth verification
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const supabaseUserClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    const { data: { user }, error: authError } = await supabaseUserClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Rate Limiting (using Service Role to bypass RLS)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const { data: rateLimit } = await supabaseAdmin
+      .from('rate_limits')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    const isPro = (await supabaseAdmin.from('profiles').select('is_pro').eq('id', user.id).single()).data?.is_pro;
+    const LIMIT = isPro ? 100 : 10; // 100/day for Pro, 10/day for Free
+
+    if (rateLimit) {
+      const now = new Date();
+      const resetAt = new Date(rateLimit.reset_at);
+
+      if (now > resetAt) {
+        // Reset counts if past reset_at
+        await supabaseAdmin.from('rate_limits').update({
+          email_count: 1,
+          reset_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+        }).eq('user_id', user.id);
+      } else {
+        if (rateLimit.email_count >= LIMIT) {
+          return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait until tomorrow or upgrade to Pro.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        // Increment
+        await supabaseAdmin.from('rate_limits').update({
+          email_count: rateLimit.email_count + 1
+        }).eq('user_id', user.id);
+      }
     }
 
     const payload = await req.json();
