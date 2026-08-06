@@ -12,7 +12,8 @@ This document serves as the master map of the BillReve application structure, fe
     - `DocumentPreview.tsx` - Live document preview
     - `RevenueChat.tsx` - AI chatbot widget
   - `pages/` - Main application routes
-    - `Dashboard.tsx` - Main overview
+    - `LandingPage.tsx` - (`/`) The public marketing home page
+    - `Dashboard.tsx` - (`/dashboard`) Main overview
     - `Invoices.tsx` / `Quotes.tsx` - List views
     - `DocumentEditor.tsx` - The unified editor for quotes & invoices
     - `Reports.tsx` - Analytics & Revenue tracking
@@ -22,24 +23,38 @@ This document serves as the master map of the BillReve application structure, fe
   - `db/` - Dexie.js offline-first database setup
   - `store/` - Zustand global state management (`useAppStore.ts`)
   - `api/` - Network requests (Supabase edge functions, etc.)
+  - `services/` - Background services (e.g., `syncEngine.ts`)
 
 ## ✨ Key Features
 - **Offline-First Storage**: Uses Dexie.js to store all client/invoice data locally.
-- **Background Syncing**: `syncEngine.ts` automatically pushes local changes to Supabase when online.
+- **Background Syncing**: `syncEngine.ts` automatically pushes local changes to Supabase when online. Includes a persistent queue stored in `localStorage` to handle abrupt app closures.
 - **AI Revenue Chat**: Natural language queries over local financial data (reports/invoices).
 - **Interactive Documents**: Live preview panel, automatic tax calculations.
 - **Public Client Views**: Clients can view, pay (via Paystack), or negotiate (counter-offer) quotes via secure public links.
 - **Theming**: Dynamic CSS variable-based themes (Wine, Emerald, default Purple).
 
-## 🛠️ Recent Fixes & Improvements
-1. **Document Editor Crash Fix**: Fixed a bug where clicking edit on a draft without a date would crash the app (`Invalid Date` error).
-2. **Auth Page Redesign**: Implemented a dark, premium SaaS layout for the `/login` and `/register` views with a glassy gradient and fluid typography.
-3. **Logo Standardization**: Abstracted the CSS logo from the Splash screen into a universal `<Logo />` component, now used across Splash and Auth pages.
-4. **Offline Guards**: Added proper network checks (`navigator.onLine`) to AI Revenue Chat and Document Note enhancement to prevent Edge Function fetch errors when offline.
-5. **Reports Tab Enhancement**: Integrated the `RevenueChat` directly into the Reports tab for easier access during auditing.
-6. **Mobile Table Optimization**: Ensured action buttons on the `Trash.tsx` table do not wrap awkwardly on small screens using flex properties.
+## 🛠️ Recent Fixes & Improvements (Pre-Launch Polish)
+
+### Routing & Navigation
+- **Routing Overhaul**: The default route (`/`) is now the public Landing Page. The main application view has been moved to `/dashboard`.
+- **Auth Flow Redirects**: Updated `Login`, `Register`, and `ResetPassword` views to safely route users to `/dashboard` upon successful authentication, preventing them from being stuck on the marketing page.
+- **Post-Action Routing**: Successfully sending a document from the `DocumentEditor` now cleanly closes the modal and routes the user back to their respective Quotes or Invoices list tab.
+
+### Data Integrity & Sync
+- **SyncEngine Reliability**: Upgraded `syncEngine.ts` to implement delayed background syncing (debounced) and persistent queues. This prevents race conditions where rapidly clicking between tabs caused newly drafted documents to be overridden by stale server state.
+- **Send Document Flow Safety**: Disabled instant background saving when opening the "Send" modal. Documents are now only saved and marked as "SENT" if the actual send action succeeds, allowing the user to retry upon failure without losing draft status.
+
+### Global UI Standardization
+- **Universal Logo Standard**: Enforced a uniform brand logo (Purple outer square, rotated white inner square) across the entire application—including headers, sidebars, the splash screen, Auth screens, and directly injected into the PDF Export engine (`html2pdf.js`).
+- **Premium Auth Layout**: Upgraded the Login/Register panels from a dark grid to a premium animated `purple-to-indigo` gradient matching the Pro subscription tier aesthetic.
+
+### Landing Page Implementation
+- **Hero & Animations**: Implemented a responsive Hero section with dynamic text looping ("Simplified", "Automated", "Perfected") using `framer-motion`.
+- **Mockup Preview**: Built an intricate CSS/Tailwind-based application mockup beneath the Hero section displaying dummy metrics, charts, and recent invoices to showcase the app without needing screenshots.
+- **Pricing Clarity**: Standardized the pricing block to match the app's internal `/upgrade` view (₦3,500/mo, highlighting the 10-document cap for the Free tier).
+- **Professional Polish**: Added a mobile hamburger menu and a full comprehensive SaaS footer.
 
 ## 🚀 Upcoming / Backlog
 - Configure `support@billreve.app` via custom email hosting (Google Workspace/Zoho).
 - Verify Google Search Console DNS TXT records.
-- Architect backend subscription tiers.
+- Architect backend subscription tiers and Row Level Security (RLS) enforcement.

@@ -43,23 +43,19 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
       </div>
 
       {/* Right side: Decorative Premium SaaS Side */}
-      <div className="hidden lg:flex w-1/2 relative overflow-hidden items-center justify-center bg-slate-950">
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-700">
         
-        {/* Animated Background Gradients - Richer colors for dark mode */}
+        {/* Animated Background Gradients - Richer colors for depth */}
         <motion.div 
           animate={{ rotate: 360, scale: [1, 1.2, 1] }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-40 -left-40 w-[60rem] h-[60rem] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" 
+          className="absolute -top-40 -left-40 w-[60rem] h-[60rem] bg-white/5 rounded-full blur-[120px] pointer-events-none" 
         />
         <motion.div 
           animate={{ rotate: -360, scale: [1, 1.3, 1] }}
           transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-40 -right-40 w-[55rem] h-[55rem] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none" 
+          className="absolute -bottom-40 -right-40 w-[55rem] h-[55rem] bg-black/10 rounded-full blur-[120px] pointer-events-none" 
         />
-        
-        {/* Abstract Grid Overlay */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light pointer-events-none"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
         
         {/* Content Area */}
         <div className="relative z-10 w-full max-w-xl px-8 lg:px-12">

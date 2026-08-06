@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileSignature, 
   RefreshCw, 
@@ -8,14 +9,34 @@ import {
   ArrowRight,
   CheckCircle2,
   Zap,
-  Globe2
+  Globe2,
+  Menu,
+  X,
+  FileText,
+  Users,
+  LayoutDashboard,
+  Star,
+  FileSpreadsheet,
+  Bot,
+  Send
 } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { useAppStore } from '../store/useAppStore';
 
+const WORDS = ['Simplified.', 'Automated.', 'Perfected.'];
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % WORDS.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
@@ -33,7 +54,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
-              <Logo size="md" />
+              <Logo size="md" className="flex-shrink-0" />
               <span className="font-['Outfit'] font-black text-2xl tracking-tight text-purple-600 dark:text-purple-400">
                 BillReve
               </span>
@@ -55,8 +76,48 @@ const LandingPage: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            <div className="md:hidden flex items-center">
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 text-slate-600 dark:text-slate-300 focus:outline-none"
+              >
+                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 overflow-hidden"
+            >
+              <div className="px-4 pt-2 pb-6 flex flex-col space-y-4">
+                <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md">Features</a>
+                <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md">Pricing</a>
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-2 flex flex-col gap-3">
+                  <button 
+                    onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
+                    className="w-full text-center px-4 py-3 font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl"
+                  >
+                    Log in
+                  </button>
+                  <button 
+                    onClick={() => { setIsMobileMenuOpen(false); handleGetStarted(); }}
+                    className="w-full text-center px-4 py-3 font-bold text-white bg-purple-600 rounded-xl shadow-lg shadow-purple-500/25"
+                  >
+                    Get Started
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* Hero Section */}
@@ -69,14 +130,25 @@ const LandingPage: React.FC = () => {
             <span>The future of offline-first invoicing</span>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-['Outfit'] font-black tracking-tight mb-8 leading-tight">
-            Professional Invoicing, <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-500 dark:from-purple-400 dark:to-indigo-300">
-              Simplified.
+          <h1 className="text-5xl md:text-7xl font-['Outfit'] font-black tracking-tight mb-8 leading-tight flex flex-col justify-center items-center">
+            <span>Professional Invoicing,</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-500 dark:from-purple-400 dark:to-indigo-300 flex items-center justify-center min-w-[300px] min-h-[1.2em]">
+              <AnimatePresence mode="wait">
+                 <motion.span
+                   key={wordIndex}
+                   initial={{ opacity: 0, y: 15, filter: "blur(5px)" }}
+                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                   exit={{ opacity: 0, y: -15, filter: "blur(5px)" }}
+                   transition={{ duration: 0.3, ease: "easeOut" }}
+                   className="inline-block"
+                 >
+                   {WORDS[wordIndex]}
+                 </motion.span>
+               </AnimatePresence>
             </span>
           </h1>
           
-          <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10">
+          <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10 mt-4 md:mt-0">
             Create, send, and track stunning invoices and quotes in seconds. Get paid faster and manage your business effortlessly—even when you're offline.
           </p>
           
@@ -96,35 +168,89 @@ const LandingPage: React.FC = () => {
             </a>
           </div>
           
-          {/* Mockup Preview */}
+          {/* Mockup Preview populated with data */}
           <div className="mt-20 relative max-w-5xl mx-auto">
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent dark:from-slate-900 z-10 h-full" />
-            <div className="rounded-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transform perspective-1000 rotateX-12 scale-95 hover:scale-100 hover:rotateX-0 transition-all duration-700 ease-out">
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent dark:from-slate-900 z-20 h-full pointer-events-none" />
+            <div className="rounded-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transform perspective-1000 rotateX-12 scale-95 hover:scale-100 hover:rotateX-0 transition-all duration-700 ease-out text-left select-none">
               <div className="h-8 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center px-4 gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-400" />
                 <div className="w-3 h-3 rounded-full bg-amber-400" />
                 <div className="w-3 h-3 rounded-full bg-green-400" />
               </div>
-              <div className="p-4 md:p-8 flex gap-6 opacity-90">
+              <div className="p-4 md:p-8 flex gap-6 opacity-90 h-[600px] overflow-hidden">
                 {/* Sidebar mock */}
-                <div className="hidden md:flex flex-col gap-4 w-48 border-r border-slate-100 dark:border-slate-800 pr-6">
-                  <div className="h-8 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-                  <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800/50 rounded mt-4" />
-                  <div className="h-4 w-28 bg-slate-100 dark:bg-slate-800/50 rounded" />
-                  <div className="h-4 w-36 bg-slate-100 dark:bg-slate-800/50 rounded" />
+                <div className="hidden md:flex flex-col gap-4 w-56 border-r border-slate-100 dark:border-slate-800 pr-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Logo size="sm" className="flex-shrink-0" />
+                    <span className="font-['Outfit'] font-black text-xl text-purple-600 dark:text-purple-400">BillReve</span>
+                  </div>
+                  <div className="flex items-center gap-3 px-3 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg font-medium">
+                    <LayoutDashboard size={18} /> Dashboard
+                  </div>
+                  <div className="flex items-center gap-3 px-3 py-2 text-slate-500">
+                    <FileSignature size={18} /> Quotes
+                  </div>
+                  <div className="flex items-center gap-3 px-3 py-2 text-slate-500">
+                    <FileText size={18} /> Invoices
+                  </div>
+                  <div className="flex items-center gap-3 px-3 py-2 text-slate-500">
+                    <Users size={18} /> Clients
+                  </div>
                 </div>
                 {/* Content mock */}
                 <div className="flex-1 space-y-6">
                   <div className="flex justify-between items-center">
-                    <div className="h-10 w-48 bg-slate-200 dark:bg-slate-800 rounded" />
-                    <div className="h-10 w-32 bg-purple-600/20 dark:bg-purple-500/20 rounded" />
+                    <h2 className="text-2xl font-bold font-['Outfit']">Overview</h2>
+                    <div className="flex gap-2">
+                       <div className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold flex items-center gap-2">
+                         <span className="text-lg leading-none">+</span> New Invoice
+                       </div>
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="h-32 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800" />
-                    <div className="h-32 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800" />
-                    <div className="h-32 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800" />
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-sm text-slate-500 mb-1">Total Revenue</p>
+                      <p className="text-2xl font-black font-['Outfit']">₦1,245,000</p>
+                      <p className="text-xs text-green-500 mt-2 flex items-center gap-1">↑ 12% vs last month</p>
+                    </div>
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-sm text-slate-500 mb-1">Outstanding</p>
+                      <p className="text-2xl font-black font-['Outfit']">₦340,000</p>
+                      <p className="text-xs text-amber-500 mt-2 flex items-center gap-1">4 invoices pending</p>
+                    </div>
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-sm text-slate-500 mb-1">Drafts</p>
+                      <p className="text-2xl font-black font-['Outfit']">₦45,000</p>
+                      <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">2 documents</p>
+                    </div>
                   </div>
-                  <div className="h-64 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800" />
+                  
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-6">
+                     <h3 className="font-bold mb-4">Recent Invoices</h3>
+                     <div className="space-y-3">
+                       {[
+                         { id: '#INV-042', client: 'Acme Corp', amount: '₦450,000', status: 'PAID', color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
+                         { id: '#INV-043', client: 'Stark Industries', amount: '₦120,000', status: 'SENT', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
+                         { id: '#INV-044', client: 'Wayne Ent.', amount: '₦220,000', status: 'OVERDUE', color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
+                       ].map((inv, i) => (
+                         <div key={i} className="flex justify-between items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                           <div className="flex gap-4 items-center">
+                             <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-400 text-sm">
+                               {inv.client.charAt(0)}
+                             </div>
+                             <div>
+                               <p className="font-bold">{inv.client}</p>
+                               <p className="text-xs text-slate-500">{inv.id}</p>
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-6">
+                             <p className="font-bold">{inv.amount}</p>
+                             <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${inv.color}`}>{inv.status}</span>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -190,16 +316,19 @@ const LandingPage: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Free Tier */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 md:p-10 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col hover:border-purple-200 dark:hover:border-purple-800 transition-colors">
               <h3 className="text-2xl font-bold mb-2">Free</h3>
               <p className="text-slate-500 dark:text-slate-400 mb-6">Perfect for freelancers getting started.</p>
-              <div className="text-4xl font-black mb-8 font-['Outfit']">$0<span className="text-lg text-slate-500 font-normal">/mo</span></div>
+              <div className="flex items-end gap-1 mb-8">
+                 <span className="text-5xl font-black font-['Outfit']">₦0</span>
+                 <span className="text-lg text-slate-500 font-normal mb-2">/mo</span>
+              </div>
               
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-600" /> Unlimited Invoices & Quotes</li>
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-600" /> Up to 5 Clients</li>
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-600" /> Standard Templates</li>
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-600" /> Offline Mode</li>
+              <ul className="space-y-4 mb-10 flex-1">
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Up to 10 Invoices & Quotes</span></li>
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Up to 5 Clients</span></li>
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Standard Templates</span></li>
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Offline Mode</span></li>
               </ul>
               
               <button onClick={handleGetStarted} className="w-full py-4 rounded-xl font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
@@ -208,23 +337,40 @@ const LandingPage: React.FC = () => {
             </div>
             
             {/* Pro Tier */}
-            <div className="bg-gradient-to-b from-purple-600 to-indigo-700 rounded-3xl p-8 border border-purple-500 shadow-2xl text-white flex flex-col relative transform md:-translate-y-4 md:scale-105">
+            <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 md:p-10 border border-purple-500 shadow-2xl text-white flex flex-col relative transform md:-translate-y-4 md:scale-105">
               <div className="absolute top-0 right-8 transform -translate-y-1/2 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase shadow-lg">
                 Most Popular
               </div>
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
-              <p className="text-purple-200 mb-6">For growing businesses that need more.</p>
-              <div className="text-4xl font-black mb-8 font-['Outfit']">$10<span className="text-lg text-purple-300 font-normal">/mo</span></div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white font-semibold text-xs mb-4 w-max border border-white/20">
+                 <Star size={14} className="fill-white" /> BillReve Pro
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Pro Subscription</h3>
+              <p className="text-purple-200 mb-6">Everything you need to scale.</p>
               
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-300" /> Unlimited Everything</li>
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-300" /> Mass Email Campaigns</li>
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-300" /> Advanced Analytics & Reports</li>
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-300" /> AI Document Assistant</li>
-                <li className="flex items-center gap-3"><CheckCircle2 size={20} className="text-purple-300" /> Premium Templates</li>
+              <div className="mb-8 flex flex-col gap-1">
+                 <div className="flex items-center gap-2 mb-1">
+                   <span className="text-lg text-purple-300 line-through decoration-red-400 decoration-2 font-bold">
+                     ₦5,000
+                   </span>
+                   <span className="text-xs font-bold bg-green-400/20 text-green-300 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                     30% Off
+                   </span>
+                 </div>
+                 <div className="flex items-end gap-1">
+                   <span className="text-5xl font-black font-['Outfit'] tracking-tight">₦3,500</span>
+                   <span className="text-lg text-purple-300 font-normal mb-2">/mo</span>
+                 </div>
+              </div>
+              
+              <ul className="space-y-4 mb-10 flex-1">
+                <li className="flex items-start gap-3"><Bot size={20} className="text-purple-300 shrink-0 mt-0.5" /> <span>AI Document Drafting</span></li>
+                <li className="flex items-start gap-3"><FileSpreadsheet size={20} className="text-emerald-300 shrink-0 mt-0.5" /> <span>Advanced CSV & Excel Exports</span></li>
+                <li className="flex items-start gap-3"><Palette size={20} className="text-pink-300 shrink-0 mt-0.5" /> <span>Custom Brand Colors & Logos</span></li>
+                <li className="flex items-start gap-3"><Zap size={20} className="text-amber-300 shrink-0 mt-0.5" /> <span>Unlimited Clients & Invoices</span></li>
+                <li className="flex items-start gap-3"><Send size={20} className="text-blue-300 shrink-0 mt-0.5" /> <span>Automated Email Reminders & Campaigns</span></li>
               </ul>
               
-              <button onClick={handleGetStarted} className="w-full py-4 rounded-xl font-bold bg-white text-purple-700 hover:bg-purple-50 transition-colors shadow-lg">
+              <button onClick={handleGetStarted} className="w-full py-4 rounded-xl font-bold bg-white text-purple-700 hover:bg-purple-50 transition-colors shadow-lg mt-auto">
                 Upgrade to Pro
               </button>
             </div>
@@ -232,21 +378,56 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Logo size="sm" className="opacity-50 grayscale" />
-            <span className="font-['Outfit'] font-black text-xl text-slate-400">BillReve</span>
+      {/* Professional Footer */}
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pt-16 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
+            <div className="col-span-2 lg:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <Logo size="sm" className="flex-shrink-0" />
+                <span className="font-['Outfit'] font-black text-2xl text-slate-900 dark:text-white">BillReve</span>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
+                The modern, offline-first invoicing platform built for freelancers, SMEs, and growing businesses.
+              </p>
+            </div>
+            
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><a href="#features" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Features</a></li>
+                <li><a href="#pricing" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Pricing</a></li>
+                <li><Link to="/changelog" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Changelog</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Resources</h4>
+              <ul className="space-y-3">
+                <li><Link to="/help" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Help Center</Link></li>
+                <li><Link to="/guides" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Invoicing Guides</Link></li>
+                <li><Link to="/templates" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Free Templates</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><Link to="/about" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">About Us</Link></li>
+                <li><Link to="/contact" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Contact</Link></li>
+                <li><Link to="/privacy" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Terms of Service</Link></li>
+              </ul>
+            </div>
           </div>
           
-          <div className="flex space-x-6 text-sm text-slate-500">
-            <Link to="/terms" className="hover:text-purple-600 transition-colors">Terms of Service</Link>
-            <Link to="/privacy" className="hover:text-purple-600 transition-colors">Privacy Policy</Link>
-          </div>
-          
-          <div className="text-sm text-slate-400">
-            &copy; {new Date().getFullYear()} BillReve. All rights reserved.
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-slate-400 text-sm">
+              &copy; {new Date().getFullYear()} BillReve. All rights reserved.
+            </p>
+            <div className="flex gap-4">
+               {/* Social placeholders if needed */}
+            </div>
           </div>
         </div>
       </footer>

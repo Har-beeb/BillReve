@@ -30,7 +30,7 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
                 <img src={profile.logoUrl || profile.logo_url} alt="Logo" className="w-full h-full object-contain" />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-auto mb-2" style={{ backgroundColor: '#2563eb' }}>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-auto mb-2" style={{ backgroundColor: '#9333ea' }}>
                 <div className="w-4 h-4 rounded-sm transform rotate-45" style={{ backgroundColor: '#ffffff' }} />
             </div>
           )}

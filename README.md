@@ -20,6 +20,8 @@ This project is structured as a **Monorepo** with a cloud-native architecture:
 BillReve/
 ├── client/                 # React Frontend Application
 │   ├── src/                # UI Components, Pages, and Global State
+│   │   ├── pages/          # Landing Page (/), Dashboard (/dashboard), Auth, etc.
+│   │   └── store/          # Zustand global state (with offline persistence)
 │   ├── public/             # Static Assets
 │   └── package.json        # Frontend Dependencies
 └── server/                 # Supabase Backend Configuration
