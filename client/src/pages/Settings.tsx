@@ -33,37 +33,31 @@ const Settings: React.FC = () => {
     setLocalTaxes(taxSettings);
   }, [taxSettings]);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
+    if (file && user?.id) {
+      const toastId = toast.loading('Uploading logo...');
+      try {
+        const fileExt = file.name.split('.').pop();
+        // Add timestamp to prevent caching issues if they change logos frequently
+        const fileName = `${user.id}/logo_${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('logos')
+          .upload(fileName, file, { upsert: true });
           
-          const MAX_WIDTH = 800;
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-            setLocalProfile({ ...localProfile, logoUrl: compressedBase64 });
-          } else {
-            setLocalProfile({ ...localProfile, logoUrl: reader.result as string });
-          }
-        };
-        img.src = reader.result as string;
-      };
-      reader.readAsDataURL(file);
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('logos')
+          .getPublicUrl(fileName);
+          
+        setLocalProfile({ ...localProfile, logoUrl: publicUrl });
+        toast.success('Logo uploaded!', { id: toastId });
+      } catch (err: any) {
+        console.error('Logo upload error:', err);
+        toast.error('Failed to upload logo: ' + err.message, { id: toastId });
+      }
     }
   };
 

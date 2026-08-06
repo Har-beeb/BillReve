@@ -70,11 +70,12 @@ serve(async (req) => {
       
       // If the charge was for a subscription
       if (userId && type === 'saas_subscription') {
-        // Update the user's profile to is_pro = true
+        // Update the user's profile to is_pro = true and add 30 days
         const { error } = await supabase
           .from('profiles')
           .update({ 
-            is_pro: true
+            is_pro: true,
+            pro_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
           })
           .eq('id', userId);
 
@@ -101,7 +102,7 @@ serve(async (req) => {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <onboarding@resend.dev>',
+                from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <hello@billreve.app>',
                 to: profile.email,
                 subject: 'Welcome to BillReve Pro! 🚀',
                 html: `

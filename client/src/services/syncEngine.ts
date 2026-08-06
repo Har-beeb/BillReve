@@ -182,11 +182,37 @@ class SyncEngine {
 
     const userId = session.user.id;
 
-    // Pull everything from Supabase for this user
+    // Helper to fetch in batches of 500 to prevent memory crashes on large datasets
+    const fetchPaginated = async (table: string) => {
+      let allData: any[] = [];
+      let from = 0;
+      const limit = 500;
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from(table)
+          .select('*')
+          .eq('user_id', userId)
+          .range(from, from + limit - 1);
+          
+        if (error) {
+          console.error(`Error paginating ${table}:`, error);
+          break;
+        }
+        if (!data || data.length === 0) break;
+        
+        allData = [...allData, ...data];
+        if (data.length < limit) break;
+        from += limit;
+      }
+      return { data: allData };
+    };
+
+    // Pull paginated data from Supabase for this user
     const [clientsRes, invoicesRes, quotesRes] = await Promise.all([
-      supabase.from('clients').select('*').eq('user_id', userId),
-      supabase.from('invoices').select('*').eq('user_id', userId),
-      supabase.from('quotes').select('*').eq('user_id', userId)
+      fetchPaginated('clients'),
+      fetchPaginated('invoices'),
+      fetchPaginated('quotes')
     ]);
 
     if (clientsRes.data) {

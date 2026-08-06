@@ -73,6 +73,23 @@ const Register: React.FC = () => {
     }
   };
 
+  const handleResendOtp = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+      if (resendError) throw resendError;
+      // Optional: show a success toast here if you have a toast system
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOAuthLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -121,6 +138,15 @@ const Register: React.FC = () => {
             className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl font-medium transition-all disabled:opacity-70 shadow-md shadow-purple-900/20 mt-2"
           >
             {loading ? 'Verifying...' : 'Verify Account'}
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleResendOtp}
+            disabled={loading}
+            className="w-full text-center text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium mt-4 disabled:opacity-70"
+          >
+            Didn't receive code? Resend Code
           </button>
         </form>
       ) : (

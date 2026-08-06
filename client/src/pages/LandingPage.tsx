@@ -134,7 +134,7 @@ const LandingPage: React.FC = () => {
           
           <h1 className="text-5xl md:text-7xl font-['Outfit'] font-black tracking-tight mb-8 leading-tight flex flex-col justify-center items-center">
             <span>Professional Invoicing,</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400 flex items-center justify-center min-w-[300px] min-h-[1.2em]">
+            <span className="text-purple-600 dark:text-purple-400 flex items-center justify-center min-w-[300px] min-h-[1.2em]">
               <AnimatePresence mode="wait">
                  <motion.span
                    key={wordIndex}

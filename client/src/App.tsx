@@ -50,12 +50,13 @@ function App() {
       if (sessionUser) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_pro, name, email, phone, address, bank_name, account_name, account_number, country, currency, logo_url')
+          .select('is_pro, pro_expires_at, name, email, phone, address, bank_name, account_name, account_number, country, currency, logo_url')
           .eq('id', sessionUser.id)
           .single();
           
         if (profile) {
-          useAppStore.getState().setProUser(profile.is_pro || false);
+          const isProActive = profile.is_pro && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date());
+          useAppStore.getState().setProUser(isProActive);
           
           // Hydrate business profile from database
           const store = useAppStore.getState();

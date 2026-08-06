@@ -37,7 +37,7 @@ serve(async (req) => {
       // Send reminders at specific intervals
       if (diffDays === 3 || diffDays === 7 || diffDays === 14) {
         emailsToSend.push({
-          from: 'Acme <onboarding@resend.dev>', // Replace with verified domain
+          from: 'BillReve <hello@billreve.app>', // Verified domain
           to: [invoice.client.email],
           subject: `Reminder: Invoice ${invoice.invoice_number} is Overdue`,
           html: `
