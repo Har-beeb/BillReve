@@ -19,6 +19,10 @@ interface SendDocumentModalProps {
   documentType: 'Invoice' | 'Quote';
   amount: string;
   onBeforeSend?: (method: 'EMAIL' | 'WHATSAPP') => Promise<void>;
+  unsavedDocument?: any;
+  unsavedClient?: any;
+  onSendSuccess?: (method: 'EMAIL' | 'WHATSAPP') => Promise<void>;
+  skipDbUpdate?: boolean;
 }
 
 export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
@@ -28,7 +32,11 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
   clientEmail = '',
   documentType,
   amount,
-  onBeforeSend
+  onBeforeSend,
+  unsavedDocument,
+  unsavedClient,
+  onSendSuccess,
+  skipDbUpdate
 }) => {
   const { businessProfile, isProUser } = useAppStore();
   const [isSending, setIsSending] = useState(false);
@@ -118,14 +126,14 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
         await onBeforeSend('EMAIL');
       }
 
-      // 1. Get the document and client from IndexedDB
-      const document = documentType === 'Invoice' 
+      // 1. Get the document and client from IndexedDB or Props
+      const document = unsavedDocument || (documentType === 'Invoice' 
         ? await db.invoices.get(documentId)
-        : await db.quotes.get(documentId);
+        : await db.quotes.get(documentId));
       
       if (!document) throw new Error('Document not found');
       
-      const client = await db.clients.get(document.clientId);
+      const client = unsavedClient || await db.clients.get(document.clientId);
 
       // 2. Generate PDF as base64
       const pdfBase64 = await generateDocumentPdf(document, client, businessProfile, documentType.toUpperCase() as any, false);
@@ -168,18 +176,24 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       if (!result?.success) throw new Error(result?.error?.message || 'Failed to send email');
 
       // Update status to SENT
-      if (documentType === 'Invoice') {
-        await db.invoices.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
-        const updatedDoc = await db.invoices.get(documentId);
-        if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
-      } else {
-        await db.quotes.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
-        const updatedDoc = await db.quotes.get(documentId);
-        if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+      if (!skipDbUpdate) {
+        if (documentType === 'Invoice') {
+          await db.invoices.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+          const updatedDoc = await db.invoices.get(documentId);
+          if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+        } else {
+          await db.quotes.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+          const updatedDoc = await db.quotes.get(documentId);
+          if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+        }
       }
 
       // Immediately sync so it appears as SENT on other devices
       syncEngine.sync();
+      
+      if (onSendSuccess) {
+        await onSendSuccess('EMAIL');
+      }
 
       toast.success(isOverdue ? 'Reminder sent successfully!' : `${documentType} sent successfully!`);
       onClose();
@@ -205,14 +219,16 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     
     try {
       // Update status to SENT
-      if (documentType === 'Invoice') {
-        await db.invoices.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
-        const updatedDoc = await db.invoices.get(documentId);
-        if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
-      } else {
-        await db.quotes.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
-        const updatedDoc = await db.quotes.get(documentId);
-        if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+      if (!skipDbUpdate) {
+        if (documentType === 'Invoice') {
+          await db.invoices.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+          const updatedDoc = await db.invoices.get(documentId);
+          if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+        } else {
+          await db.quotes.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+          const updatedDoc = await db.quotes.get(documentId);
+          if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
+        }
       }
     } catch (e) {
       console.error('Failed to update status', e);
@@ -220,6 +236,10 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     
     // Immediately sync so it appears as SENT on other devices
     syncEngine.sync();
+
+    if (onSendSuccess) {
+      await onSendSuccess('WHATSAPP');
+    }
 
     onClose();
     } catch (err) {

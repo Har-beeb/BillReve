@@ -40,6 +40,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
 
   // Basic State
   const [localId] = useState<string>(initialDoc?.localId || uuidv4());
+  const [newClientLocalId] = useState<string>(uuidv4());
   const [clientId, setClientId] = useState<string>(initialDoc?.clientId || '');
   const defaultNote = 'Thank you for your business! Please note that products in good condition are not returnable after 7 days. Payment is due within the specified terms.';
   const [description, setDescription] = useState<string>(initialDoc?.description || '');
@@ -120,6 +121,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const [savedDocumentId, setSavedDocumentId] = useState<string>('');
   const [savedDocumentAmount, setSavedDocumentAmount] = useState<string>('');
   const [savedDocumentClientEmail, setSavedDocumentClientEmail] = useState<string>('');
+  const [unsavedDocument, setUnsavedDocument] = useState<any>(null);
+  const [unsavedClient, setUnsavedClient] = useState<any>(null);
 
   const handleAddItem = () => {
     setItems([...items, { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, amount: 0 }]);
@@ -149,6 +152,60 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       return;
     }
     
+    let finalClientId = clientId;
+    let newClientObj = null;
+    if (isCreatingClient && newClientName) {
+      finalClientId = newClientLocalId;
+      newClientObj = {
+        localId: finalClientId,
+        name: newClientName,
+        email: newClientEmail,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        syncStatus: 'pending' as const
+      };
+      setUnsavedClient(newClientObj);
+    } else {
+      setUnsavedClient(clients.find(c => c.localId === finalClientId));
+    }
+
+    const docBase = {
+      localId: localId,
+      userId: user?.id,
+      clientId: finalClientId,
+      description: description.trim() !== '' ? description : undefined,
+      notes: notes.trim() !== '' ? notes : undefined,
+      bankAccountId: bankAccountId || undefined,
+      currency: 'NGN',
+      subtotal,
+      taxes: computedTaxes,
+      total,
+      allowCounterOffer,
+      items: items.filter(i => i.description.trim() !== ''),
+      createdAt: initialDoc?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending' as const
+    };
+
+    let doc: any;
+    if (type === 'QUOTE') {
+      doc = {
+        ...docBase,
+        quoteNumber: initialDoc?.quoteNumber || documentNumber,
+        expiresAt: dueDate ? new Date(dueDate).toISOString() : undefined,
+        status: 'SENT' as any,
+      };
+    } else {
+      doc = {
+        ...docBase,
+        invoiceNumber: initialDoc?.invoiceNumber || documentNumber,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        status: 'SENT' as any,
+      };
+    }
+
+    setUnsavedDocument(doc);
+    
     setSavedDocumentId(localId);
     setSavedDocumentAmount(total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
     setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === (clientId === 'NEW' ? '' : clientId))?.email || '');
@@ -167,7 +224,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     
     // Create client on the fly if needed
     if (isCreatingClient && newClientName) {
-      finalClientId = uuidv4();
+      finalClientId = newClientLocalId;
       const newClient = {
         localId: finalClientId,
         name: newClientName,
@@ -588,8 +645,12 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         documentType={type === 'QUOTE' ? 'Quote' : 'Invoice'}
         amount={savedDocumentAmount}
         clientEmail={savedDocumentClientEmail}
-        onBeforeSend={async () => {
+        unsavedDocument={unsavedDocument}
+        unsavedClient={unsavedClient}
+        skipDbUpdate={true}
+        onSendSuccess={async () => {
           await handleSave('SENT', true);
+          navigate(type === 'QUOTE' ? '/quotes' : '/invoices');
         }}
       />
     </div>
