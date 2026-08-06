@@ -70,21 +70,21 @@ const Privacy: React.FC = () => {
           <section>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3">6. Data Retention</h2>
             <p>
-              We retain your personal data for as long as your account is active or as needed to provide the Service. You may request deletion of your account and associated data at any time by contacting support@billreve.app.
+              We retain your personal data for as long as your account is active or as needed to provide the Service. You may request deletion of your account and associated data at any time by contacting hello@billreve.app.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3">7. Your Rights</h2>
             <p>
-              Depending on your location, you may have rights to access, correct, or delete your personal data. Please contact us at <a href="mailto:support@billreve.app" className="text-purple-600 dark:text-purple-400 hover:underline">support@billreve.app</a> to exercise your rights.
+              Depending on your location, you may have rights to access, correct, or delete your personal data. Please contact us at <a href="mailto:hello@billreve.app" className="text-purple-600 dark:text-purple-400 hover:underline">hello@billreve.app</a> to exercise your rights.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3">8. Contact Us</h2>
             <p>
-              If you have any questions about this Privacy Policy, please contact us at <a href="mailto:support@billreve.app" className="text-purple-600 dark:text-purple-400 hover:underline">support@billreve.app</a>.
+              If you have any questions about this Privacy Policy, please contact us at <a href="mailto:hello@billreve.app" className="text-purple-600 dark:text-purple-400 hover:underline">hello@billreve.app</a>.
             </p>
           </section>
         </div>

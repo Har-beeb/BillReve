@@ -29,6 +29,18 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
+      // Check if email already exists
+      const { data: emailExists, error: rpcError } = await supabase.rpc('check_email_exists', { p_email: email });
+      
+      if (rpcError) {
+        console.error("RPC Error:", rpcError);
+        throw new Error("Unable to verify email availability.");
+      }
+      
+      if (emailExists) {
+        throw new Error("An account with this email already exists.");
+      }
+
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,

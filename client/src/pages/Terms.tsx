@@ -84,14 +84,14 @@ const Terms: React.FC = () => {
           <section>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3">8. Termination</h2>
             <p>
-              We reserve the right to suspend or terminate your access to the Service at our sole discretion for violations of these Terms. You may terminate your account at any time by contacting <a href="mailto:support@billreve.app" className="text-purple-600 dark:text-purple-400 hover:underline">support@billreve.app</a>.
+              We reserve the right to suspend or terminate your access to the Service at our sole discretion for violations of these Terms. You may terminate your account at any time by contacting <a href="mailto:hello@billreve.app" className="text-purple-600 dark:text-purple-400 hover:underline">hello@billreve.app</a>.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3">9. Contact</h2>
             <p>
-              For questions regarding these Terms, please contact us at <a href="mailto:support@billreve.app" className="text-purple-600 dark:text-purple-400 hover:underline">support@billreve.app</a>.
+              For questions regarding these Terms, please contact us at <a href="mailto:hello@billreve.app" className="text-purple-600 dark:text-purple-400 hover:underline">hello@billreve.app</a>.
             </p>
           </section>
         </div>

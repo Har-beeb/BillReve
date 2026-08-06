@@ -9,8 +9,8 @@ dotenv.config();
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const TRANSACTIONAL_SENDER = process.env.EMAIL_FROM || 'BillReve Support <support@billreve.app>';
-const MARKETING_SENDER = process.env.EMAIL_FROM || 'BillReve Updates <support@billreve.app>';
+const TRANSACTIONAL_SENDER = process.env.EMAIL_FROM || 'BillReve <hello@billreve.app>';
+const MARKETING_SENDER = process.env.EMAIL_FROM || 'BillReve Updates <hello@billreve.app>';
 
 async function sendWithRetry(payload: any, retries = 2): Promise<any> {
   let attempt = 0;

@@ -22,7 +22,6 @@ import About from './pages/About';
 import Upgrade from './pages/Upgrade';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
-import Splash from './pages/Splash';
 import LandingPage from './pages/LandingPage';
 import { useAppStore } from './store/useAppStore';
 import { supabase } from './lib/supabase';
@@ -43,7 +42,6 @@ function App() {
   const theme = useAppStore(state => state.theme);
   const colorTheme = useAppStore(state => state.colorTheme);
   const fontSize = useAppStore(state => state.fontSize);
-  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async (sessionUser: any) => {
@@ -146,10 +144,6 @@ function App() {
       root.style.fontSize = '16px';
     }
   }, [theme, colorTheme, fontSize]);
-
-  if (showSplash) {
-    return <Splash onComplete={() => setShowSplash(false)} />;
-  }
 
   return (
     <BrowserRouter>
