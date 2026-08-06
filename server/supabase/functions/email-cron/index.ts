@@ -50,7 +50,39 @@ serve(async (req) => {
       }
     }
 
-    // 2. Send emails via Resend
+    // 2. Fetch Users Expiring in exactly 3 Days
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    const startOfThreeDays = new Date(threeDaysFromNow.setHours(0, 0, 0, 0)).toISOString();
+    const endOfThreeDays = new Date(threeDaysFromNow.setHours(23, 59, 59, 999)).toISOString();
+
+    const { data: expiringProfiles, error: expiringError } = await supabase
+      .from('profiles')
+      .select('id, name, email, pro_expires_at')
+      .eq('is_pro', true)
+      .gte('pro_expires_at', startOfThreeDays)
+      .lte('pro_expires_at', endOfThreeDays);
+      
+    if (expiringError) throw expiringError;
+
+    for (const profile of expiringProfiles || []) {
+      if (profile.email) {
+        emailsToSend.push({
+          from: 'BillReve <hello@billreve.app>',
+          to: [profile.email],
+          subject: 'Action Required: Your BillReve Pro subscription expires in 3 days',
+          html: `
+            <p>Hi ${profile.name || 'there'},</p>
+            <p>This is a quick reminder that your BillReve Pro subscription is set to expire on <strong>${new Date(profile.pro_expires_at).toDateString()}</strong>.</p>
+            <p>Because we don't auto-renew your card, your Pro status will simply deactivate on this date. To avoid any interruption to your premium features (like custom logos, unlimited clients, and AI tools), please log in and renew your subscription.</p>
+            <p><a href="https://billreve.app/upgrade">Click here to renew</a></p>
+            <p>Best regards,<br>The BillReve Team</p>
+          `
+        });
+      }
+    }
+
+    // 3. Send emails via Resend
     let sentCount = 0;
     for (const email of emailsToSend) {
       const res = await fetch('https://api.resend.com/emails', {
