@@ -16,8 +16,6 @@ const Register: React.FC = () => {
   const [showVerification, setShowVerification] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,31 +73,6 @@ const Register: React.FC = () => {
     }
   };
 
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0) return;
-    setResendLoading(true);
-    setError('');
-    try {
-      const { error: resendError } = await supabase.auth.resend({
-        type: 'signup',
-        email,
-      });
-      if (resendError) throw resendError;
-      // Start 60s cooldown
-      setResendCooldown(60);
-      const interval = setInterval(() => {
-        setResendCooldown(prev => {
-          if (prev <= 1) { clearInterval(interval); return 0; }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend code. Please try again.');
-    } finally {
-      setResendLoading(false);
-    }
-  };
-
   const handleOAuthLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -148,19 +121,6 @@ const Register: React.FC = () => {
             className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl font-medium transition-all disabled:opacity-70 shadow-md shadow-purple-900/20 mt-2"
           >
             {loading ? 'Verifying...' : 'Verify Account'}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleResendOtp}
-            disabled={resendLoading || resendCooldown > 0}
-            className="w-full text-sm text-center text-slate-500 hover:text-purple-600 disabled:text-slate-300 dark:disabled:text-slate-600 transition-colors mt-1 py-1"
-          >
-            {resendLoading
-              ? 'Sending...'
-              : resendCooldown > 0
-              ? `Resend code in ${resendCooldown}s`
-              : "Didn't receive it? Resend code"}
           </button>
         </form>
       ) : (

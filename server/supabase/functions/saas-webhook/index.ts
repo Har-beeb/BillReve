@@ -74,8 +74,7 @@ serve(async (req) => {
         const { error } = await supabase
           .from('profiles')
           .update({ 
-            is_pro: true,
-            pro_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            is_pro: true
           })
           .eq('id', userId);
 
@@ -102,7 +101,7 @@ serve(async (req) => {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <hello@billreve.app>',
+                from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <onboarding@resend.dev>',
                 to: profile.email,
                 subject: 'Welcome to BillReve Pro! 🚀',
                 html: `

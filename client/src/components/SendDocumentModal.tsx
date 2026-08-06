@@ -5,7 +5,6 @@ import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { draftAiEmail } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
-import { syncEngine } from '../services/syncEngine';
 import { ProFeature } from './ui/ProFeature';
 import { db } from '../db/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -172,9 +171,6 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
         if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
       }
 
-      // Trigger immediate sync so other devices get the SENT status
-      syncEngine.sync();
-
       toast.success(isOverdue ? 'Reminder sent successfully!' : `${documentType} sent successfully!`);
       onClose();
     } catch (err) {
@@ -203,9 +199,6 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
         const updatedDoc = await db.quotes.get(documentId);
         if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
       }
-
-      // Trigger immediate sync so other devices get the SENT status
-      syncEngine.sync();
     } catch (e) {
       console.error('Failed to update status', e);
     }

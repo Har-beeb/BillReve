@@ -22,7 +22,7 @@ async function sendEmailWithRetry(to: string, subject: string, html: string, ret
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <hello@billreve.app>',
+          from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <onboarding@resend.dev>',
           to,
           subject,
           html
