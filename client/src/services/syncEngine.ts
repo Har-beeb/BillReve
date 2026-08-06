@@ -182,61 +182,39 @@ class SyncEngine {
 
     const userId = session.user.id;
 
-    // Delta sync: only pull rows updated since our last successful sync.
-    // On first sync (no stored timestamp), pull everything.
-    const lastSyncedAt = localStorage.getItem(LAST_SYNC_KEY);
-
-    const buildQuery = (table: string) => {
-      let q = supabase.from(table).select('*').eq('user_id', userId);
-      if (lastSyncedAt) {
-        // Pull anything updated at or after the last sync time
-        q = q.gte('updated_at', lastSyncedAt);
-      }
-      return q;
-    };
-
+    // Pull everything from Supabase for this user
     const [clientsRes, invoicesRes, quotesRes] = await Promise.all([
-      buildQuery('clients'),
-      buildQuery('invoices'),
-      buildQuery('quotes'),
+      supabase.from('clients').select('*').eq('user_id', userId),
+      supabase.from('invoices').select('*').eq('user_id', userId),
+      supabase.from('quotes').select('*').eq('user_id', userId)
     ]);
 
-    if (clientsRes.data && clientsRes.data.length > 0) {
+    if (clientsRes.data) {
       const remoteClients = clientsRes.data.map(toCamelCase);
-
-      if (!lastSyncedAt) {
-        // First sync: reconcile deletions
-        const remoteIds = new Set(remoteClients.map((c: any) => c.localId));
-        const localSynced = await db.clients.where('syncStatus').equals('synced').toArray();
-        const toDelete = localSynced.filter(c => !remoteIds.has(c.localId)).map(c => c.localId);
-        if (toDelete.length > 0) await db.clients.bulkDelete(toDelete);
-      }
-
+      const remoteIds = new Set(remoteClients.map((c: any) => c.localId));
+      const localSynced = await db.clients.where('syncStatus').equals('synced').toArray();
+      const toDelete = localSynced.filter(c => !remoteIds.has(c.localId)).map(c => c.localId);
+      if (toDelete.length > 0) await db.clients.bulkDelete(toDelete);
+      
       await db.clients.bulkPut(remoteClients.map((c: Client) => ({ ...c, syncStatus: 'synced' })));
     }
-
-    if (invoicesRes.data && invoicesRes.data.length > 0) {
+    
+    if (invoicesRes.data) {
       const remoteInvoices = invoicesRes.data.map(toCamelCase);
-
-      if (!lastSyncedAt) {
-        const remoteIds = new Set(remoteInvoices.map((i: any) => i.localId));
-        const localSynced = await db.invoices.where('syncStatus').equals('synced').toArray();
-        const toDelete = localSynced.filter(i => !remoteIds.has(i.localId)).map(i => i.localId);
-        if (toDelete.length > 0) await db.invoices.bulkDelete(toDelete);
-      }
+      const remoteIds = new Set(remoteInvoices.map((i: any) => i.localId));
+      const localSynced = await db.invoices.where('syncStatus').equals('synced').toArray();
+      const toDelete = localSynced.filter(i => !remoteIds.has(i.localId)).map(i => i.localId);
+      if (toDelete.length > 0) await db.invoices.bulkDelete(toDelete);
 
       await db.invoices.bulkPut(remoteInvoices.map((i: Invoice) => ({ ...i, syncStatus: 'synced' })));
     }
 
-    if (quotesRes.data && quotesRes.data.length > 0) {
+    if (quotesRes.data) {
       const remoteQuotes = quotesRes.data.map(toCamelCase);
-
-      if (!lastSyncedAt) {
-        const remoteIds = new Set(remoteQuotes.map((q: any) => q.localId));
-        const localSynced = await db.quotes.where('syncStatus').equals('synced').toArray();
-        const toDelete = localSynced.filter(q => !remoteIds.has(q.localId)).map(q => q.localId);
-        if (toDelete.length > 0) await db.quotes.bulkDelete(toDelete);
-      }
+      const remoteIds = new Set(remoteQuotes.map((q: any) => q.localId));
+      const localSynced = await db.quotes.where('syncStatus').equals('synced').toArray();
+      const toDelete = localSynced.filter(q => !remoteIds.has(q.localId)).map(q => q.localId);
+      if (toDelete.length > 0) await db.quotes.bulkDelete(toDelete);
 
       await db.quotes.bulkPut(remoteQuotes.map((q: Quote) => ({ ...q, syncStatus: 'synced' })));
     }
