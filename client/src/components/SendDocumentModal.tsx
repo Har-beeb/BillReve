@@ -222,6 +222,10 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     syncEngine.sync();
 
     onClose();
+    } catch (err) {
+      console.error('Failed to prepare WhatsApp:', err);
+      toast.error('Failed to prepare WhatsApp message.');
+    }
   };
 
   return createPortal(
