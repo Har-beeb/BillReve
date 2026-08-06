@@ -101,11 +101,22 @@ export function useNotifications() {
     await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
   };
 
+  const clearAll = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    setNotifications([]);
+    setUnreadCount(0);
+    
+    await supabase.from('notifications').delete().eq('user_id', session.user.id);
+  };
+
   return {
     notifications,
     unreadCount,
     loading,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    clearAll
   };
 }

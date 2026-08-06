@@ -18,7 +18,9 @@ import {
   Star,
   FileSpreadsheet,
   Bot,
-  Send
+  Send,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { useAppStore } from '../store/useAppStore';
@@ -132,7 +134,7 @@ const LandingPage: React.FC = () => {
           
           <h1 className="text-5xl md:text-7xl font-['Outfit'] font-black tracking-tight mb-8 leading-tight flex flex-col justify-center items-center">
             <span>Professional Invoicing,</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-500 dark:from-purple-400 dark:to-indigo-300 flex items-center justify-center min-w-[300px] min-h-[1.2em]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400 flex items-center justify-center min-w-[300px] min-h-[1.2em]">
               <AnimatePresence mode="wait">
                  <motion.span
                    key={wordIndex}
@@ -140,7 +142,7 @@ const LandingPage: React.FC = () => {
                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                    exit={{ opacity: 0, y: -15, filter: "blur(5px)" }}
                    transition={{ duration: 0.3, ease: "easeOut" }}
-                   className="inline-block"
+                   className="inline-block origin-bottom"
                  >
                    {WORDS[wordIndex]}
                  </motion.span>
@@ -386,6 +388,13 @@ const LandingPage: React.FC = () => {
               <div className="flex items-center gap-2 mb-4">
                 <Logo size="sm" className="flex-shrink-0" />
                 <span className="font-['Outfit'] font-black text-2xl text-slate-900 dark:text-white">BillReve</span>
+                <button 
+                  onClick={() => useAppStore.getState().toggleTheme()}
+                  className="ml-4 p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                  aria-label="Toggle theme"
+                >
+                  {useAppStore.getState().theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
               </div>
               <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
                 The modern, offline-first invoicing platform built for freelancers, SMEs, and growing businesses.

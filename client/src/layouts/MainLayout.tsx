@@ -67,7 +67,7 @@ const MainLayout: React.FC = () => {
   const notificationsRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -314,11 +314,18 @@ const MainLayout: React.FC = () => {
                 <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 rounded-t-xl">
                     <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Notifications</h3>
-                    {unreadCount > 0 && (
-                      <button onClick={markAllAsRead} className="text-xs text-[#9333ea] dark:text-[#a855f7] hover:underline flex items-center gap-1">
-                        <Check size={12} /> Mark all read
-                      </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {unreadCount > 0 && (
+                        <button onClick={markAllAsRead} className="text-xs text-[#9333ea] dark:text-[#a855f7] hover:underline flex items-center gap-1">
+                          <Check size={12} /> Mark read
+                        </button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button onClick={clearAll} className="text-xs text-slate-500 hover:text-red-500 transition-colors flex items-center gap-1">
+                          <Trash2 size={12} /> Clear all
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="max-h-[60vh] overflow-y-auto">

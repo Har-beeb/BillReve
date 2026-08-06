@@ -61,6 +61,14 @@ class SyncEngine {
         .subscribe();
     }
 
+    // Auto-trigger sync when local changes are queued
+    db.syncQueue.hook('creating', (_primKey, _obj, trans) => {
+      trans.on('complete', () => {
+        // Debounce slightly to prevent thrashing on rapid additions
+        setTimeout(() => this.sync(), 500);
+      });
+    });
+
     window.addEventListener('online', () => {
       this.retryCount = 0;
       this.sync();
