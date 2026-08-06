@@ -38,7 +38,16 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Remove existing schedule if it exists to prevent errors on multiple runs
-SELECT cron.unschedule('empty-trash-daily');
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'empty-trash-daily') THEN
+    PERFORM cron.unschedule('empty-trash-daily');
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Catch-all just in case
+END;
+$$;
 
 -- Schedule the cron job to run daily at midnight
 SELECT cron.schedule(
