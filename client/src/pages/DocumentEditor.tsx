@@ -219,7 +219,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         return;
       }
       
-      const finalStatus = intendedStatus === 'SENT' ? (initialDoc?.status || 'DRAFT') : intendedStatus;
+      const finalStatus = intendedStatus;
       let finalClientId = clientId;
     
     // Create client on the fly if needed
@@ -650,6 +650,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         skipDbUpdate={true}
         onSendSuccess={async () => {
           await handleSave('SENT', true);
+          syncEngine.sync();
           navigate(type === 'QUOTE' ? '/quotes' : '/invoices');
         }}
       />
