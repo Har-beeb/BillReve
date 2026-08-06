@@ -9,6 +9,7 @@ import { ProFeature } from './ui/ProFeature';
 import { db } from '../db/db';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
+import { syncEngine } from '../services/syncEngine';
 
 interface SendDocumentModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface SendDocumentModalProps {
   clientEmail?: string;
   documentType: 'Invoice' | 'Quote';
   amount: string;
+  onBeforeSend?: (method: 'EMAIL' | 'WHATSAPP') => Promise<void>;
 }
 
 export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
@@ -26,6 +28,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
   clientEmail = '',
   documentType,
   amount,
+  onBeforeSend
 }) => {
   const { businessProfile, isProUser } = useAppStore();
   const [isSending, setIsSending] = useState(false);
@@ -111,6 +114,10 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     }
     setIsSending(true);
     try {
+      if (onBeforeSend) {
+        await onBeforeSend('EMAIL');
+      }
+
       // 1. Get the document and client from IndexedDB
       const document = documentType === 'Invoice' 
         ? await db.invoices.get(documentId)
@@ -171,6 +178,9 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
         if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
       }
 
+      // Immediately sync so it appears as SENT on other devices
+      syncEngine.sync();
+
       toast.success(isOverdue ? 'Reminder sent successfully!' : `${documentType} sent successfully!`);
       onClose();
     } catch (err) {
@@ -182,7 +192,12 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
   };
 
   const handleSendWhatsApp = async () => {
-    const defaultText = `Hi there,\n\nPlease find the link to your ${documentType} for the amount of ${amount} below:\n\n${publicLink}\n\nThank you!`;
+    try {
+      if (onBeforeSend) {
+        await onBeforeSend('WHATSAPP');
+      }
+      
+      const defaultText = `Hi there,\n\nPlease find the link to your ${documentType} for the amount of ${amount} below:\n\n${publicLink}\n\nThank you!`;
     const messageToSend = customMessage.trim() ? `${customMessage.trim()}\n\n${publicLink}` : defaultText;
     const text = encodeURIComponent(messageToSend);
     // Using wa.me which will open WhatsApp app or web depending on device
@@ -202,6 +217,9 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     } catch (e) {
       console.error('Failed to update status', e);
     }
+    
+    // Immediately sync so it appears as SENT on other devices
+    syncEngine.sync();
 
     onClose();
   };

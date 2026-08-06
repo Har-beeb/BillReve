@@ -39,6 +39,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const initialDoc = location.state?.invoice || location.state?.quote;
 
   // Basic State
+  const [localId] = useState<string>(initialDoc?.localId || uuidv4());
   const [clientId, setClientId] = useState<string>(initialDoc?.clientId || '');
   const defaultNote = 'Thank you for your business! Please note that products in good condition are not returnable after 7 days. Payment is due within the specified terms.';
   const [description, setDescription] = useState<string>(initialDoc?.description || '');
@@ -142,7 +143,19 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     }));
   };
 
-  const handleSave = async (intendedStatus: 'DRAFT' | 'SENT') => {
+  const handleSaveAndSendClick = () => {
+    if (!clientId && !isCreatingClient) {
+      toast.error('Please select or create a client');
+      return;
+    }
+    
+    setSavedDocumentId(localId);
+    setSavedDocumentAmount(total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+    setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === (clientId === 'NEW' ? '' : clientId))?.email || '');
+    setIsSendModalOpen(true);
+  };
+
+  const handleSave = async (intendedStatus: 'DRAFT' | 'SENT', skipModal = false) => {
     try {
       if (!clientId && !isCreatingClient) {
         toast.error('Please select or create a client');
@@ -175,7 +188,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     }
 
     const isEditing = !!initialDoc?.localId;
-    const finalLocalId = initialDoc?.localId || uuidv4();
+    const finalLocalId = localId;
 
     const docBase = {
       localId: finalLocalId,
@@ -226,12 +239,12 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         });
       }
       
-      if (intendedStatus === 'SENT') {
+      if (intendedStatus === 'SENT' && !skipModal) {
         setSavedDocumentId(docBase.localId);
         setSavedDocumentAmount(docBase.total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
         setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === finalClientId)?.email || '');
         setIsSendModalOpen(true);
-      } else {
+      } else if (!skipModal) {
         navigate('/quotes');
       }
     } else {
@@ -267,12 +280,12 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         });
       }
       
-      if (intendedStatus === 'SENT') {
+      if (intendedStatus === 'SENT' && !skipModal) {
         setSavedDocumentId(docBase.localId);
         setSavedDocumentAmount(docBase.total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
         setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === finalClientId)?.email || '');
         setIsSendModalOpen(true);
-      } else {
+      } else if (!skipModal) {
         navigate('/invoices');
       }
       }
@@ -286,7 +299,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
 
   const handleCloseSendModal = () => {
     setIsSendModalOpen(false);
-    navigate(type === 'QUOTE' ? '/quotes' : '/invoices');
   };
 
   return (
@@ -308,7 +320,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             <span className="hidden md:inline">Save Draft</span>
           </button>
           <button 
-            onClick={() => handleSave('SENT')}
+            onClick={handleSaveAndSendClick}
             className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors"
           >
             <Send size={18} />
@@ -576,6 +588,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         documentType={type === 'QUOTE' ? 'Quote' : 'Invoice'}
         amount={savedDocumentAmount}
         clientEmail={savedDocumentClientEmail}
+        onBeforeSend={async () => {
+          await handleSave('SENT', true);
+        }}
       />
     </div>
   );
