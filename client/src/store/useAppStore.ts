@@ -15,6 +15,7 @@ interface AppState {
   user: User | null;
   session: Session | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   isProUser: boolean;
   syncStatus: SyncStatus;
   isSidebarExpanded: boolean;
@@ -29,6 +30,7 @@ interface AppState {
   invoices: Invoice[];
   businessProfile: BusinessProfile;
   taxSettings: TaxSetting[];
+  setInitialized: (initialized: boolean) => void;
   setSyncStatus: (status: SyncStatus) => void;
   setProUser: (isPro: boolean) => void;
   toggleSidebar: () => void;
@@ -61,6 +63,7 @@ export const useAppStore = create<AppState>()(
       user: null,
       session: null,
       isAuthenticated: false,
+      isInitialized: false,
       isProUser: false, // Default to free tier for MVP
       syncStatus: 'synced',
       isSidebarExpanded: false, // Collapsed by default
@@ -86,6 +89,7 @@ export const useAppStore = create<AppState>()(
         { id: '1', name: 'VAT (7.5%)', rate: 7.5, isDeduction: false, isActive: false },
         { id: '2', name: 'WHT (5%)', rate: 5, isDeduction: true, isActive: false }
       ],
+      setInitialized: (initialized) => set({ isInitialized: initialized }),
       setSyncStatus: (status) => set({ syncStatus: status }),
       setProUser: (isPro) => set({ isProUser: isPro }),
       toggleSidebar: () => set((state) => ({ isSidebarExpanded: !state.isSidebarExpanded })),

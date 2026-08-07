@@ -77,7 +77,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                    exit={{ opacity: 0, y: -15, filter: "blur(5px)" }}
                    transition={{ duration: 0.3, ease: "easeOut" }}
-                   className="text-purple-400 inline-block origin-bottom"
+                   className="text-emerald-400 inline-block origin-bottom"
                  >
                    {WORDS[wordIndex]}
                  </motion.span>

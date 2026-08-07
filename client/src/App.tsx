@@ -42,6 +42,7 @@ function App() {
   const theme = useAppStore(state => state.theme);
   const colorTheme = useAppStore(state => state.colorTheme);
   const fontSize = useAppStore(state => state.fontSize);
+  const isInitialized = useAppStore(state => state.isInitialized);
 
   useEffect(() => {
     const fetchProfile = async (sessionUser: any) => {
@@ -86,7 +87,9 @@ function App() {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      fetchProfile(session?.user);
+      fetchProfile(session?.user).finally(() => {
+        useAppStore.getState().setInitialized(true);
+      });
     });
 
     // Listen for auth changes (login, logout, refresh)
@@ -144,6 +147,14 @@ function App() {
       root.style.fontSize = '16px';
     }
   }, [theme, colorTheme, fontSize]);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
