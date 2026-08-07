@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
-import { MessageSquare, X, Send, Sparkles, Loader2, Bot, User } from 'lucide-react';
+import { MessageSquare, X, Send, Sparkles, Loader2, Bot, User, Copy, Check } from 'lucide-react';
 import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
@@ -27,7 +27,15 @@ export const RevenueChat: React.FC = () => {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const SUGGESTED_PROMPTS = [
+    "Who owes me the most money?",
+    "Draft a polite reminder for overdue invoices",
+    "What is my total revenue this month?",
+    "Who is my best client?"
+  ];
 
   // Optional: render nothing during SSR if we're worried about document being undefined,
   // but since this is a pure CSR React app, document.body is always available.
@@ -109,10 +117,16 @@ export const RevenueChat: React.FC = () => {
 
   const formatMessage = (text: string) => {
     return (
-      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-800 prose-pre:text-slate-100">
+      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-800 prose-pre:text-slate-100 text-sm">
         <ReactMarkdown>{text}</ReactMarkdown>
       </div>
     );
+  };
+
+  const handleCopy = (id: string, content: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   if (!mounted) return null;
@@ -160,8 +174,21 @@ export const RevenueChat: React.FC = () => {
               <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${msg.role === 'user' ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' : 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400'}`}>
                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
-              <div className={`p-3 rounded-2xl ${msg.role === 'user' ? 'bg-purple-600 text-white rounded-tr-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-tl-sm shadow-sm'}`}>
-                {msg.role === 'user' ? <p className="text-sm">{msg.content}</p> : formatMessage(msg.content)}
+              <div className={`p-3 rounded-2xl relative group ${msg.role === 'user' ? 'bg-purple-600 text-white rounded-tr-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-tl-sm shadow-sm'}`}>
+                {msg.role === 'user' ? (
+                  <p className="text-sm">{msg.content}</p>
+                ) : (
+                  <>
+                    {formatMessage(msg.content)}
+                    <button
+                      onClick={() => handleCopy(msg.id, msg.content)}
+                      className="absolute top-2 right-2 p-1.5 bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                      title="Copy message"
+                    >
+                      {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -170,15 +197,33 @@ export const RevenueChat: React.FC = () => {
               <div className="w-8 h-8 shrink-0 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                 <Bot size={16} />
               </div>
-              <div className="p-3 rounded-2xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-tl-sm shadow-sm flex items-center gap-1">
-                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-tl-sm shadow-sm flex flex-col gap-2 min-w-[100px]">
+                <div className="flex items-center gap-1.5 h-5">
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <div className="w-24 h-2 bg-slate-100 dark:bg-slate-700 rounded-full animate-pulse"></div>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Suggested Prompts */}
+        {messages.length === 1 && !isTyping && (
+          <div className="px-4 pb-2 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap gap-2">
+            {SUGGESTED_PROMPTS.map((prompt, idx) => (
+              <button
+                key={idx}
+                onClick={() => setInput(prompt)}
+                className="text-left text-[11px] px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-full hover:border-purple-300 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors shadow-sm"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Input */}
         <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl">

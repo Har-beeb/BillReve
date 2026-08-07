@@ -82,8 +82,8 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-purple-50/50 to-indigo-50/50 dark:from-slate-800/50 dark:to-slate-800/50">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-lg">
-              <Sparkles size={20} />
+            <div className={`p-2 bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-lg transition-all ${isLoading ? 'animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.5)]' : ''}`}>
+              <Sparkles size={20} className={isLoading ? 'animate-spin-slow' : ''} />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Draft {documentType === 'INVOICE' ? 'Invoice' : 'Quote'} with AI</h2>

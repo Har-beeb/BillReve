@@ -280,20 +280,32 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
                   className="flex-none px-3 py-1.5 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-medium rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Draft a professional message using AI"
                 >
-                  {isDrafting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  {isDrafting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} className={documentType === 'Invoice' && documentDetails?.dueDate && new Date(documentDetails.dueDate) < new Date() ? 'animate-pulse text-red-500' : ''} />}
                   {documentType === 'Invoice' && documentDetails?.dueDate && new Date(documentDetails.dueDate) < new Date() 
                     ? 'AI Draft Reminder' 
                     : 'AI Draft Message'}
                 </button>
               </ProFeature>
             </div>
-            <textarea
-              rows={4}
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="Add a personal note to the email body..."
-              className="w-full p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-purple-500/50"
-            />
+            <div className="relative w-full">
+              <textarea
+                rows={4}
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                placeholder="Add a personal note to the email body..."
+                disabled={isDrafting}
+                className="w-full p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-purple-500/50 disabled:opacity-50 transition-opacity resize-none"
+              />
+              {isDrafting && (
+                <div className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg overflow-hidden border border-purple-200 dark:border-purple-800/50 pointer-events-none p-4 flex flex-col gap-3">
+                  <div className="w-3/4 h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse"></div>
+                  <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-5/6 h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                  <div className="w-1/2 h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" style={{ animationDelay: '450ms' }}></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 dark:via-white/10 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
+                </div>
+              )}
+            </div>
           </div>
 
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">

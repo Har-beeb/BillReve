@@ -226,3 +226,5 @@
     padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 }
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
