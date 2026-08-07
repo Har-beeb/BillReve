@@ -24,6 +24,8 @@ export interface BusinessProfile {
   flutterwaveSecretKey?: string;
   country: string; // e.g., 'NG', 'US', 'GB'
   currency: string; // e.g., 'NGN', 'USD', 'GBP'
+  industry?: string;
+  businessDescription?: string;
 }
 
 export interface TaxSetting {

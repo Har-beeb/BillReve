@@ -101,7 +101,7 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
         ))}
         <div className="flex justify-between gap-4 font-bold text-lg mt-2 pt-2 border-t" style={{ borderColor: '#f1f5f9' }}>
           <span className="whitespace-nowrap">Total</span>
-          <span className="text-right" style={{ color: '#2563eb' }}>{formatMoney(document.total, document.currency)}</span>
+          <span className="text-right" style={{ color: '#9333ea' }}>{formatMoney(document.total, document.currency)}</span>
         </div>
         {document.amountPaid > 0 && (
           <div className="flex justify-between gap-4 font-medium text-sm mt-2" style={{ color: '#16a34a' }}>

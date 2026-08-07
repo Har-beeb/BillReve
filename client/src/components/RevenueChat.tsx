@@ -15,7 +15,7 @@ interface Message {
 }
 
 export const RevenueChat: React.FC = () => {
-  const { isProUser, mobileNavStyle } = useAppStore();
+  const { isProUser, mobileNavStyle, businessProfile } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -104,7 +104,8 @@ export const RevenueChat: React.FC = () => {
       // 3. Send to API
       const result = await chatWithRevenue({
         prompt: userMsg,
-        data: { invoices, quotes, clients }
+        data: { invoices, quotes, clients },
+        businessProfile
       });
 
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: result.text || 'I could not process that.', timestamp: new Date() }]);

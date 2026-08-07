@@ -103,7 +103,8 @@ async function handleGenerateQuote(aiClient: GoogleGenAI, body: any) {
     documents: z.array(z.object({
       mimeType: z.string(),
       data: z.string() // base64 string
-    })).optional()
+    })).optional(),
+    businessProfile: z.any().optional()
   }).refine(data => data.text || (data.documents && data.documents.length > 0), {
     message: "Either text or at least one document must be provided."
   });
@@ -116,7 +117,13 @@ Your task is to parse the provided text or document(s) into a structured ${docTy
 Extract all line items, their descriptions, quantities, and unit prices.
 If a quantity is not specified, assume 1.
 If the notes mention a general description, use that for the ${docTypeName.toLowerCase()} description.
-Ensure all prices are represented as numbers (do not include currency symbols).`;
+Ensure all prices are represented as numbers (do not include currency symbols).
+
+Context about the business:
+${validatedData.businessProfile?.name ? `Business Name: ${validatedData.businessProfile.name}` : ''}
+${validatedData.businessProfile?.industry ? `Industry: ${validatedData.businessProfile.industry}` : ''}
+${validatedData.businessProfile?.businessDescription ? `What they do: ${validatedData.businessProfile.businessDescription}` : ''}
+Use this context to accurately interpret line items (e.g., industry-specific jargon or services).`;
 
   const contents: any[] = [];
   contents.push({ text: prompt });
@@ -225,7 +232,8 @@ async function handleDraftEmail(aiClient: GoogleGenAI, body: any) {
     clientHistory: z.any().optional(),
     businessName: z.string().optional().default('Your Business'),
     currency: z.string().optional().default('USD'),
-    isOverdue: z.boolean().optional().default(false)
+    isOverdue: z.boolean().optional().default(false),
+    businessProfile: z.any().optional()
   });
 
   const validatedData = schema.parse(body);
@@ -238,6 +246,10 @@ async function handleDraftEmail(aiClient: GoogleGenAI, body: any) {
 Client Name: ${clientName}
 Document Amount: ${currency} ${amount}
 Document Number: ${documentDetails.number || documentDetails.invoiceNumber || documentDetails.quoteNumber || 'N/A'}`;
+
+  if (validatedData.businessProfile?.industry || validatedData.businessProfile?.businessDescription) {
+    prompt += `\nBusiness Context: ${businessName} is in the ${validatedData.businessProfile.industry || 'Business'} industry. ${validatedData.businessProfile.businessDescription || ''} Tailor the tone of the email to match this professional industry context.`;
+  }
 
   if (clientHistory) {
     if (clientHistory.isNewClient) {
@@ -275,7 +287,8 @@ async function handleInsights(aiClient: GoogleGenAI, body: any) {
       invoices: z.array(z.any()),
       quotes: z.array(z.any()),
       clients: z.array(z.any())
-    })
+    }),
+    businessProfile: z.any().optional()
   });
 
   const validatedData = schema.parse(body);
@@ -283,6 +296,13 @@ async function handleInsights(aiClient: GoogleGenAI, body: any) {
 
   const systemPrompt = `You are an expert financial analyst, accountant, and business advisor.
 You are helping the user understand their business data through a conversational interface.
+
+Business Context:
+- Name: ${validatedData.businessProfile?.name || 'A business'}
+- Industry: ${validatedData.businessProfile?.industry || 'Unspecified'}
+- What they do: ${validatedData.businessProfile?.businessDescription || 'Unspecified'}
+
+Tailor your financial advice, tone, and insights to their specific industry and business model.
 
 Here is a summary of the user's business data (with sensitive personal information removed for security):
 \`\`\`json

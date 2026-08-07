@@ -21,7 +21,7 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
   defaultTab = 'text'
 }) => {
   const navigate = useNavigate();
-  const { isProUser } = useAppStore();
+  const { isProUser, businessProfile } = useAppStore();
   const [activeTab, setActiveTab] = useState<'text' | 'document'>(defaultTab);
   const [textInput, setTextInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -66,7 +66,7 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
       }
 
       // @ts-ignore - passing documentType to API if updated
-      const generatedData = await generateAiQuote({ ...payload, documentType });
+      const generatedData = await generateAiQuote({ ...payload, documentType, businessProfile });
       onSuccess(generatedData);
       onClose();
     } catch (err: any) {

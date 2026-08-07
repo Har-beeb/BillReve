@@ -93,7 +93,8 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
         clientHistory,
         businessName: businessProfile.name || 'Your Business',
         currency: documentDetails.currency || 'USD',
-        isOverdue: isOverdue || false
+        isOverdue: isOverdue || false,
+        businessProfile
       });
       
       if (draft?.text) {

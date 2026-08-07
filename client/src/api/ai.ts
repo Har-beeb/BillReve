@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-export const generateAiQuote = async (payload: { text?: string; documents?: { mimeType: string; data: string }[] }) => {
+export const generateAiQuote = async (payload: { text?: string; documents?: { mimeType: string; data: string }[]; businessProfile?: any }) => {
   const { data, error } = await supabase.functions.invoke('ai/generate-quote', {
     body: payload,
   });
@@ -16,7 +16,7 @@ export const generateAiQuote = async (payload: { text?: string; documents?: { mi
   return data.data;
 };
 
-export const enhanceAiText = async (payload: { text: string; mode: 'line_item' | 'note' }) => {
+export const enhanceAiText = async (payload: { text: string; mode: 'line_item' | 'note'; businessProfile?: any }) => {
   const { data, error } = await supabase.functions.invoke('ai/enhance-text', {
     body: payload,
   });
@@ -39,7 +39,8 @@ export const draftAiEmail = async (payload: {
   clientHistory?: any,
   businessName?: string,
   currency?: string,
-  isOverdue?: boolean 
+  isOverdue?: boolean,
+  businessProfile?: any
 }) => {
   const { data, error } = await supabase.functions.invoke('ai/draft-email', {
     body: payload,
@@ -56,7 +57,7 @@ export const draftAiEmail = async (payload: {
   return data.data;
 };
 
-export const chatWithRevenue = async (payload: { prompt: string; data: any }) => {
+export const chatWithRevenue = async (payload: { prompt: string; data: any; businessProfile?: any }) => {
   const { data, error } = await supabase.functions.invoke('ai/insights', {
     body: payload,
   });

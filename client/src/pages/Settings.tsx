@@ -76,6 +76,8 @@ const Settings: React.FC = () => {
             bank_name: localProfile.bankAccounts?.[0]?.bankName || null,
             account_name: localProfile.bankAccounts?.[0]?.accountName || null,
             account_number: localProfile.bankAccounts?.[0]?.accountNumber || null,
+            industry: localProfile.industry || null,
+            business_description: localProfile.businessDescription || null,
           })
           .eq('id', user.id);
           
@@ -596,6 +598,36 @@ const Settings: React.FC = () => {
                     onChange={(e) => setLocalProfile({...localProfile, phone: e.target.value})}
                     className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Industry</label>
+                  <select
+                    value={localProfile.industry || ''}
+                    onChange={(e) => setLocalProfile({ ...localProfile, industry: e.target.value })}
+                    className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                  >
+                    <option value="">Select your industry...</option>
+                    <option value="Freelance & Creative">Freelance & Creative</option>
+                    <option value="Agency & Consulting">Agency & Consulting</option>
+                    <option value="Software & Tech">Software & Tech</option>
+                    <option value="E-commerce & Retail">E-commerce & Retail</option>
+                    <option value="Real Estate & Construction">Real Estate & Construction</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Education">Education</option>
+                    <option value="Logistics">Logistics</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Business Description (AI Context)</label>
+                  <textarea
+                    value={localProfile.businessDescription || ''}
+                    onChange={(e) => setLocalProfile({ ...localProfile, businessDescription: e.target.value })}
+                    rows={3}
+                    placeholder="e.g. We build custom web applications for healthcare startups..."
+                    className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none resize-none"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">This helps the AI generate more accurate quotes, insights, and emails tailored to your business. This is NOT shown on your invoices.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Business Address</label>

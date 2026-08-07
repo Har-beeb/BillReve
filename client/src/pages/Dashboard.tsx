@@ -423,11 +423,20 @@ const Dashboard: React.FC = () => {
                 })}
               </div>
             ) : (
-              <div className="p-8 text-center text-slate-500">
-                <FileText size={48} className="mx-auto mb-4 opacity-20" />
-                <p>No recent activity.</p>
+              <div className="p-12 text-center flex flex-col items-center justify-center">
+                <div className="w-20 h-20 bg-purple-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                  <FileText size={32} className="text-purple-300 dark:text-slate-600" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No recent activity</h3>
+                <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-6">When you create invoices or quotes, they'll appear here for quick access.</p>
                 {invoices.length === 0 && (
-                  <button onClick={() => checkQuota('invoice') && navigate('/invoices/new')} className="mt-4 text-sm text-purple-600 hover:underline">Create your first invoice</button>
+                  <button 
+                    onClick={() => checkQuota('invoice') && navigate('/invoices/new')} 
+                    className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all shadow-sm hover:shadow shadow-purple-200 dark:shadow-none flex items-center gap-2"
+                  >
+                    <Plus size={18} />
+                    Create First Invoice
+                  </button>
                 )}
               </div>
             )}
