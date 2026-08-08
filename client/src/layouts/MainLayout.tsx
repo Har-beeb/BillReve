@@ -378,7 +378,7 @@ const MainLayout: React.FC = () => {
             <div className="relative" ref={menuRef}>
               <button 
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/50 text-[#9333ea] dark:text-[#a855f7] flex items-center justify-center font-bold hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 overflow-hidden ring-2 ring-transparent"
+                className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 overflow-hidden ring-2 ring-transparent"
                 aria-label="User menu"
               >
                 {(() => {

@@ -17,7 +17,7 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 'md' }) => {
 
   return (
     <div className={`flex justify-center items-center ${className}`}>
-      <div className={`${currentSize.outer} bg-purple-600 dark:bg-purple-600 flex items-center justify-center shadow-md`}>
+      <div className={`${currentSize.outer} bg-[#9333ea] flex items-center justify-center shadow-md`}>
         <div className={`${currentSize.inner} bg-white dark:bg-white transform rotate-45`}></div>
       </div>
     </div>

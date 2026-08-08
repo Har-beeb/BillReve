@@ -912,17 +912,17 @@ const Settings: React.FC = () => {
 
                 {/* Data Migration */}
                 {enableCsvImport && (
-                  <div className="w-full bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 mt-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 text-left">
+                  <div className="w-full bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/50 rounded-lg p-4 mt-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 text-left">
                     <div>
-                      <div className="text-sm font-medium text-blue-700 dark:text-blue-400">Data Migration</div>
-                      <div className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-1 max-w-lg">
+                      <div className="text-sm font-medium text-purple-700 dark:text-purple-400">Data Migration</div>
+                      <div className="text-xs text-purple-600/80 dark:text-purple-400/80 mt-1 max-w-lg">
                         Import your clients, invoices, or quotes from QuickBooks, Wave, or any other system using our CSV Import Wizard.
                       </div>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
                       <button 
                         onClick={() => setShowImportWizard(true)}
-                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto"
+                        className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap w-full sm:w-auto shadow-sm"
                       >
                         <FileUp size={16} />
                         Import CSV

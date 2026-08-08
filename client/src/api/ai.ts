@@ -57,7 +57,7 @@ export const draftAiEmail = async (payload: {
   return data.data;
 };
 
-export const chatWithRevenue = async (payload: { prompt: string; data: any; businessProfile?: any }) => {
+export const chatWithRevenue = async (payload: { prompt: string; data: any; businessProfile?: any; currentView?: string }) => {
   const { data, error } = await supabase.functions.invoke('ai/insights', {
     body: payload,
   });

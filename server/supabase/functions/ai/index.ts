@@ -288,7 +288,8 @@ async function handleInsights(aiClient: GoogleGenAI, body: any) {
       quotes: z.array(z.any()),
       clients: z.array(z.any())
     }),
-    businessProfile: z.any().optional()
+    businessProfile: z.any().optional(),
+    currentView: z.string().optional()
   });
 
   const validatedData = schema.parse(body);
@@ -302,7 +303,10 @@ Business Context:
 - Industry: ${validatedData.businessProfile?.industry || 'Unspecified'}
 - What they do: ${validatedData.businessProfile?.businessDescription || 'Unspecified'}
 
-Tailor your financial advice, tone, and insights to their specific industry and business model.
+User Interface Context:
+- The user is currently viewing the app from the: ${validatedData.currentView === '/dashboard' ? 'Dashboard page' : validatedData.currentView === '/reports' ? 'Reports & Analytics page' : validatedData.currentView || 'App'}
+
+Tailor your financial advice, tone, and insights to their specific industry and business model. If they ask a generic question, you can tailor your answer to focus on the context of the page they are currently viewing (e.g., summarizing overall metrics if on the Dashboard, or deeper analytic insights if on the Reports page).
 
 Here is a summary of the user's business data (with sensitive personal information removed for security):
 \`\`\`json
@@ -315,17 +319,55 @@ INSTRUCTIONS:
 - Analyze the provided data to answer the user's question accurately.
 - Provide insights, calculations, or summaries if relevant (e.g., total revenue, overdue amounts, best clients).
 - Keep your tone professional, concise, and helpful.
-- Format your response using markdown for readability (use bolding, bullet points, or tables if useful).
+- Format the "text" part of your response using markdown for readability.
 - If the data provided doesn't contain the answer, politely say so. Do not make up numbers.
+
+ACTION CAPABILITIES:
+You have the ability to execute actions in the user's application if they explicitly ask you to create or delete something. 
+If their prompt contains an intent to perform an action, include the "action" object in your JSON response.
+
+Supported Action Types:
+- "CREATE_INVOICE": Payload requires { clientId: string, amount: number, items: [{ description: string, amount: number }] }
+- "CREATE_QUOTE": Payload requires { clientId: string, amount: number, items: [{ description: string, amount: number }] }
+- "CREATE_CLIENT": Payload requires { name: string, email?: string }
+- "DELETE_INVOICE": Payload requires { invoiceId: string }
+- "DELETE_QUOTE": Payload requires { quoteId: string }
+- "DELETE_CLIENT": Payload requires { clientId: string }
+- "SEND_DOCUMENT": Payload requires { documentId: string, documentType: "Invoice" | "Quote" }
+- "NAVIGATE_EDIT": Payload requires { route: string } (e.g. "/invoices/localId/edit" or "/clients/localId")
+
+If no action is needed, omit the "action" key or set it to null.
+
+CRITICAL: You MUST respond ONLY with a valid JSON object matching this schema:
+{
+  "text": "Your markdown response here",
+  "action": {
+    "type": "CREATE_INVOICE | DELETE_CLIENT | etc...",
+    "payload": { ... }
+  } // optional
+}
 `;
 
   const response = await aiClient.models.generateContent({
     model: "gemini-3.5-flash-lite",
     contents: systemPrompt,
+    config: {
+      responseMimeType: "application/json",
+    }
   });
+
+  let parsedResponse = { text: "I'm sorry, I couldn't process that." };
+  try {
+    if (response.text) {
+      parsedResponse = JSON.parse(response.text.trim());
+    }
+  } catch (e) {
+    console.error("Failed to parse Gemini JSON:", response.text);
+    parsedResponse.text = response.text || parsedResponse.text;
+  }
 
   return new Response(JSON.stringify({
     success: true,
-    data: { text: response.text?.trim() }
+    data: parsedResponse
   }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }

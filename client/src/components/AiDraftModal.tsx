@@ -29,6 +29,14 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  React.useEffect(() => {
+    if (!isOpen) {
+      setTextInput('');
+      setFile(null);
+      setError(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,30 +164,48 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
               />
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Upload File</label>
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors ${file ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/10' : 'border-slate-300 dark:border-slate-700 hover:border-purple-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-              >
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileSelect} 
-                  className="hidden" 
-                  accept="image/*,application/pdf"
-                />
-                <UploadCloud size={32} className={file ? 'text-purple-500' : 'text-slate-400'} />
-                <p className="mt-4 font-medium text-slate-700 dark:text-slate-300 text-sm">
-                  {file ? file.name : 'Click to upload a document or image'}
-                </p>
-                {!file && (
-                  <p className="mt-1 text-xs text-slate-500 text-center max-w-[250px]">
-                    Supports PDF, JPG, and PNG. We'll extract the line items and totals.
+              <div className="flex flex-col gap-2 relative">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Upload File</label>
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      setFile(e.dataTransfer.files[0]);
+                    }
+                  }}
+                  className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors ${file ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/10' : 'border-slate-300 dark:border-slate-700 hover:border-purple-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                >
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileSelect} 
+                    className="hidden" 
+                    accept="image/*,application/pdf"
+                  />
+                  <UploadCloud size={32} className={file ? 'text-purple-500' : 'text-slate-400'} />
+                  <p className="mt-4 font-medium text-slate-700 dark:text-slate-300 text-sm">
+                    {file ? file.name : 'Click or drag to upload a document'}
                   </p>
+                  {!file && (
+                    <p className="mt-1 text-xs text-slate-500 text-center max-w-[250px]">
+                      Supports PDF, JPG, and PNG. We'll extract the line items and totals.
+                    </p>
+                  )}
+                </div>
+                {file && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFile(null);
+                    }}
+                    className="absolute top-10 right-4 p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
                 )}
               </div>
-            </div>
           )}
         </div>
 

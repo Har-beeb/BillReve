@@ -1,27 +1,40 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { MessageSquare, X, Send, Sparkles, Loader2, Bot, User, Copy, Check } from 'lucide-react';
+import { MessageSquare, X, Send, Sparkles, Loader2, Bot, User, Copy, Check, CheckCircle } from 'lucide-react';
 import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
 import { ProFeature } from './ui/ProFeature';
+import { SendDocumentModal } from './SendDocumentModal';
+import { v4 as uuidv4 } from 'uuid';
+import { syncEngine } from '../services/syncEngine';
+
+interface Action {
+  type: string;
+  payload: any;
+}
 
 interface Message {
   id: string;
   role: 'user' | 'ai';
   content: string;
   timestamp: Date;
+  action?: Action;
 }
 
 export const RevenueChat: React.FC = () => {
-  const { isProUser, mobileNavStyle, businessProfile } = useAppStore();
+  const { isProUser, mobileNavStyle, businessProfile, clients: storeClients } = useAppStore();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [sendModalConfig, setSendModalConfig] = useState({ isOpen: false, documentId: '', documentType: 'Invoice' as 'Invoice' | 'Quote' });
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       role: 'ai',
-      content: 'Hi! I am your Revenue AI. Ask me anything about your invoices, quotes, or clients.',
+      content: 'Hi! I am your Revenue AI. Ask me anything about your finances.\n\n💡 **Tip:** Type `/` to see quick actions (like creating an invoice), or use `@` to tag a specific client!',
       timestamp: new Date()
     }
   ]);
@@ -31,9 +44,9 @@ export const RevenueChat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const SUGGESTED_PROMPTS = [
+    "/create invoice",
     "Who owes me the most money?",
-    "Draft a polite reminder for overdue invoices",
-    "What is my total revenue this month?",
+    "/help",
     "Who is my best client?"
   ];
 
@@ -79,14 +92,25 @@ export const RevenueChat: React.FC = () => {
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
-    
-    if (!navigator.onLine) {
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: 'You must be online to use the AI Revenue Chat feature.', timestamp: new Date() }]);
-      return;
-    }
 
     const userMsg = input.trim();
     setInput('');
+    
+    // Intercept /help command locally
+    if (userMsg.toLowerCase() === '/help') {
+      setMessages(prev => [
+        ...prev, 
+        { id: Date.now().toString(), role: 'user', content: userMsg, timestamp: new Date() },
+        { 
+          id: (Date.now() + 1).toString(), 
+          role: 'ai', 
+          content: `### 🤖 Available Commands\n\n**Slash Commands**\n* \`/create invoice\`\n* \`/create quote\`\n* \`/create client\`\n* \`/edit\`\n* \`/send email\`\n* \`/help\`\n\n**Mentions**\n* Use **\`@\`** to tag clients directly from your database (e.g. \`@Acme Corp\`).\n\n**Conversational Actions**\nJust ask me to delete an invoice, edit a client's details, or draft an email, and I'll do it for you!`, 
+          timestamp: new Date() 
+        }
+      ]);
+      return;
+    }
+
     setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: userMsg, timestamp: new Date() }]);
     setIsTyping(true);
 
@@ -105,14 +129,83 @@ export const RevenueChat: React.FC = () => {
       const result = await chatWithRevenue({
         prompt: userMsg,
         data: { invoices, quotes, clients },
-        businessProfile
+        businessProfile,
+        currentView: location.pathname
       });
 
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: result.text || 'I could not process that.', timestamp: new Date() }]);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          id: Date.now().toString(), 
+          role: 'ai', 
+          content: result.text || 'I could not process that.', 
+          timestamp: new Date(),
+          action: result.action 
+        }
+      ]);
     } catch (err: any) {
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: `Error: ${err.message || 'Failed to connect to AI.'}`, timestamp: new Date() }]);
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const handleExecuteAction = async (msgId: string, action: Action) => {
+    try {
+      const now = new Date().toISOString();
+      if (action.type === 'CREATE_INVOICE') {
+        const payload = action.payload;
+        const newInvoice = {
+          localId: uuidv4(),
+          clientId: payload.clientId,
+          number: `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+          issueDate: now.split('T')[0],
+          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          items: payload.items || [],
+          subtotal: payload.amount || 0,
+          total: payload.amount || 0,
+          taxAmount: 0,
+          discount: 0,
+          notes: '',
+          status: 'DRAFT' as const,
+          currency: 'USD',
+          taxes: [],
+          amountPaid: 0,
+          isRecurring: false,
+          syncStatus: 'pending' as const,
+          createdAt: now,
+          updatedAt: now
+        };
+        await db.invoices.add(newInvoice);
+        useAppStore.getState().addInvoice(newInvoice);
+        syncEngine.sync();
+      } else if (action.type === 'DELETE_INVOICE') {
+        await db.invoices.update(action.payload.invoiceId, { deletedAt: now, syncStatus: 'pending' });
+        syncEngine.sync();
+      } else if (action.type === 'DELETE_CLIENT') {
+        await db.clients.update(action.payload.clientId, { deletedAt: now, syncStatus: 'pending' });
+        syncEngine.sync();
+      } else if (action.type === 'SEND_DOCUMENT') {
+        setSendModalConfig({
+          isOpen: true,
+          documentId: action.payload.documentId,
+          documentType: action.payload.documentType
+        });
+      } else if (action.type === 'NAVIGATE_EDIT') {
+        navigate(action.payload.route);
+        setIsOpen(false);
+      } else if (action.type === 'CREATE_QUOTE') {
+        navigate('/quotes/new');
+        setIsOpen(false);
+      } else if (action.type === 'CREATE_CLIENT') {
+        navigate('/clients/new');
+        setIsOpen(false);
+      }
+      
+      // Update message to remove the action so it doesn't show confirmation anymore
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, action: undefined, content: m.content + '\n\n**✅ Action Executed Successfully**' } : m));
+    } catch (err: any) {
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: `Failed to execute action: ${err.message}`, timestamp: new Date() }]);
     }
   };
 
@@ -181,6 +274,27 @@ export const RevenueChat: React.FC = () => {
                 ) : (
                   <>
                     {formatMessage(msg.content)}
+                    {msg.action && (
+                      <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-900 border border-purple-200 dark:border-purple-900/50 rounded-lg">
+                        <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-2">
+                          Action Required: {msg.action.type.replace('_', ' ')}
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleExecuteAction(msg.id, msg.action!)}
+                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs py-1.5 rounded-md transition-colors font-medium flex items-center justify-center gap-1"
+                          >
+                            <CheckCircle size={14} /> Confirm
+                          </button>
+                          <button
+                            onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, action: undefined, content: m.content + '\n\n*Action Cancelled*' } : m))}
+                            className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs py-1.5 rounded-md transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <button
                       onClick={() => handleCopy(msg.id, msg.content)}
                       className="absolute top-2 right-2 p-1.5 bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
@@ -227,7 +341,34 @@ export const RevenueChat: React.FC = () => {
         )}
 
         {/* Input */}
-        <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl">
+        <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl relative">
+          
+          {/* Autocomplete Popover */}
+          {(input.startsWith('/') || input.includes('@')) && (
+            <div className="absolute bottom-full left-4 mb-2 w-64 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-10 p-1">
+              {input.startsWith('/') && (
+                <>
+                  <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Commands</div>
+                  {['/create invoice', '/create quote', '/create client', '/edit', '/send email', '/help'].filter(c => c.startsWith(input.toLowerCase())).map(cmd => (
+                    <button key={cmd} onClick={() => setInput(cmd + ' ')} className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">
+                      {cmd}
+                    </button>
+                  ))}
+                </>
+              )}
+              {input.includes('@') && (
+                <>
+                  <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Clients</div>
+                  {storeClients.filter(c => c.name.toLowerCase().includes(input.split('@')[1].toLowerCase())).map(client => (
+                    <button key={client.localId} onClick={() => setInput(input.substring(0, input.lastIndexOf('@')) + '@' + client.name + ' ')} className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">
+                      {client.name}
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+
           <ProFeature isProUser={isProUser}>
             <form 
               onSubmit={(e) => { e.preventDefault(); handleSend(); }}
@@ -237,7 +378,7 @@ export const RevenueChat: React.FC = () => {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about your revenue..."
+                placeholder="Ask a question, or type / for commands..."
                 className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                 disabled={isTyping}
               />
@@ -257,6 +398,17 @@ export const RevenueChat: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Send Document Modal */}
+      {sendModalConfig.isOpen && (
+        <SendDocumentModal
+          isOpen={sendModalConfig.isOpen}
+          onClose={() => setSendModalConfig(prev => ({ ...prev, isOpen: false }))}
+          documentId={sendModalConfig.documentId}
+          documentType={sendModalConfig.documentType}
+          amount="Unknown" // Amount is fetched internally by the modal
+        />
+      )}
     </>,
     document.body
   );
