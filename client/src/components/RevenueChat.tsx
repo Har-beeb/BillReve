@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { MessageSquare, X, Send, Sparkles, Loader2, Bot, User, Copy, Check, CheckCircle } from 'lucide-react';
+import { MessageSquare, X, Send, Loader2, User, Copy, Check, CheckCircle, Bot, Sparkles } from 'lucide-react';
 import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
@@ -42,9 +42,18 @@ export const RevenueChat: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isTyping && isOpen) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
+    }
+  }, [isTyping, isOpen]);
 
   const SUGGESTED_PROMPTS = [
-    "/create invoice",
+    "/create",
     "Who owes me the most money?",
     "/help",
     "Who is my best client?"
@@ -104,7 +113,7 @@ export const RevenueChat: React.FC = () => {
         { 
           id: (Date.now() + 1).toString(), 
           role: 'ai', 
-          content: `### 🤖 Available Commands\n\n**Slash Commands**\n* \`/create invoice\`\n* \`/create quote\`\n* \`/create client\`\n* \`/edit\`\n* \`/send email\`\n* \`/help\`\n\n**Mentions**\n* Use **\`@\`** to tag clients directly from your database (e.g. \`@Acme Corp\`).\n\n**Conversational Actions**\nJust ask me to delete an invoice, edit a client's details, or draft an email, and I'll do it for you!`, 
+          content: `### 💼 Available Commands\n\n**Slash Commands**\n* \`/create\` - Start the document creation wizard (Invoice, Quote, or Client)\n* \`/edit\` - Edit an existing record\n* \`/send email\` - Draft an email to a client\n* \`/help\` - Show this help menu\n\n**Mentions**\n* Use **\`@\`** to tag clients directly from your database and get a financial summary (e.g. \`@Acme Corp\`).\n\n**Conversational Actions**\nJust ask me to delete an invoice, edit a client's details, or draft an email, and I'll do it for you!`, 
           timestamp: new Date() 
         }
       ]);
@@ -130,7 +139,11 @@ export const RevenueChat: React.FC = () => {
         prompt: userMsg,
         data: { invoices, quotes, clients },
         businessProfile,
-        currentView: location.pathname
+        currentView: location.pathname,
+        history: messages.slice(-20).map(m => ({
+          role: m.role === 'ai' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        }))
       });
 
       setMessages(prev => [
@@ -144,7 +157,7 @@ export const RevenueChat: React.FC = () => {
         }
       ]);
     } catch (err: any) {
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: `Error: ${err.message || 'Failed to connect to AI.'}`, timestamp: new Date() }]);
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: `I'm having trouble connecting right now. Please try again in a moment.`, timestamp: new Date() }]);
     } finally {
       setIsTyping(false);
     }
@@ -153,34 +166,135 @@ export const RevenueChat: React.FC = () => {
   const handleExecuteAction = async (msgId: string, action: Action) => {
     try {
       const now = new Date().toISOString();
-      if (action.type === 'CREATE_INVOICE') {
+      if (action.type === 'CREATE_INVOICE' || action.type === 'CREATE_QUOTE') {
         const payload = action.payload;
-        const newInvoice = {
+        const formattedItems = (payload.items || []).map((item: any) => ({
+          description: item.description || 'Item',
+          quantity: 1,
+          unitPrice: item.amount || 0,
+          amount: item.amount || 0
+        }));
+        
+        const invoiceCount = await db.invoices.count();
+        const quoteCount = await db.quotes.count();
+        const nextNum = action.type === 'CREATE_INVOICE' 
+          ? `INV-${String(invoiceCount + 1).padStart(3, '0')}`
+          : `QTE-${String(quoteCount + 1).padStart(3, '0')}`;
+        
+        if (action.type === 'CREATE_INVOICE') {
+          const newInvoice = {
+            localId: uuidv4(),
+            clientId: payload.clientId,
+            invoiceNumber: nextNum,
+            description: payload.description,
+            notes: payload.notes || '',
+            dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            items: formattedItems,
+            subtotal: payload.amount || 0,
+            total: payload.amount || 0,
+            status: 'DRAFT' as const,
+            currency: businessProfile.currency || 'USD',
+            taxes: [],
+            amountPaid: 0,
+            isRecurring: false,
+            syncStatus: 'pending' as const,
+            createdAt: now,
+            updatedAt: now
+          };
+          await db.invoices.add(newInvoice as any);
+          useAppStore.getState().addInvoice(newInvoice as any);
+          await db.syncQueue.add({
+            id: uuidv4(),
+            action: 'CREATE',
+            entity: 'INVOICE',
+            payload: newInvoice,
+            status: 'pending',
+            createdAt: now
+          });
+          
+          setTimeout(() => {
+            setMessages(prev => [...prev, {
+              id: Date.now().toString(),
+              role: 'ai',
+              content: `Your invoice has been created successfully! What would you like to do next?`,
+              timestamp: new Date(),
+              action: {
+                type: 'DOCUMENT_CREATED',
+                payload: { documentId: newInvoice.localId, documentType: 'Invoice', rawDoc: newInvoice }
+              }
+            }]);
+          }, 500);
+        } else {
+          const newQuote = {
+            localId: uuidv4(),
+            clientId: payload.clientId,
+            quoteNumber: nextNum,
+            description: payload.description,
+            notes: payload.notes || '',
+            expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            items: formattedItems,
+            subtotal: payload.amount || 0,
+            total: payload.amount || 0,
+            status: 'DRAFT' as const,
+            currency: businessProfile.currency || 'USD',
+            taxes: [],
+            syncStatus: 'pending' as const,
+            createdAt: now,
+            updatedAt: now
+          };
+          await db.quotes.add(newQuote as any);
+          useAppStore.getState().addQuote(newQuote as any);
+          await db.syncQueue.add({
+            id: uuidv4(),
+            action: 'CREATE',
+            entity: 'QUOTE',
+            payload: newQuote,
+            status: 'pending',
+            createdAt: now
+          });
+
+          setTimeout(() => {
+            setMessages(prev => [...prev, {
+              id: Date.now().toString(),
+              role: 'ai',
+              content: `Your quote has been created successfully! What would you like to do next?`,
+              timestamp: new Date(),
+              action: {
+                type: 'DOCUMENT_CREATED',
+                payload: { documentId: newQuote.localId, documentType: 'Quote', rawDoc: newQuote }
+              }
+            }]);
+          }, 500);
+        }
+        syncEngine.sync();
+      } else if (action.type === 'DELETE_INVOICE') {
+        await db.invoices.update(action.payload.invoiceId, { deletedAt: now, syncStatus: 'pending' });
+        syncEngine.sync();
+      } else if (action.type === 'DELETE_QUOTE') {
+        await db.quotes.update(action.payload.quoteId, { deletedAt: now, syncStatus: 'pending' });
+        syncEngine.sync();
+      } else if (action.type === 'CREATE_CLIENT') {
+        const payload = action.payload;
+        const newClient = {
           localId: uuidv4(),
-          clientId: payload.clientId,
-          number: `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-          issueDate: now.split('T')[0],
-          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          items: payload.items || [],
-          subtotal: payload.amount || 0,
-          total: payload.amount || 0,
-          taxAmount: 0,
-          discount: 0,
-          notes: '',
-          status: 'DRAFT' as const,
-          currency: 'USD',
-          taxes: [],
-          amountPaid: 0,
-          isRecurring: false,
+          name: payload.name || 'New Client',
+          email: payload.email || '',
+          phone: '',
+          address: '',
           syncStatus: 'pending' as const,
           createdAt: now,
           updatedAt: now
         };
-        await db.invoices.add(newInvoice);
-        useAppStore.getState().addInvoice(newInvoice);
-        syncEngine.sync();
-      } else if (action.type === 'DELETE_INVOICE') {
-        await db.invoices.update(action.payload.invoiceId, { deletedAt: now, syncStatus: 'pending' });
+        await db.clients.add(newClient);
+        useAppStore.getState().addClient(newClient);
+        await db.syncQueue.add({
+          id: uuidv4(),
+          action: 'CREATE',
+          entity: 'CLIENT',
+          payload: newClient,
+          status: 'pending',
+          createdAt: now
+        });
         syncEngine.sync();
       } else if (action.type === 'DELETE_CLIENT') {
         await db.clients.update(action.payload.clientId, { deletedAt: now, syncStatus: 'pending' });
@@ -194,18 +308,49 @@ export const RevenueChat: React.FC = () => {
       } else if (action.type === 'NAVIGATE_EDIT') {
         navigate(action.payload.route);
         setIsOpen(false);
-      } else if (action.type === 'CREATE_QUOTE') {
-        navigate('/quotes/new');
-        setIsOpen(false);
-      } else if (action.type === 'CREATE_CLIENT') {
-        navigate('/clients/new');
-        setIsOpen(false);
       }
       
       // Update message to remove the action so it doesn't show confirmation anymore
-      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, action: undefined, content: m.content + '\n\n**✅ Action Executed Successfully**' } : m));
+      const updatedMessages = messages.map(m => m.id === msgId ? { ...m, action: undefined, content: m.content + '\n\n**✅ Action Executed Successfully**' } : m);
+      setMessages(updatedMessages);
+      
+      // Automatically prompt the AI to continue the conversation without needing the user to press "okay"
+      setIsTyping(true);
+      const rawInvoices = await db.invoices.filter(x => !x.deletedAt).toArray();
+      const rawQuotes = await db.quotes.filter(x => !x.deletedAt).toArray();
+      const rawClients = await db.clients.filter(x => !x.deletedAt).toArray();
+      
+      const invoices = stripSensitiveData(rawInvoices, 'invoice');
+      const quotes = stripSensitiveData(rawQuotes, 'quote');
+      const clients = stripSensitiveData(rawClients, 'client');
+      
+      const result = await chatWithRevenue({
+        prompt: "The action was executed successfully! Acknowledge this briefly and ask if there is anything else I need help with. DO NOT include an 'action' object in your JSON response.",
+        data: { invoices, quotes, clients },
+        businessProfile: useAppStore.getState().businessProfile,
+        currentView: window.location.pathname,
+        history: updatedMessages.slice(-20).map(m => ({
+          role: m.role === 'ai' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        }))
+      });
+      
+      setMessages(prev => [
+        ...prev, 
+        { 
+          id: Date.now().toString(), 
+          role: 'ai', 
+          content: result.text || 'Action complete!', 
+          timestamp: new Date(),
+          // Forcefully omit action to prevent duplicate button loops
+          action: undefined 
+        }
+      ]);
+      setIsTyping(false);
+      
     } catch (err: any) {
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: `Failed to execute action: ${err.message}`, timestamp: new Date() }]);
+      setIsTyping(false);
     }
   };
 
@@ -295,6 +440,26 @@ export const RevenueChat: React.FC = () => {
                         </div>
                       </div>
                     )}
+                    {msg.action && msg.action.type === 'DOCUMENT_CREATED' && (
+                      <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-900 border border-purple-200 dark:border-purple-900/50 rounded-lg flex gap-2">
+                        <button
+                          onClick={() => {
+                            const { documentType, rawDoc } = msg.action!.payload;
+                            navigate(documentType === 'Invoice' ? '/invoices/new' : '/quotes/new', { state: { [documentType.toLowerCase()]: rawDoc } });
+                            setIsOpen(false);
+                          }}
+                          className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs py-2 rounded-md transition-colors font-medium text-center"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setSendModalConfig({ isOpen: true, documentId: msg.action!.payload.documentId, documentType: msg.action!.payload.documentType as any })}
+                          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs py-2 rounded-md transition-colors font-medium text-center"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    )}
                     <button
                       onClick={() => handleCopy(msg.id, msg.content)}
                       className="absolute top-2 right-2 p-1.5 bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
@@ -349,7 +514,7 @@ export const RevenueChat: React.FC = () => {
               {input.startsWith('/') && (
                 <>
                   <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Commands</div>
-                  {['/create invoice', '/create quote', '/create client', '/edit', '/send email', '/help'].filter(c => c.startsWith(input.toLowerCase())).map(cmd => (
+                  {['/create', '/edit', '/client', '/quote', '/invoice', '/help'].filter(c => c.startsWith(input.toLowerCase())).map(cmd => (
                     <button key={cmd} onClick={() => setInput(cmd + ' ')} className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">
                       {cmd}
                     </button>
@@ -375,6 +540,7 @@ export const RevenueChat: React.FC = () => {
               className="flex items-center gap-2"
             >
               <input
+                ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

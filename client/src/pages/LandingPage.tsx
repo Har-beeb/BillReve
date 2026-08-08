@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileSignature, 
@@ -10,27 +10,24 @@ import {
   CheckCircle2,
   Zap,
   Globe2,
-  Menu,
-  X,
   FileText,
   Users,
   LayoutDashboard,
   Star,
   FileSpreadsheet,
   Bot,
-  Send,
-  Moon,
-  Sun
+  Send
 } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { useAppStore } from '../store/useAppStore';
+import { PublicHeader } from '../components/PublicHeader';
+import { Footer } from '../components/Footer';
 
 const WORDS = ['Simplified.', 'Automated.', 'Perfected.'];
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [wordIndex, setWordIndex] = useState(0);
 
   useEffect(() => {
@@ -52,75 +49,7 @@ const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-purple-200 dark:selection:bg-purple-900 selection:text-purple-900 dark:selection:text-purple-100">
       
       {/* Navigation */}
-      <nav className="fixed w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
-              <Logo size="md" className="flex-shrink-0" />
-              <span className="font-['Outfit'] font-black text-2xl tracking-tight text-purple-600 dark:text-purple-400">
-                BillReve
-              </span>
-            </div>
-            
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Features</a>
-              <a href="#pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Pricing</a>
-              
-              <div className="flex items-center space-x-4 pl-4 border-l border-slate-200 dark:border-slate-700">
-                <Link to="/login" className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                  Log in
-                </Link>
-                <button 
-                  onClick={handleGetStarted}
-                  className="px-5 py-2.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-all shadow-lg hover:shadow-purple-500/25 active:scale-95"
-                >
-                  Get Started
-                </button>
-              </div>
-            </div>
-
-            <div className="md:hidden flex items-center">
-              <button 
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 text-slate-600 dark:text-slate-300 focus:outline-none"
-              >
-                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 overflow-hidden"
-            >
-              <div className="px-4 pt-2 pb-6 flex flex-col space-y-4">
-                <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md">Features</a>
-                <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md">Pricing</a>
-                <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-2 flex flex-col gap-3">
-                  <button 
-                    onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
-                    className="w-full text-center px-4 py-3 font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl"
-                  >
-                    Log in
-                  </button>
-                  <button 
-                    onClick={() => { setIsMobileMenuOpen(false); handleGetStarted(); }}
-                    className="w-full text-center px-4 py-3 font-bold text-white bg-purple-600 rounded-xl shadow-lg shadow-purple-500/25"
-                  >
-                    Get Started
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
+      <PublicHeader />
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
@@ -381,65 +310,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Professional Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pt-16 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
-            <div className="col-span-2 lg:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <Logo size="sm" className="flex-shrink-0" />
-                <span className="font-['Outfit'] font-black text-2xl text-slate-900 dark:text-white">BillReve</span>
-                <button 
-                  onClick={() => useAppStore.getState().toggleTheme()}
-                  className="ml-4 p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-                  aria-label="Toggle theme"
-                >
-                  {useAppStore.getState().theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
-              </div>
-              <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
-                The modern, offline-first invoicing platform built for freelancers, SMEs, and growing businesses.
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Product</h4>
-              <ul className="space-y-3">
-                <li><a href="#features" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Features</a></li>
-                <li><a href="#pricing" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Pricing</a></li>
-                <li><Link to="/changelog" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Changelog</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Resources</h4>
-              <ul className="space-y-3">
-                <li><Link to="/help" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Help Center</Link></li>
-                <li><Link to="/guides" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Invoicing Guides</Link></li>
-                <li><Link to="/templates" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Free Templates</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-bold text-slate-900 dark:text-white mb-4">Company</h4>
-              <ul className="space-y-3">
-                <li><Link to="/about" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">About Us</Link></li>
-                <li><Link to="/contact" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Contact</Link></li>
-                <li><Link to="/privacy" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/terms" className="text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Terms of Service</Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-slate-400 text-sm">
-              &copy; {new Date().getFullYear()} BillReve. All rights reserved.
-            </p>
-            <div className="flex gap-4">
-               {/* Social placeholders if needed */}
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

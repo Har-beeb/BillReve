@@ -517,7 +517,7 @@ const Quotes: React.FC = () => {
                           {quote.quoteNumber || quote.localId.slice(0, 8)}
                         </div>
                         <div className="text-slate-400 text-xs mt-0.5">
-                          {formatDate(quote.issuedAt)}
+                          {quote.issuedAt ? formatDate(quote.issuedAt) : 'Not issued yet'}
                         </div>
                       </div>
                       <div className="font-bold text-base text-slate-900 dark:text-slate-100">
@@ -586,7 +586,7 @@ const Quotes: React.FC = () => {
                       {quote.description || '—'}
                     </div>
                     <div className="text-slate-400 text-xs mt-0.5">
-                      Issued {quote.issuedAt ? new Date(quote.issuedAt).toLocaleDateString() : 'Draft'}
+                      {quote.issuedAt ? `Issued ${new Date(quote.issuedAt).toLocaleDateString()}` : 'Not issued yet'}
                     </div>
                   </div>
                   

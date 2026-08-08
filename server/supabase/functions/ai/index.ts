@@ -289,11 +289,16 @@ async function handleInsights(aiClient: GoogleGenAI, body: any) {
       clients: z.array(z.any())
     }),
     businessProfile: z.any().optional(),
-    currentView: z.string().optional()
+    currentView: z.string().optional(),
+    history: z.array(z.object({
+      role: z.enum(['user', 'model']),
+      parts: z.array(z.object({ text: z.string() }))
+    })).optional()
   });
 
   const validatedData = schema.parse(body);
   const businessDataStr = JSON.stringify(validatedData.data, null, 2);
+  const defaultCurrency = validatedData.businessProfile?.currency || 'USD';
 
   const systemPrompt = `You are an expert financial analyst, accountant, and business advisor.
 You are helping the user understand their business data through a conversational interface.
@@ -302,41 +307,40 @@ Business Context:
 - Name: ${validatedData.businessProfile?.name || 'A business'}
 - Industry: ${validatedData.businessProfile?.industry || 'Unspecified'}
 - What they do: ${validatedData.businessProfile?.businessDescription || 'Unspecified'}
+- Default Currency: ${defaultCurrency}
 
 User Interface Context:
 - The user is currently viewing the app from the: ${validatedData.currentView === '/dashboard' ? 'Dashboard page' : validatedData.currentView === '/reports' ? 'Reports & Analytics page' : validatedData.currentView || 'App'}
-
-Tailor your financial advice, tone, and insights to their specific industry and business model. If they ask a generic question, you can tailor your answer to focus on the context of the page they are currently viewing (e.g., summarizing overall metrics if on the Dashboard, or deeper analytic insights if on the Reports page).
 
 Here is a summary of the user's business data (with sensitive personal information removed for security):
 \`\`\`json
 ${businessDataStr}
 \`\`\`
 
-USER PROMPT: "${validatedData.prompt}"
-
-INSTRUCTIONS:
-- Analyze the provided data to answer the user's question accurately.
-- Provide insights, calculations, or summaries if relevant (e.g., total revenue, overdue amounts, best clients).
-- Keep your tone professional, concise, and helpful.
-- Format the "text" part of your response using markdown for readability.
-- If the data provided doesn't contain the answer, politely say so. Do not make up numbers.
+INSTRUCTIONS & PROTOCOLS:
+1. Data Analysis: Analyze the provided data to answer the user's question accurately. Format the "text" part of your response using markdown for readability. If the data doesn't contain the answer, politely say so. Do not make up numbers.
+2. /create Wizard Protocol: If the user indicates they want to create a document or client (e.g. "/create"), DO NOT emit an action yet. Instead, ask them one question at a time to gather the missing pieces. You MUST collect information that matches our strict database structures:
+   - For a Client: Company/Name (Required), Email, Phone, Address.
+   - For an Invoice: Client Details, Project/Description, Terms & Notes, Due Date, Receiving Bank, Line Items (Description, Qty, Rate, Amount), Taxes (Apply VAT 7.5%, Apply WHT 5%).
+   - For a Quote: Client Details, Project/Description, Terms & Notes, Expiry Date, Line Items (Description, Qty, Rate, Amount), Taxes (Apply VAT 7.5%, Apply WHT 5%), Document Settings (Allow counter offer).
+   Ask for these details sequentially and naturally. Once all details are gathered, output the JSON action.
+3. Client Query Protocol (@client): If the user asks about a specific client or uses "@ ClientName", find them in the JSON data, cross-reference their invoices/quotes, and summarize their Total Outstanding Balance, Total Paid, and a brief markdown list of their documents.
+4. Data Listing Commands: If the user types "/client", summarize all clients. If they type "/quote", summarize recent quotes. If they type "/invoice", summarize recent invoices. Use markdown tables if helpful.
+5. Client Existence Validation: If the user wants to create a document for a client, YOU MUST verify the client exists in the JSON data. If they do not exist, DO NOT emit a CREATE action. Instead, output text asking if they want to create that client first.
+6. Currency Enforcement: If the user mentions a currency different from the Default Currency (${defaultCurrency}), you MUST save the payload amounts using the default currency. In your text response, politely notify them that you used the default currency instead.
 
 ACTION CAPABILITIES:
-You have the ability to execute actions in the user's application if they explicitly ask you to create or delete something. 
-If their prompt contains an intent to perform an action, include the "action" object in your JSON response.
+You can execute actions by including the "action" object in your JSON response.
 
 Supported Action Types:
-- "CREATE_INVOICE": Payload requires { clientId: string, amount: number, items: [{ description: string, amount: number }] }
-- "CREATE_QUOTE": Payload requires { clientId: string, amount: number, items: [{ description: string, amount: number }] }
-- "CREATE_CLIENT": Payload requires { name: string, email?: string }
-- "DELETE_INVOICE": Payload requires { invoiceId: string }
-- "DELETE_QUOTE": Payload requires { quoteId: string }
-- "DELETE_CLIENT": Payload requires { clientId: string }
-- "SEND_DOCUMENT": Payload requires { documentId: string, documentType: "Invoice" | "Quote" }
-- "NAVIGATE_EDIT": Payload requires { route: string } (e.g. "/invoices/localId/edit" or "/clients/localId")
-
-If no action is needed, omit the "action" key or set it to null.
+- "CREATE_INVOICE": Payload { clientId: string, amount: number, description: "string (Project description provided first)", notes: "string (Terms & notes. Never blank, generate default if missing)", items: [{ description: "string (Line item description)", amount: number }] }
+- "CREATE_QUOTE": Payload { clientId: string, amount: number, description: "string (Project description provided first)", notes: "string (Terms & notes. Never blank, generate default if missing)", items: [{ description: "string (Line item description)", amount: number }] }
+- "CREATE_CLIENT": Payload { name: string, email?: string }
+- "DELETE_INVOICE": Payload { invoiceId: string }
+- "DELETE_QUOTE": Payload { quoteId: string }
+- "DELETE_CLIENT": Payload { clientId: string }
+- "SEND_DOCUMENT": Payload { documentId: string, documentType: "Invoice" | "Quote" }
+- "NAVIGATE_EDIT": Payload { route: string }
 
 CRITICAL: You MUST respond ONLY with a valid JSON object matching this schema:
 {
@@ -348,9 +352,16 @@ CRITICAL: You MUST respond ONLY with a valid JSON object matching this schema:
 }
 `;
 
+  const contents = [
+    { role: 'user', parts: [{ text: systemPrompt }] },
+    { role: 'model', parts: [{ text: '{ "text": "Understood. I will follow the protocols and respond only with the valid JSON schema." }' }] },
+    ...(validatedData.history || []),
+    { role: 'user', parts: [{ text: validatedData.prompt }] }
+  ];
+
   const response = await aiClient.models.generateContent({
     model: "gemini-3.5-flash-lite",
-    contents: systemPrompt,
+    contents: contents as any,
     config: {
       responseMimeType: "application/json",
     }

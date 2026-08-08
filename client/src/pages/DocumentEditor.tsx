@@ -200,6 +200,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         ...docBase,
         invoiceNumber: initialDoc?.invoiceNumber || documentNumber,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        ...(true && { issuedAt: new Date().toISOString() }),
         status: 'SENT' as any,
       };
     }
@@ -270,6 +271,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         ...docBase,
         quoteNumber: initialDoc?.quoteNumber || documentNumber,
         expiresAt: dueDate ? new Date(dueDate).toISOString() : undefined,
+        ...(finalStatus === 'SENT' && { issuedAt: new Date().toISOString() }),
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         status: finalStatus as any,
       };
@@ -312,7 +314,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         status: finalStatus as any,
         amountPaid: initialDoc?.amountPaid || 0,
         isRecurring: initialDoc?.isRecurring || false,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined
+        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        ...(finalStatus === 'SENT' && { issuedAt: new Date().toISOString() })
       };
       
       if (isEditing) {
@@ -457,7 +460,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Project / Description</label>
                <input 
                  type="text"
-                 value={description}
+                 value={description || ''}
                  onChange={(e) => setDescription(e.target.value)}
                  placeholder={`e.g. Website Redesign ${new Date().getFullYear()}`}
                  className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all font-medium"
@@ -470,7 +473,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
                 {aiEnabled && isProUser && (
                    <button
                      onClick={handleEnhanceNote}
-                     disabled={isEnhancingNote || !notes.trim()}
+                     disabled={isEnhancingNote || !(notes || '').trim()}
                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                      title="Enhance Terms with AI"
                    >
@@ -481,7 +484,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
                </div>
                <textarea 
                  rows={3}
-                 value={notes}
+                 value={notes || ''}
                  onChange={(e) => setNotes(e.target.value)}
                  placeholder="Terms, conditions, and notes for the client..."
                  className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all text-sm leading-relaxed"

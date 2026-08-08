@@ -154,7 +154,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
             : `Please find your ${documentType.toLowerCase()} attached.`}</p>
           <p><strong>Amount:</strong> ${amount}</p>
           ${(document as any).dueDate ? `<p><strong>Due Date:</strong> ${new Date((document as any).dueDate).toLocaleDateString()}</p>` : ''}
-          ${customMessage ? `<p style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #8b5cf6;">${customMessage}</p>` : ''}
+          ${customMessage ? `<div style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #8b5cf6; white-space: pre-wrap;">${customMessage}</div>` : ''}
           ${publicLink ? `<div style="margin-top: 24px;"><a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">${documentType === 'Invoice' ? (isProUser ? 'View & Pay Online' : 'View Invoice Online') : 'View Quote Online'}</a></div>` : ''}
         </div>
       `;
@@ -179,11 +179,11 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       // Update status to SENT
       if (!skipDbUpdate) {
         if (documentType === 'Invoice') {
-          await db.invoices.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+          await db.invoices.update(documentId, { status: 'SENT', issuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), syncStatus: 'pending' });
           const updatedDoc = await db.invoices.get(documentId);
           if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
         } else {
-          await db.quotes.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+          await db.quotes.update(documentId, { status: 'SENT', issuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), syncStatus: 'pending' });
           const updatedDoc = await db.quotes.get(documentId);
           if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
         }
@@ -222,11 +222,11 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       // Update status to SENT
       if (!skipDbUpdate) {
         if (documentType === 'Invoice') {
-          await db.invoices.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+          await db.invoices.update(documentId, { status: 'SENT', issuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), syncStatus: 'pending' });
           const updatedDoc = await db.invoices.get(documentId);
           if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
         } else {
-          await db.quotes.update(documentId, { status: 'SENT', updatedAt: new Date().toISOString(), syncStatus: 'pending' });
+          await db.quotes.update(documentId, { status: 'SENT', issuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), syncStatus: 'pending' });
           const updatedDoc = await db.quotes.get(documentId);
           if (updatedDoc) await db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'QUOTE', payload: updatedDoc as any, status: 'pending', createdAt: new Date().toISOString() });
         }

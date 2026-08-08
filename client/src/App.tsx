@@ -18,11 +18,18 @@ import Reports from './pages/Reports';
 import Campaigns from './pages/Campaigns';
 import Trash from './pages/Trash';
 import Payments from './pages/Payments';
-import About from './pages/About';
+import Support from './pages/Support';
 import Upgrade from './pages/Upgrade';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import LandingPage from './pages/LandingPage';
+import PublicLayout from './layouts/PublicLayout';
+import PublicAbout from './pages/public/About';
+import Changelog from './pages/public/Changelog';
+import HelpCenter from './pages/public/HelpCenter';
+import Guides from './pages/public/Guides';
+import Templates from './pages/public/Templates';
+import Contact from './pages/public/Contact';
 import { useAppStore } from './store/useAppStore';
 import { supabase } from './lib/supabase';
 import { syncEngine } from './services/syncEngine';
@@ -160,9 +167,19 @@ function App() {
     <BrowserRouter>
       <Toaster position="bottom-right" />
       <Routes>
-        {/* Fully Open Routes */}
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/terms" element={<Terms />} />
+        {/* Fully Open Routes with Layout */}
+        <Route element={<PublicLayout />}>
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/about" element={<PublicAbout />} />
+          <Route path="/changelog" element={<Changelog />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/guides" element={<Guides />} />
+          <Route path="/templates" element={<Templates />} />
+          <Route path="/contact" element={<Contact />} />
+        </Route>
+        
+        {/* Fully Open Routes without Layout */}
         <Route path="/pay/:id" element={<PublicInvoice />} />
         <Route path="/quote/:id" element={<PublicQuote />} />
         {/* Auth Routes */}
@@ -186,7 +203,7 @@ function App() {
           <Route path="trash" element={<Trash />} />
           <Route path="payments" element={<Payments />} />
           <Route path="upgrade" element={<Upgrade />} />
-          <Route path="about" element={<About />} />
+          <Route path="support" element={<Support />} />
         </Route>
       </Routes>
     </BrowserRouter>

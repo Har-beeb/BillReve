@@ -3,7 +3,7 @@ import { Card } from '../components/ui';
 import { Mail, MessageSquare, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const About: React.FC = () => {
+const Support: React.FC = () => {
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -59,4 +59,4 @@ const About: React.FC = () => {
   );
 };
 
-export default About;
+export default Support;

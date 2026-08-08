@@ -132,7 +132,7 @@ const MainLayout: React.FC = () => {
     { name: 'Reports', path: '/reports', icon: <BarChart3 size={20} />, isPro: true },
     { name: 'Payments', path: '/payments', icon: <WalletCards size={20} />, isPro: true },
     { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
-    { name: 'About', path: '/about', icon: <Info size={20} /> },
+    { name: 'Support', path: '/support', icon: <Info size={20} /> },
     { name: 'Trash', path: '/trash', icon: <Trash2 size={20} /> },
   ];
 

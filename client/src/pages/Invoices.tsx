@@ -476,8 +476,8 @@ const Invoices: React.FC = () => {
                className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
              />
           </div>
-          <div className="col-span-4">Client & Invoice</div>
-          <div className="col-span-3">Dates</div>
+          <div className="col-span-4 pl-4">Client</div>
+          <div className="col-span-3">Description & Dates</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-2 text-right pr-8">Amount</div>
         </div>
@@ -509,7 +509,7 @@ const Invoices: React.FC = () => {
                           {invoice.invoiceNumber || invoice.localId.slice(0, 8)}
                         </div>
                         <div className="text-slate-400 text-xs mt-0.5">
-                          {formatDate(invoice.issuedAt)}
+                          {invoice.issuedAt ? formatDate(invoice.issuedAt) : 'Not issued yet'}
                         </div>
                       </div>
                       <div className="font-bold text-base text-slate-900 dark:text-slate-100">
@@ -565,13 +565,12 @@ const Invoices: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="col-span-3 flex flex-col justify-center">
-                    <div className="text-slate-600 dark:text-slate-300 text-sm">
-                      <span className="text-slate-400 mr-1 text-xs">Due:</span> 
-                      {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '—'}
+                  <div className="col-span-3 flex flex-col justify-center pr-4">
+                    <div className="text-slate-600 dark:text-slate-300 text-sm truncate">
+                      {invoice.description || '—'}
                     </div>
                     <div className="text-slate-400 text-xs mt-0.5">
-                      Issued {invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString() : 'Draft'}
+                      {invoice.issuedAt ? `Issued ${new Date(invoice.issuedAt).toLocaleDateString()}` : 'Not issued yet'}
                     </div>
                   </div>
                   
