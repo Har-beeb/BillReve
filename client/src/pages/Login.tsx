@@ -54,7 +54,7 @@ const Login: React.FC = () => {
       subtitle="Please enter your details to sign in."
     >
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
           <span className="block w-1.5 h-full rounded-full bg-red-600"></span>
           {error}
         </div>
@@ -83,10 +83,10 @@ const Login: React.FC = () => {
 
         <div className="flex items-center justify-between pt-1 pb-2">
           <label className="flex items-center gap-2 cursor-pointer group">
-            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-purple-600 focus:ring-purple-500 bg-white dark:bg-slate-800" />
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">Remember me</span>
+            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 bg-white" />
+            <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Remember me</span>
           </label>
-          <Link to="/forgot-password" className="text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">Forgot password?</Link>
+          <Link to="/forgot-password" className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors">Forgot password?</Link>
         </div>
 
         <button
@@ -98,17 +98,17 @@ const Login: React.FC = () => {
         </button>
         
         <div className="relative flex items-center py-2">
-          <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-          <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">or continue with</span>
-          <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+          <div className="flex-grow border-t border-slate-200"></div>
+          <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">or sign in with</span>
+          <div className="flex-grow border-t border-slate-200"></div>
         </div>
 
         <OAuthButton provider="google" onClick={handleOAuthLogin} />
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
+      <p className="mt-6 text-center text-sm text-slate-600">
         Don't have an account?{' '}
-        <Link to="/register" className="font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">
+        <Link to="/register" className="font-semibold text-purple-600 hover:text-purple-700 transition-colors">
           Sign up
         </Link>
       </p>

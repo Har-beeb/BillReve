@@ -50,12 +50,13 @@ interface AppState {
 }
 
 /**
- * Zustand global store with persistence.
- * Currently configured to only persist UI settings (theme, sidebar) and 
- * business profile/tax settings to localStorage.
+ * Zustand global store with persistence for UI settings.
  * 
- * Note: Data entities (invoices, quotes, clients) will eventually be 
- * fetched from the Node.js backend.
+ * Note on Architecture: This store only manages non-volatile UI state (theme, sidebar),
+ * authenticated user session, and business profiles. 
+ * Data entities (invoices, quotes, clients) are managed entirely by IndexedDB (Dexie) 
+ * via the SyncEngine for offline-first capabilities, and are NOT stored here to prevent 
+ * Zustand persistence bloat.
  */
 export const useAppStore = create<AppState>()(
   persist(

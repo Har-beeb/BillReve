@@ -35,6 +35,12 @@ const toCamelCase = (obj: any): any => {
   return obj;
 };
 
+/**
+ * SyncEngine is responsible for managing the bidirectional synchronization 
+ * between the local IndexedDB and the remote Supabase PostgreSQL database.
+ * It operates with an "offline-first" architecture, meaning local writes 
+ * are prioritized and pushed to the cloud whenever connectivity is available.
+ */
 class SyncEngine {
   private isSyncing = false;
   private hasPendingSync = false;
@@ -42,6 +48,13 @@ class SyncEngine {
   private retryCount = 0;
   private maxRetries = 5;
 
+  /**
+   * Initializes the synchronization process and starts listening for changes.
+   * 1. Performs an initial sync.
+   * 2. Subscribes to remote Postgres changes via Supabase Realtime.
+   * 3. Hooks into the local IndexedDB queue to trigger syncs on new local writes.
+   * 4. Listens for browser 'online' events to resume syncing.
+   */
   async start() {
     await this.sync();
 
@@ -75,6 +88,10 @@ class SyncEngine {
     });
   }
 
+  /**
+   * Stops all active subscriptions and listeners. Should be called upon logout 
+   * or when the application unmounts to prevent memory leaks.
+   */
   stop() {
     if (this.channel) {
       supabase.removeChannel(this.channel);
@@ -82,6 +99,11 @@ class SyncEngine {
     }
   }
 
+  /**
+   * Manually triggers a bi-directional synchronization.
+   * Prevents concurrent syncs by marking pending attempts and processing them sequentially.
+   * Handles both pushing local offline queue and pulling remote cloud changes.
+   */
   async sync() {
     if (this.isSyncing) {
       this.hasPendingSync = true;

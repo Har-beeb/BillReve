@@ -71,6 +71,8 @@ serve(async (req) => {
         return await handleEnhanceText(aiClient, body);
       case 'draft-email':
         return await handleDraftEmail(aiClient, body);
+      case 'draft-campaign':
+        return await handleDraftCampaign(aiClient, body);
       case 'insights':
         return await handleInsights(aiClient, body);
       default:
@@ -277,6 +279,51 @@ Thank them for their business and provide a brief friendly note.`;
   return new Response(JSON.stringify({
     success: true,
     data: { text: response.text?.trim() }
+  }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+async function handleDraftCampaign(aiClient: GoogleGenAI, body: any) {
+  const schema = z.object({
+    businessName: z.string().optional().default('Your Business'),
+    businessProfile: z.any().optional(),
+    campaignContext: z.string().optional().default('A general update')
+  });
+
+  const validatedData = schema.parse(body);
+  const { businessName, businessProfile, campaignContext } = validatedData;
+
+  let prompt = `You are a highly professional marketing copywriter for "${businessName}". 
+Draft a professional, engaging marketing email or campaign announcement to send to clients.
+Context / Goal of this campaign: ${campaignContext}`;
+
+  if (businessProfile?.industry || businessProfile?.businessDescription) {
+    prompt += `\nBusiness Context: ${businessProfile.industry ? `Industry: ${businessProfile.industry}. ` : ''}${businessProfile.businessDescription ? `What we do: ${businessProfile.businessDescription}` : ''}`;
+  }
+
+  prompt += `\n\nEnsure the email has a friendly, professional tone. Include a clear subject line at the very top formatted exactly as "SUBJECT: <your subject here>". Do not include placeholder brackets like [Client Name] if possible, just write the copy naturally. Do not include signature blocks, just end with a friendly sign-off.`;
+
+  const response = await aiClient.models.generateContent({
+    model: "gemini-3.5-flash-lite",
+    contents: prompt,
+  });
+
+  const rawText = response.text || '';
+  let subject = '';
+  let content = rawText;
+
+  // Extract subject if present
+  const subjectMatch = rawText.match(/SUBJECT:\s*(.+)/i);
+  if (subjectMatch) {
+    subject = subjectMatch[1].trim();
+    content = rawText.replace(subjectMatch[0], '').trim();
+  }
+
+  return new Response(JSON.stringify({
+    success: true,
+    data: { 
+      subject,
+      content 
+    }
   }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 

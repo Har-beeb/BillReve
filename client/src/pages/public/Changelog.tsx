@@ -1,4 +1,5 @@
 import React from 'react';
+import { SEO } from '../../components/SEO';
 import { motion } from 'framer-motion';
 import { Zap, ShieldCheck, Sparkles } from 'lucide-react';
 
@@ -32,6 +33,7 @@ const updates = [
 const Changelog: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+      <SEO title="Changelog" />
       <div className="text-center mb-16">
         <h1 className="text-4xl md:text-5xl font-['Outfit'] font-black text-slate-900 dark:text-white mb-6">
           Changelog

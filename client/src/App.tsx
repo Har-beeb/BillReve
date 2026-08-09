@@ -1,35 +1,37 @@
-import { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import MainLayout from './layouts/MainLayout';
-import Dashboard from './pages/Dashboard';
-import Quotes from './pages/Quotes';
-import Invoices from './pages/Invoices';
-import Clients from './pages/Clients';
-import Settings from './pages/Settings';
-import DocumentEditor from './pages/DocumentEditor';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import PublicInvoice from './pages/PublicInvoice';
-import PublicQuote from './pages/PublicQuote';
-import Reports from './pages/Reports';
-import Campaigns from './pages/Campaigns';
-import Trash from './pages/Trash';
-import Payments from './pages/Payments';
-import Support from './pages/Support';
-import Upgrade from './pages/Upgrade';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
-import LandingPage from './pages/LandingPage';
 import PublicLayout from './layouts/PublicLayout';
-import PublicAbout from './pages/public/About';
-import Changelog from './pages/public/Changelog';
-import HelpCenter from './pages/public/HelpCenter';
-import Guides from './pages/public/Guides';
-import Templates from './pages/public/Templates';
-import Contact from './pages/public/Contact';
+
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Quotes = React.lazy(() => import('./pages/Quotes'));
+const Invoices = React.lazy(() => import('./pages/Invoices'));
+const Clients = React.lazy(() => import('./pages/Clients'));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const DocumentEditor = React.lazy(() => import('./pages/DocumentEditor'));
+const Login = React.lazy(() => import('./pages/Login'));
+const Register = React.lazy(() => import('./pages/Register'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
+const PublicInvoice = React.lazy(() => import('./pages/PublicInvoice'));
+const PublicQuote = React.lazy(() => import('./pages/PublicQuote'));
+const Reports = React.lazy(() => import('./pages/Reports'));
+const Campaigns = React.lazy(() => import('./pages/Campaigns'));
+const Trash = React.lazy(() => import('./pages/Trash'));
+const Payments = React.lazy(() => import('./pages/Payments'));
+const Support = React.lazy(() => import('./pages/Support'));
+const Upgrade = React.lazy(() => import('./pages/Upgrade'));
+const Privacy = React.lazy(() => import('./pages/Privacy'));
+const Terms = React.lazy(() => import('./pages/Terms'));
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const PublicAbout = React.lazy(() => import('./pages/public/About'));
+const Changelog = React.lazy(() => import('./pages/public/Changelog'));
+const HelpCenter = React.lazy(() => import('./pages/public/HelpCenter'));
+const Guides = React.lazy(() => import('./pages/public/Guides'));
+const Templates = React.lazy(() => import('./pages/public/Templates'));
+const Contact = React.lazy(() => import('./pages/public/Contact'));
 import { useAppStore } from './store/useAppStore';
 import { supabase } from './lib/supabase';
 import { syncEngine } from './services/syncEngine';
@@ -164,49 +166,57 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Toaster position="bottom-right" />
-      <Routes>
-        {/* Fully Open Routes with Layout */}
-        <Route element={<PublicLayout />}>
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/about" element={<PublicAbout />} />
-          <Route path="/changelog" element={<Changelog />} />
-          <Route path="/help" element={<HelpCenter />} />
-          <Route path="/guides" element={<Guides />} />
-          <Route path="/templates" element={<Templates />} />
-          <Route path="/contact" element={<Contact />} />
-        </Route>
-        
-        {/* Fully Open Routes without Layout */}
-        <Route path="/pay/:id" element={<PublicInvoice />} />
-        <Route path="/quote/:id" element={<PublicQuote />} />
-        {/* Auth Routes */}
-        <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+    <HelmetProvider>
+      <BrowserRouter>
+        <Toaster position="bottom-right" />
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+            <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        }>
+          <Routes>
+            {/* Fully Open Routes with Layout */}
+            <Route element={<PublicLayout />}>
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/about" element={<PublicAbout />} />
+              <Route path="/changelog" element={<Changelog />} />
+              <Route path="/help" element={<HelpCenter />} />
+              <Route path="/guides" element={<Guides />} />
+              <Route path="/templates" element={<Templates />} />
+              <Route path="/contact" element={<Contact />} />
+            </Route>
+            
+            {/* Fully Open Routes without Layout */}
+            <Route path="/pay/:id" element={<PublicInvoice />} />
+            <Route path="/quote/:id" element={<PublicQuote />} />
+            {/* Auth Routes */}
+            <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+            <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Private Routes */}
-        <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/quotes" element={<Quotes />} />
-          <Route path="/quotes/new" element={<DocumentEditor type="QUOTE" />} />
-          <Route path="invoices" element={<Invoices />} />
-          <Route path="invoices/new" element={<DocumentEditor type="INVOICE" />} />
-          <Route path="clients" element={<Clients />} />
-          <Route path="campaigns" element={<Campaigns />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="trash" element={<Trash />} />
-          <Route path="payments" element={<Payments />} />
-          <Route path="upgrade" element={<Upgrade />} />
-          <Route path="support" element={<Support />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+            {/* Private Routes */}
+            <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/quotes" element={<Quotes />} />
+              <Route path="/quotes/new" element={<DocumentEditor type="QUOTE" />} />
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="invoices/new" element={<DocumentEditor type="INVOICE" />} />
+              <Route path="clients" element={<Clients />} />
+              <Route path="campaigns" element={<Campaigns />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="trash" element={<Trash />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="upgrade" element={<Upgrade />} />
+              <Route path="support" element={<Support />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }
 

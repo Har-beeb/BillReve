@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Send, ChevronDown, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Send } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { v4 as uuidv4 } from 'uuid';
 import { SendDocumentModal } from '../components/SendDocumentModal';
-import { DocumentItemsTable, type LineItem } from '../components/DocumentItemsTable';
+import { type LineItem } from '../components/DocumentItemsTable';
 import { DocumentPreview } from '../components/DocumentPreview';
+import { EditorHeader } from '../components/editor/EditorHeader';
+import { EditorLineItems } from '../components/editor/EditorLineItems';
+import { EditorSummary } from '../components/editor/EditorSummary';
 import { enhanceAiText } from '../api/ai';
 import toast from 'react-hot-toast';
 import { syncEngine } from '../services/syncEngine';
@@ -395,225 +398,54 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         {/* Editor Form Pane - Fixed width sidebar */}
         <div className="w-full lg:w-[500px] xl:w-[550px] flex-1 lg:flex-none overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/50 shadow-2xl lg:shadow-[10px_0_30px_-15px_rgba(0,0,0,0.1)] z-10 custom-scrollbar">
           
-          {/* Client Selection section */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Client Details</h2>
-            
-            {!isCreatingClient ? (
-              <div className="relative group">
-                <select 
-                  className="appearance-none w-full p-3.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white cursor-pointer outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all group-hover:border-slate-300 dark:group-hover:border-slate-700 font-medium"
-                  value={clientId}
-                  onChange={(e) => {
-                    if (e.target.value === 'NEW') setIsCreatingClient(true);
-                    else setClientId(e.target.value);
-                  }}
-                >
-                  <option value="" className="text-slate-400">Select a client...</option>
-                  {clients.map(c => (
-                    <option key={c.localId} value={c.localId} className="bg-white dark:bg-slate-800">{c.name}</option>
-                  ))}
-                  <option value="NEW" className="bg-white dark:bg-slate-800 font-semibold text-purple-600 dark:text-purple-400">+ Create New Client</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform group-hover:text-slate-600 dark:group-hover:text-slate-300" size={18} />
-              </div>
-            ) : (
-              <div className="space-y-4 border border-purple-200 dark:border-purple-900/30 bg-purple-50/50 dark:bg-purple-900/10 p-5 rounded-xl">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-purple-600 dark:text-purple-400">New Client</h3>
-                  <button onClick={() => setIsCreatingClient(false)} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium">
-                    Cancel
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Company / Name</label>
-                    <input 
-                      type="text" 
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                      className="w-full p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition-all"
-                      placeholder="Acme Corp"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Email</label>
-                    <input 
-                      type="email" 
-                      value={newClientEmail}
-                      onChange={(e) => setNewClientEmail(e.target.value)}
-                      className="w-full p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition-all"
-                      placeholder="billing@acme.com"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <hr className="border-slate-100 dark:border-slate-800/50" />
-
-          {/* Description & Terms */}
-          <div className="space-y-6">
-            <div>
-               <h2 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Document Details</h2>
-               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Project / Description</label>
-               <input 
-                 type="text"
-                 value={description || ''}
-                 onChange={(e) => setDescription(e.target.value)}
-                 placeholder={`e.g. Website Redesign ${new Date().getFullYear()}`}
-                 className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all font-medium"
-               />
-            </div>
-            
-            <div>
-               <div className="flex justify-between items-center mb-1.5">
-                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Terms & Notes</label>
-                {aiEnabled && isProUser && (
-                   <button
-                     onClick={handleEnhanceNote}
-                     disabled={isEnhancingNote || !(notes || '').trim()}
-                     className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                     title="Enhance Terms with AI"
-                   >
-                     {isEnhancingNote ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                     <span>AI Expand</span>
-                   </button>
-                )}
-               </div>
-               <textarea 
-                 rows={3}
-                 value={notes || ''}
-                 onChange={(e) => setNotes(e.target.value)}
-                 placeholder="Terms, conditions, and notes for the client..."
-                 className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all text-sm leading-relaxed"
-               />
-            </div>
-          </div>
-
-          <hr className="border-slate-100 dark:border-slate-800/50" />
-
-          {/* Payment & Dates */}
-          <div className="space-y-6">
-            <h2 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Dates & Details</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">{type === 'QUOTE' ? 'Expiry Date' : 'Due Date'}</label>
-                  <input 
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all"
-                  />
-                </div>
-
-              {(type === 'INVOICE' || (businessProfile.bankAccounts && businessProfile.bankAccounts.length > 0)) && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Receiving Bank</label>
-                  <div className="relative group">
-                    <select 
-                      className="appearance-none w-full p-3.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white cursor-pointer outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all group-hover:border-slate-300 dark:group-hover:border-slate-700"
-                      value={bankAccountId}
-                      onChange={(e) => setBankAccountId(e.target.value)}
-                    >
-                      <option value="">Do not include bank details</option>
-                      {businessProfile.bankAccounts?.map(b => (
-                        <option key={b.id} value={b.id} className="bg-white dark:bg-slate-800">
-                          {b.bankName} - {b.accountNumber}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform group-hover:text-slate-600 dark:group-hover:text-slate-300" size={18} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Line Items section */}
-          <DocumentItemsTable
-            items={items}
-            onItemChange={handleItemChange}
-            onRemoveItem={handleRemoveItem}
-            onAddItem={handleAddItem}
+          <EditorHeader
+            type={type}
+            clients={clients}
+            clientId={clientId}
+            setClientId={setClientId}
+            isCreatingClient={isCreatingClient}
+            setIsCreatingClient={setIsCreatingClient}
+            newClientName={newClientName}
+            setNewClientName={setNewClientName}
+            newClientEmail={newClientEmail}
+            setNewClientEmail={setNewClientEmail}
+            description={description}
+            setDescription={setDescription}
+            dueDate={dueDate}
+            setDueDate={setDueDate}
+            bankAccountId={bankAccountId}
+            setBankAccountId={setBankAccountId}
+            businessProfile={businessProfile}
           />
 
           <hr className="border-slate-100 dark:border-slate-800/50" />
 
-          {/* Tax & Totals section */}
-          <div className="space-y-6">
-            <h2 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Taxes & Totals</h2>
-            
-            <div className="flex flex-col gap-8">
-              <div className="space-y-3">
-                {taxSettings.map(tax => (
-                  <label key={tax.id} className="flex items-center gap-3 cursor-pointer group">
-                    <div className="relative flex items-center justify-center">
-                      <input 
-                        type="checkbox" 
-                        checked={appliedTaxes.has(tax.id)} 
-                        onChange={(e) => {
-                          const newSet = new Set(appliedTaxes);
-                          if (e.target.checked) newSet.add(tax.id);
-                          else newSet.delete(tax.id);
-                          setAppliedTaxes(newSet);
-                        }}
-                        className="w-5 h-5 rounded-md border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-purple-600 focus:ring-purple-500/50 focus:ring-offset-0 transition-all cursor-pointer appearance-none checked:bg-purple-600 checked:border-transparent"
-                      />
-                      {appliedTaxes.has(tax.id) && (
-                        <svg className="absolute w-3.5 h-3.5 text-white pointer-events-none" viewBox="0 0 14 14" fill="none">
-                          <path d="M3 8L6 11L11 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                    <span className="font-medium text-sm text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Apply {tax.name}</span>
-                  </label>
-                ))}
-              </div>
-              
-              <div className="bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 p-5 rounded-xl space-y-3">
-                 <div className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
-                   <span>Subtotal</span>
-                   <span className="font-medium text-slate-700 dark:text-slate-300">NGN {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                 </div>
-                 {computedTaxes.map((t, idx) => (
-                   <div key={idx} className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
-                     <span>{t.name}</span>
-                     <span className="font-medium text-slate-700 dark:text-slate-300">{t.isDeduction ? '- ' : '+ '}NGN {t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                   </div>
-                 ))}
-                 {computedTaxes.length > 0 && <hr className="border-slate-200 dark:border-slate-700" />}
-                 <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-between font-bold text-lg">
-                   <span className="text-slate-900 dark:text-white">Total</span>
-                   <span className="text-purple-600 dark:text-purple-400">NGN {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                 </div>
-              </div>
-            </div>
-          </div>
+          <EditorLineItems
+            items={items}
+            handleItemChange={handleItemChange}
+            handleRemoveItem={handleRemoveItem}
+            handleAddItem={handleAddItem}
+          />
 
-          {/* Document Settings */}
-          {type === 'QUOTE' && (
-            <div className="space-y-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-              <h2 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Document Settings</h2>
-              
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className="relative inline-block w-10 h-6">
-                  <input 
-                    type="checkbox"
-                    checked={allowCounterOffer}
-                    onChange={(e) => setAllowCounterOffer(e.target.checked)}
-                    className="peer appearance-none w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full checked:bg-purple-600 dark:checked:bg-purple-500 cursor-pointer transition-colors"
-                  />
-                  <span className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4 shadow-sm pointer-events-none"></span>
-                </div>
-                <span className="font-medium text-sm text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
-                  Allow client to make a counter offer
-                </span>
-              </label>
-            </div>
-          )}
+          <hr className="border-slate-100 dark:border-slate-800/50" />
+
+          <EditorSummary
+            type={type}
+            notes={notes}
+            setNotes={setNotes}
+            aiEnabled={aiEnabled}
+            isProUser={isProUser}
+            handleEnhanceNote={handleEnhanceNote}
+            isEnhancingNote={isEnhancingNote}
+            taxSettings={taxSettings}
+            appliedTaxes={appliedTaxes}
+            setAppliedTaxes={setAppliedTaxes}
+            subtotal={subtotal}
+            computedTaxes={computedTaxes}
+            total={total}
+            allowCounterOffer={allowCounterOffer}
+            setAllowCounterOffer={setAllowCounterOffer}
+          />
           
           {/* Bottom spacing for mobile to ensure scrollability past FAB */}
           <div className="h-20 md:hidden"></div>

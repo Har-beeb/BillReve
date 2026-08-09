@@ -65,10 +65,16 @@ const Campaigns: React.FC = () => {
       }
 
       // 1. Construct HTML for the marketing campaign
+      // Convert newlines to <br/> and wrap in a clean template
+      const formattedContent = content
+        .split('\n')
+        .map(line => line.trim() ? `<p style="margin: 0 0 16px 0;">${line}</p>` : '<br/>')
+        .join('');
+        
       const htmlContent = `
-        <div style="font-family: sans-serif; max-w-xl mx-auto p-6 border border-gray-200 rounded-lg shadow-sm">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           ${title ? `<h1 style="color: #4F46E5; margin-bottom: 20px;">${title}</h1>` : ''}
-          <div style="color: #374151; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${content}</div>
+          <div style="color: #374151; font-size: 16px; line-height: 1.6;">${formattedContent}</div>
           ${ctaText && ctaLink ? `<div style="margin-top: 30px; text-align: center;"><a href="${ctaLink}" style="background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">${ctaText}</a></div>` : ''}
         </div>
       `;
@@ -105,10 +111,22 @@ const Campaigns: React.FC = () => {
   const handleDraftAI = async () => {
     setIsDrafting(true);
     try {
-      const mockDraft = `We are excited to announce new updates to our services! We've improved our offerings to provide you with even better value. Contact us today to learn more about how we can help your business grow.`;
+      const response = await supabase.functions.invoke('ai/draft-campaign', {
+        body: {
+          businessName: businessProfile.name || 'Your Business',
+          businessProfile: businessProfile,
+          campaignContext: title || subject || 'A general update and newsletter',
+        }
+      });
       
-      setContent(mockDraft);
-      setSubject('Exciting Updates from ' + (businessProfile.name || 'us'));
+      if (response.error) throw new Error(response.error.message);
+      
+      const { data } = response.data;
+      
+      setContent(data.content);
+      if (!subject && data.subject) {
+        setSubject(data.subject);
+      }
     } catch (err) {
       console.error('Failed to draft email:', err);
       toast.error('Failed to generate draft.');

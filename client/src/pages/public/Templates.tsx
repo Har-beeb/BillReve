@@ -1,4 +1,5 @@
 import React from 'react';
+import { SEO } from '../../components/SEO';
 import { Sparkles, FileText, Download, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -32,6 +33,7 @@ const TEMPLATES = [
 const Templates: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+      <SEO title="Templates" />
       <div className="text-center mb-16 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-sm font-bold mb-6">
           <Sparkles size={16} />

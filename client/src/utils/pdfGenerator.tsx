@@ -1,6 +1,7 @@
 // @refresh reset
 import { createRoot } from 'react-dom/client';
 import { useAppStore } from '../store/useAppStore';
+import { Logo } from '../components/ui/Logo';
 // @ts-ignore
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
 import { formatMoney } from './formatters';
@@ -24,15 +25,13 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
             </div>
           )}
         </div>
-        <div className="text-right">
+        <div className="text-right flex flex-col items-end">
           {profile?.logoUrl || profile?.logo_url ? (
-            <div className="w-16 h-16 ml-auto mb-2 flex items-center justify-center" style={{ backgroundColor: '#ffffff' }}>
+            <div className="w-16 h-16 mb-2 flex items-center justify-center" style={{ backgroundColor: '#ffffff' }}>
                 <img src={profile.logoUrl || profile.logo_url} alt="Logo" className="w-full h-full object-contain" />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center ml-auto mb-2" style={{ backgroundColor: '#9333ea' }}>
-                <div className="w-4 h-4 rounded-sm transform rotate-45" style={{ backgroundColor: '#ffffff' }} />
-            </div>
+            <Logo size="md" className="mb-2" />
           )}
           <p className="font-bold">{profile?.name || 'Business Name'}</p>
           <p className="text-sm whitespace-pre-line" style={{ color: '#64748b' }}>{profile?.address}</p>

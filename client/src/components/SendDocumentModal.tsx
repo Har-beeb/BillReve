@@ -146,7 +146,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
         : `${documentType} ${(document as any).invoiceNumber || (document as any).quoteNumber || ''} from ${businessProfile.name || 'BillReve'}`;
         
       const htmlContent = `
-        <div style="font-family: sans-serif; max-w-xl mx-auto p-4 border border-gray-200 rounded-lg shadow-sm">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
           <h2 style="color: #4F46E5;">${isOverdue ? 'Payment Reminder' : `Your ${documentType} from ${businessProfile.name || 'BillReve'}`}</h2>
           <p>Hi ${client?.name || 'Client'},</p>
           <p>${isOverdue 
@@ -154,7 +154,9 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
             : `Please find your ${documentType.toLowerCase()} attached.`}</p>
           <p><strong>Amount:</strong> ${amount}</p>
           ${(document as any).dueDate ? `<p><strong>Due Date:</strong> ${new Date((document as any).dueDate).toLocaleDateString()}</p>` : ''}
-          ${customMessage ? `<div style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #8b5cf6; white-space: pre-wrap;">${customMessage}</div>` : ''}
+          ${customMessage ? `<div style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #8b5cf6; margin-bottom: 20px;">
+            ${customMessage.split('\n').map(line => line.trim() ? `<p style="margin: 0 0 8px 0; font-size: 14px;">${line}</p>` : '<br/>').join('')}
+          </div>` : ''}
           ${publicLink ? `<div style="margin-top: 24px;"><a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">${documentType === 'Invoice' ? (isProUser ? 'View & Pay Online' : 'View Invoice Online') : 'View Quote Online'}</a></div>` : ''}
         </div>
       `;

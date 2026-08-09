@@ -8,7 +8,7 @@ const OAuthButton: React.FC<OAuthButtonProps> = ({ provider, ...props }) => {
   return (
     <button
       type="button"
-      className="w-full flex items-center justify-center gap-2 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium text-slate-700 dark:text-slate-300 shadow-sm"
+      className="w-full flex items-center justify-center gap-2 p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-medium text-slate-700 shadow-sm"
       {...props}
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24">

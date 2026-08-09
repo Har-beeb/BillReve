@@ -6,12 +6,6 @@ const Privacy: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        {/* Back Link */}
-        <Link to="/login" className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors mb-8 font-medium">
-          <ArrowLeft size={16} />
-          Back to Login
-        </Link>
-
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">

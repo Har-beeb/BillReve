@@ -21,7 +21,9 @@ import {
 import { Logo } from '../components/ui/Logo';
 import { useAppStore } from '../store/useAppStore';
 import { PublicHeader } from '../components/PublicHeader';
+
 import { Footer } from '../components/Footer';
+import { SEO } from '../components/SEO';
 
 const WORDS = ['Simplified.', 'Automated.', 'Perfected.'];
 
@@ -47,6 +49,7 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-purple-200 dark:selection:bg-purple-900 selection:text-purple-900 dark:selection:text-purple-100">
+      <SEO title="Home" />
       
       {/* Navigation */}
       <PublicHeader />

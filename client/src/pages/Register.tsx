@@ -122,7 +122,7 @@ const Register: React.FC = () => {
       subtitle="Start managing your invoices offline with our robust platform."
     >
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
           <span className="block w-1.5 h-full rounded-full bg-red-600"></span>
           {error}
         </div>
@@ -130,7 +130,7 @@ const Register: React.FC = () => {
 
       {showVerification ? (
         <form onSubmit={handleVerifyOtp} className="space-y-4 animate-fade-in">
-          <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/30 rounded-xl text-sm text-purple-800 dark:text-purple-300 mb-4">
+          <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl text-sm text-purple-800 mb-4">
             We've sent a 6-digit verification code to <strong>{email}</strong>. Please enter it below to confirm your account.
           </div>
           
@@ -156,7 +156,7 @@ const Register: React.FC = () => {
             type="button"
             onClick={handleResendOtp}
             disabled={loading}
-            className="w-full text-center text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium mt-4 disabled:opacity-70"
+            className="w-full text-center text-sm text-purple-600 hover:text-purple-700 font-medium mt-4 disabled:opacity-70"
           >
             Didn't receive code? Resend Code
           </button>
@@ -205,18 +205,18 @@ const Register: React.FC = () => {
         </button>
         
         <div className="relative flex items-center py-2">
-          <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+          <div className="flex-grow border-t border-slate-200"></div>
           <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">or sign up with</span>
-          <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+          <div className="flex-grow border-t border-slate-200"></div>
         </div>
 
         <OAuthButton provider="google" onClick={handleOAuthLogin} />
       </form>
       )}
 
-      <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
+      <p className="mt-6 text-center text-sm text-slate-600">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">
+        <Link to="/login" className="font-semibold text-purple-600 hover:text-purple-700 transition-colors">
           Sign in
         </Link>
       </p>

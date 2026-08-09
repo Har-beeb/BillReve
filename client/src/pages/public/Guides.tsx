@@ -1,4 +1,5 @@
 import React from 'react';
+import { SEO } from '../../components/SEO';
 import { ArrowRight, BookOpen, PenTool, LayoutTemplate } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -29,6 +30,7 @@ const GUIDES = [
 const Guides: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+      <SEO title="Guides" />
       <div className="text-center mb-16 max-w-3xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-['Outfit'] font-black text-slate-900 dark:text-white mb-6">
           Invoicing Guides

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { SEO } from '../../components/SEO';
 import { Mail, MapPin, Send, MessageSquare, Globe } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -15,16 +17,43 @@ const Contact: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const htmlContent = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2>New Contact Form Submission</h2>
+          <p><strong>Name:</strong> ${formData.name}</p>
+          <p><strong>Email:</strong> ${formData.email}</p>
+          <p><strong>Subject:</strong> ${formData.subject}</p>
+          <div style="background: #f4f4f5; padding: 16px; border-radius: 8px; margin-top: 16px; white-space: pre-wrap;">
+            ${formData.message}
+          </div>
+        </div>
+      `;
+
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: ['support@billreve.app'],
+          subject: `Contact Form: ${formData.subject || 'No Subject'}`,
+          html: htmlContent
+        }
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error?.message || 'Failed to send message');
+
       toast.success('Message sent! We will get back to you shortly.');
       setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (err: any) {
+      console.error('Failed to send contact message:', err);
+      toast.error('Failed to send your message. Please try again later.');
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+      <SEO title="Contact" />
       <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
         
         <div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SEO } from '../../components/SEO';
 import { Search, ChevronDown, MessageCircle, FileText, Settings, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,7 +25,7 @@ const FAQS = [
     icon: <FileText size={20} className="text-blue-500" />,
     items: [
       { q: 'Can I send invoices via WhatsApp?', a: 'Yes! When you click Send on any document, you have the option to send via Email (directly from our servers) or via WhatsApp, which will open your WhatsApp app with a pre-formatted message and a secure public link to the invoice.' },
-      { q: 'How do clients pay?', a: 'Clients receive a secure, public link to view their invoice online. (Online payments integration is coming soon in v2.0).' }
+      { q: 'How do clients pay?', a: 'Clients receive a secure, public link to view their invoice online. If you configure Paystack or Flutterwave in your Settings, clients can pay you instantly via credit card or bank transfer directly from the invoice page.' }
     ]
   },
   {
@@ -52,6 +53,7 @@ const HelpCenter: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+      <SEO title="Help Center" />
       <div className="text-center mb-16">
         <h1 className="text-4xl md:text-5xl font-['Outfit'] font-black text-slate-900 dark:text-white mb-6">
           Help Center

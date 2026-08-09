@@ -67,9 +67,10 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
              </span>
           </Badge>
           
-          <h2 className="text-4xl xl:text-5xl font-extrabold mb-4 leading-tight tracking-tight text-white min-h-[100px]">
-             Manage your business{' '}
-             <span className="inline-flex min-w-[220px]">
+          <h2 className="text-4xl xl:text-5xl font-extrabold mb-4 leading-tight tracking-tight text-white min-h-[120px] flex flex-col">
+             <span>Manage your</span>
+             <span className="inline-flex items-center gap-3 min-w-[220px]">
+               <span>business</span>
                <AnimatePresence mode="wait">
                  <motion.span
                    key={wordIndex}
