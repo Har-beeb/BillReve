@@ -1,13 +1,43 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { Trash2, RefreshCw } from 'lucide-react';
+import { Trash2, RefreshCw, AlertCircle } from 'lucide-react';
 import { EmptyState, LongPressable } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
 import { useSelection } from '../hooks/useSelection';
+import { useAppStore } from '../store/useAppStore';
 
 const Trash: React.FC = () => {
+  const { isProUser } = useAppStore();
+  const retentionDays = isProUser ? 30 : 7;
+
+  // Auto-purge items older than retention window
+  useEffect(() => {
+    const purgeExpired = async () => {
+      const now = Date.now();
+      const cutoff = now - (retentionDays * 24 * 60 * 60 * 1000);
+
+      const tables = [db.clients, db.invoices, db.quotes];
+      for (const table of tables) {
+        const expiredItems = await table.filter((item: any) => {
+          if (!item.deletedAt) return false;
+          const deletedTime = new Date(item.deletedAt).getTime();
+          return deletedTime < cutoff;
+        }).toArray();
+
+        for (const item of expiredItems) {
+          const entity = 'invoiceNumber' in item ? 'INVOICE' : 'quoteNumber' in item ? 'QUOTE' : 'CLIENT';
+          await table.delete(item.localId);
+          await db.syncQueue.add({
+            id: uuidv4(), action: 'DELETE', entity,
+            payload: { local_id: item.localId }, status: 'pending', createdAt: new Date().toISOString()
+          });
+        }
+      }
+    };
+    purgeExpired();
+  }, [retentionDays]);
   const deletedClients = useLiveQuery(() => db.clients.filter(c => !!c.deletedAt).toArray()) || [];
   const deletedInvoices = useLiveQuery(() => db.invoices.filter(i => !!i.deletedAt).toArray()) || [];
   const deletedQuotes = useLiveQuery(() => db.quotes.filter(q => !!q.deletedAt).toArray()) || [];
@@ -219,6 +249,16 @@ const Trash: React.FC = () => {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-4 flex gap-3 items-start animate-fade-in">
+        <AlertCircle className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" size={20} />
+        <div>
+          <h4 className="font-medium text-blue-900 dark:text-blue-300 text-sm">Auto-Delete Policy</h4>
+          <p className="text-blue-700 dark:text-blue-400/80 text-sm mt-1">
+            Items in the trash are automatically deleted forever after <strong>{retentionDays} days</strong>. {isProUser ? '' : 'Upgrade to Pro to extend this to 30 days.'}
+          </p>
+        </div>
       </div>
 
       {isEmpty ? (
