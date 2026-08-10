@@ -36,6 +36,7 @@ const Contact = React.lazy(() => import('./pages/public/Contact'));
 import { useAppStore } from './store/useAppStore';
 import { supabase } from './lib/supabase';
 import { syncEngine } from './services/syncEngine';
+import { notificationService } from './services/notificationService';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
@@ -149,8 +150,11 @@ function App() {
       fetchProfile(session?.user);
       if (session) {
         syncEngine.start();
+        notificationService.setupRealtimeListeners(session.user.id);
+        notificationService.requestPermission(); // Request on login
       } else {
         syncEngine.stop();
+        notificationService.cleanup();
       }
     });
 
@@ -158,12 +162,14 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         syncEngine.start();
+        notificationService.setupRealtimeListeners(session.user.id);
       }
     });
 
     return () => {
       subscription.unsubscribe();
       syncEngine.stop();
+      notificationService.cleanup();
     };
   }, [setSession]);
 
