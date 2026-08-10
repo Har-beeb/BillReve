@@ -54,7 +54,7 @@ const Quotes: React.FC = () => {
   const [quoteToSend, setQuoteToSend] = useState<Quote | null>(null);
   
   const quotes = useLiveQuery(() => db.quotes.filter(q => !q.deletedAt).toArray()) || [];
-  const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
+  const allClients = useLiveQuery(() => db.clients.toArray()) || [];
   const [activeCard, setActiveCard] = useState(0);
   const carouselRef = React.useRef<HTMLDivElement>(null);
 
@@ -110,7 +110,7 @@ const Quotes: React.FC = () => {
 
   const handleDownloadPdf = async (quote: Quote) => {
     try {
-      const client = clients.find(c => c.localId === quote.clientId);
+      const client = allClients.find(c => c.localId === quote.clientId);
       await generateDocumentPdf(quote, client, businessProfile, 'QUOTE', true);
     } catch (err) {
       console.error('Failed to generate PDF', err);
@@ -174,7 +174,7 @@ const Quotes: React.FC = () => {
     import('../utils/csvGenerator').then(({ exportToCsv }) => {
       const headers = ['Quote Number', 'Client', 'Description', 'Date Issued', 'Status', 'Subtotal', 'Tax', 'Total'];
       const rows = selectedQuotes.map(quote => {
-        const client = clients.find(c => c.localId === quote.clientId);
+        const client = allClients.find(c => c.localId === quote.clientId);
         const taxAmount = quote.taxes?.reduce((sum, t) => sum + (t.isDeduction ? -t.amount : t.amount), 0) || 0;
         return [
           quote.quoteNumber || quote.localId.slice(0, 8),
@@ -259,7 +259,7 @@ const Quotes: React.FC = () => {
         isOpen={sendModalOpen}
         onClose={() => { setSendModalOpen(false); setQuoteToSend(null); }}
         documentId={quoteToSend?.localId || ''}
-        clientEmail={clients.find(c => c.localId === quoteToSend?.clientId)?.email || ''}
+        clientEmail={allClients.find(c => c.localId === quoteToSend?.clientId)?.email || ''}
         documentType="Quote"
         amount={quoteToSend ? formatMoney(quoteToSend.total, quoteToSend.currency) : ''}
       />
@@ -527,7 +527,7 @@ const Quotes: React.FC = () => {
                     <div className="flex justify-between items-center mt-1">
                       <div className="flex items-center gap-3">
                         <div className="text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px] sm:max-w-[200px]">
-                          {clients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
+                          {allClients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
                         </div>
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <Badge variant={quote.status.toLowerCase() as any}>{quote.status}</Badge>
@@ -574,7 +574,7 @@ const Quotes: React.FC = () => {
                   
                   <div className="col-span-4 flex flex-col justify-center">
                     <div className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors truncate pr-4">
-                      {clients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
+                      {allClients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
                     </div>
                     <div className="text-slate-500 text-xs font-medium mt-0.5">
                       {quote.quoteNumber || quote.localId.slice(0, 8)}
@@ -736,10 +736,10 @@ const Quotes: React.FC = () => {
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Quote For</h3>
                 <p className="text-base font-medium text-slate-900 dark:text-white">
-                  {clients.find(c => c.localId === selectedQuote.clientId)?.name || selectedQuote.clientId}
+                  {allClients.find(c => c.localId === selectedQuote.clientId)?.name || selectedQuote.clientId}
                 </p>
-                {clients.find(c => c.localId === selectedQuote.clientId)?.email && (
-                  <p className="text-sm text-slate-500 mt-0.5">{clients.find(c => c.localId === selectedQuote.clientId)?.email}</p>
+                {allClients.find(c => c.localId === selectedQuote.clientId)?.email && (
+                  <p className="text-sm text-slate-500 mt-0.5">{allClients.find(c => c.localId === selectedQuote.clientId)?.email}</p>
                 )}
               </div>
               <div className="text-right">

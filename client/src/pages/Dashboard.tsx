@@ -21,9 +21,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { checkQuota } = useQuota();
+  const allClients = useLiveQuery(() => db.clients.toArray()) || [];
   const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
   const quotes = useLiveQuery(() => db.quotes.filter(q => !q.deletedAt).toArray()) || [];
-  const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
   const [activeSlide, setActiveSlide] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -139,7 +139,7 @@ const Dashboard: React.FC = () => {
     .slice(0, 5);
 
   const getClientName = (id: string) => {
-    return clients.find(c => c.localId === id)?.name || 'Unknown Client';
+    return allClients.find(c => c.localId === id)?.name || 'Unknown Client';
   };
 
   return (

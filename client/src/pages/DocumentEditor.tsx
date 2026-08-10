@@ -30,7 +30,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const navigate = useNavigate();
   const { businessProfile, taxSettings, user, isProUser } = useAppStore();
   const aiEnabled = import.meta.env.VITE_ENABLE_AI_FEATURES !== 'false';
-  const clients = useLiveQuery(() => db.clients.filter(x => !x.deletedAt).toArray()) || [];
+  const allClients = useLiveQuery(() => db.clients.toArray()) || [];
+  const activeClients = allClients.filter(x => !x.deletedAt);
   const invoicesList = useLiveQuery(() => db.invoices.filter(x => !x.deletedAt).toArray()) || [];
   const quotesList = useLiveQuery(() => db.quotes.filter(x => !x.deletedAt).toArray()) || [];
 
@@ -169,7 +170,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       };
       setUnsavedClient(newClientObj);
     } else {
-      setUnsavedClient(clients.find(c => c.localId === finalClientId));
+      setUnsavedClient(allClients.find(c => c.localId === finalClientId));
     }
 
     const docBase = {
@@ -212,7 +213,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     
     setSavedDocumentId(localId);
     setSavedDocumentAmount(total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
-    setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === (clientId === 'NEW' ? '' : clientId))?.email || '');
+    setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : allClients.find(c => c.localId === (clientId === 'NEW' ? '' : clientId))?.email || '');
     setIsSendModalOpen(true);
   };
 
@@ -304,7 +305,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       if (intendedStatus === 'SENT' && !skipModal) {
         setSavedDocumentId(docBase.localId);
         setSavedDocumentAmount(docBase.total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
-        setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === finalClientId)?.email || '');
+        setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : allClients.find(c => c.localId === finalClientId)?.email || '');
         setIsSendModalOpen(true);
       } else if (!skipModal) {
         navigate('/quotes');
@@ -346,7 +347,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       if (intendedStatus === 'SENT' && !skipModal) {
         setSavedDocumentId(docBase.localId);
         setSavedDocumentAmount(docBase.total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
-        setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : clients.find(c => c.localId === finalClientId)?.email || '');
+        setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : allClients.find(c => c.localId === finalClientId)?.email || '');
         setIsSendModalOpen(true);
       } else if (!skipModal) {
         navigate('/invoices');
@@ -400,7 +401,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           
           <EditorHeader
             type={type}
-            clients={clients}
+            clients={activeClients}
             clientId={clientId}
             setClientId={setClientId}
             isCreatingClient={isCreatingClient}
@@ -458,7 +459,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           documentNumber={documentNumber as string}
           initialDoc={initialDoc}
           clientId={clientId}
-          clients={clients}
+          clients={activeClients}
           isCreatingClient={isCreatingClient}
           newClientName={newClientName}
           newClientEmail={newClientEmail}

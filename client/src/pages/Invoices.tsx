@@ -52,7 +52,7 @@ const Invoices: React.FC = () => {
   const [invoiceForPayment, setInvoiceForPayment] = useState<Invoice | null>(null);
   
   const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
-  const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
+  const allClients = useLiveQuery(() => db.clients.toArray()) || [];
   const [activeCard, setActiveCard] = useState(0);
   const carouselRef = React.useRef<HTMLDivElement>(null);
 
@@ -135,7 +135,7 @@ const Invoices: React.FC = () => {
   }, [searchParams, invoices, setSearchParams, setSelectedIds, setCurrentPage, filteredInvoices]);
   const handleDownloadPdf = async (invoice: Invoice) => {
     try {
-      const client = clients.find(c => c.localId === invoice.clientId);
+      const client = allClients.find(c => c.localId === invoice.clientId);
       await generateDocumentPdf(invoice, client, businessProfile, 'INVOICE', true);
     } catch (err) {
       console.error('Failed to generate PDF', err);
@@ -199,7 +199,7 @@ const Invoices: React.FC = () => {
     import('../utils/csvGenerator').then(({ exportToCsv }) => {
       const headers = ['Invoice Number', 'Client', 'Date Issued', 'Due Date', 'Status', 'Subtotal', 'Tax', 'Total', 'Amount Paid', 'Balance Due'];
       const rows = selectedInvoices.map(invoice => {
-        const client = clients.find(c => c.localId === invoice.clientId);
+        const client = allClients.find(c => c.localId === invoice.clientId);
         const taxAmount = invoice.taxes?.reduce((sum, t) => sum + (t.isDeduction ? -t.amount : t.amount), 0) || 0;
         return [
           invoice.invoiceNumber || invoice.localId.slice(0, 8),
@@ -267,7 +267,7 @@ const Invoices: React.FC = () => {
         isOpen={sendModalOpen}
         onClose={() => { setSendModalOpen(false); setInvoiceToSend(null); }}
         documentId={invoiceToSend?.localId || ''}
-        clientEmail={clients.find(c => c.localId === invoiceToSend?.clientId)?.email || ''}
+        clientEmail={allClients.find(c => c.localId === invoiceToSend?.clientId)?.email || ''}
         documentType="Invoice"
         amount={invoiceToSend ? formatMoney(invoiceToSend.total, invoiceToSend.currency) : ''}
       />
@@ -519,7 +519,7 @@ const Invoices: React.FC = () => {
                     <div className="flex justify-between items-center mt-1">
                       <div className="flex items-center gap-3">
                         <div className="text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px] sm:max-w-[200px]">
-                          {clients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
+                          {allClients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
                         </div>
                         <Badge variant={invoice.status.toLowerCase() as any}>
                           {invoice.status === 'PARTIAL' ? 'Partial' : invoice.status}
@@ -558,7 +558,7 @@ const Invoices: React.FC = () => {
                   
                   <div className="col-span-4 flex flex-col justify-center">
                     <div className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors truncate pr-4">
-                      {clients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
+                      {allClients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
                     </div>
                     <div className="text-slate-500 text-xs font-medium mt-0.5">
                       {invoice.invoiceNumber || invoice.localId.slice(0, 8)}
@@ -697,10 +697,10 @@ const Invoices: React.FC = () => {
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Billed To</h3>
                 <p className="text-base font-medium text-slate-900 dark:text-white">
-                  {clients.find(c => c.localId === selectedInvoice.clientId)?.name || selectedInvoice.clientId}
+                  {allClients.find(c => c.localId === selectedInvoice.clientId)?.name || selectedInvoice.clientId}
                 </p>
-                {clients.find(c => c.localId === selectedInvoice.clientId)?.email && (
-                  <p className="text-sm text-slate-500 mt-0.5">{clients.find(c => c.localId === selectedInvoice.clientId)?.email}</p>
+                {allClients.find(c => c.localId === selectedInvoice.clientId)?.email && (
+                  <p className="text-sm text-slate-500 mt-0.5">{allClients.find(c => c.localId === selectedInvoice.clientId)?.email}</p>
                 )}
               </div>
               <div className="text-right">

@@ -2,6 +2,7 @@ import { db } from '../db/db';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/useAppStore';
 import type { Client, Invoice, Quote } from '../types';
+import toast from 'react-hot-toast';
 
 // Helper to convert camelCase keys to snake_case for Supabase
 const toSnakeCase = (obj: any): any => {
@@ -138,6 +139,18 @@ class SyncEngine {
     }
   }
 
+  private isAuthError(error: any): boolean {
+    if (!error) return false;
+    const msg = error.message?.toLowerCase() || '';
+    return error.code === 'PGRST301' || msg.includes('jwt expired') || msg.includes('unauthorized') || error.status === 401;
+  }
+
+  private handleAuthError() {
+    toast.error('Your online session has expired. Please sign in to resume cloud backups.', { id: 'auth-expired', duration: 6000 });
+    // Update store state
+    useAppStore.getState().setSession(null);
+  }
+
   private async pushLocalChanges() {
     // Check if authenticated with Supabase
     const { data: { session } } = await supabase.auth.getSession();
@@ -193,6 +206,12 @@ class SyncEngine {
 
       } catch (error: any) {
         console.error(`Failed to push queue item ${item.id}`, error);
+        
+        if (this.isAuthError(error)) {
+          this.handleAuthError();
+          throw error; // Abort further sync this cycle
+        }
+        
         await db.syncQueue.update(item.id, { status: 'failed', error: String(error.message || error) });
       }
     }
@@ -218,6 +237,10 @@ class SyncEngine {
           .range(from, from + limit - 1);
           
         if (error) {
+          if (this.isAuthError(error)) {
+            this.handleAuthError();
+            throw error;
+          }
           console.error(`Error paginating ${table}:`, error);
           break;
         }
