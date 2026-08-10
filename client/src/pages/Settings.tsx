@@ -5,19 +5,19 @@ import { PreferencesSettings } from '../components/settings/PreferencesSettings'
 import { ProfileSettings } from '../components/settings/ProfileSettings';
 import { TaxSettings } from '../components/settings/TaxSettings';
 import { SyncSettings } from '../components/settings/SyncSettings';
-import { Swiper, SwiperSlide } from 'swiper/react';
-// @ts-ignore
-import 'swiper/css';
-import type { Swiper as SwiperType } from 'swiper';
 
 const TABS = ['account', 'preferences', 'profile', 'taxes', 'sync'] as const;
 type Tab = typeof TABS[number];
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('account');
+  const activeIndex = TABS.indexOf(activeTab);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
-  const swiperRef = useRef<{ swiper: SwiperType }>(null);
+  
+  // Native touch handling
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   // Smooth scroll the header tabs horizontally without scrolling the whole page down
   useEffect(() => {
@@ -31,9 +31,46 @@ const Settings: React.FC = () => {
 
   const handleTabClick = (tab: Tab) => {
     setActiveTab(tab);
-    if (swiperRef.current?.swiper) {
-      swiperRef.current.swiper.slideTo(TABS.indexOf(tab));
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Only handle primary pointer (usually left click or first touch)
+    if (!e.isPrimary) return;
+    touchStartX.current = e.clientX;
+    touchStartY.current = e.clientY;
+  };
+
+  const handlePointerUp = (e: React.TouchEvent | React.PointerEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    
+    // Support both TouchEvent and PointerEvent
+    let touchEndX = 0;
+    let touchEndY = 0;
+    
+    if ('changedTouches' in e) {
+      touchEndX = e.changedTouches[0].clientX;
+      touchEndY = e.changedTouches[0].clientY;
+    } else {
+      touchEndX = (e as React.PointerEvent).clientX;
+      touchEndY = (e as React.PointerEvent).clientY;
     }
+    
+    const deltaX = touchStartX.current - touchEndX;
+    const deltaY = touchStartY.current - touchEndY;
+    
+    // Ensure it's a horizontal swipe (deltaX is dominant) and long enough (> 50px)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+      if (deltaX > 0 && activeIndex < TABS.length - 1) {
+        // Swiped left, go to next tab
+        setActiveTab(TABS[activeIndex + 1]);
+      } else if (deltaX < 0 && activeIndex > 0) {
+        // Swiped right, go to prev tab
+        setActiveTab(TABS[activeIndex - 1]);
+      }
+    }
+    
+    touchStartX.current = null;
+    touchStartY.current = null;
   };
 
   const getTabIcon = (tab: Tab) => {
@@ -86,32 +123,23 @@ const Settings: React.FC = () => {
           ))}
         </div>
 
-        {/* Swipeable Pages */}
-        <div className="flex-1 min-h-0 w-full relative">
-          <Swiper
-            ref={swiperRef}
-            onSlideChange={(swiper) => setActiveTab(TABS[swiper.activeIndex])}
-            spaceBetween={0}
-            slidesPerView={1}
-            className="w-full h-full"
-            resistanceRatio={0} // Stops bouncy overscroll so it feels native
+        {/* Swipeable Pages Container */}
+        <div 
+          className="flex-1 min-h-0 w-full relative overflow-hidden"
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onTouchEnd={handlePointerUp} // Fallback for pure touch devices that might not fire pointer events perfectly
+        >
+          <div 
+            className="w-full h-full flex transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(-${activeIndex * 100}%)` }}
           >
-            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
-              <AccountSettings />
-            </SwiperSlide>
-            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
-              <PreferencesSettings />
-            </SwiperSlide>
-            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
-              <ProfileSettings />
-            </SwiperSlide>
-            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
-              <TaxSettings />
-            </SwiperSlide>
-            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
-              <SyncSettings />
-            </SwiperSlide>
-          </Swiper>
+            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><AccountSettings /></div>
+            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><PreferencesSettings /></div>
+            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><ProfileSettings /></div>
+            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><TaxSettings /></div>
+            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><SyncSettings /></div>
+          </div>
         </div>
       </div>
     </div>
