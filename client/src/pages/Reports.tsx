@@ -21,6 +21,17 @@ const Reports: React.FC = () => {
   const [timeframe, setTimeframe] = useState<Timeframe>('6month');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(businessProfile.currency || 'USD');
+
+  // Extract unique currencies
+  const uniqueCurrencies = useMemo(() => {
+    const currencies = new Set<string>();
+    currencies.add(businessProfile.currency || 'USD');
+    invoices.forEach(inv => {
+      if (inv.currency) currencies.add(inv.currency);
+    });
+    return Array.from(currencies);
+  }, [invoices, businessProfile.currency]);
 
   // 1. Filter Invoices by Timeframe
   const filteredInvoices = useMemo(() => {
@@ -57,9 +68,10 @@ const Reports: React.FC = () => {
 
     return invoices.filter(inv => {
       const d = inv.issuedAt ? parseISO(inv.issuedAt) : new Date(inv.createdAt);
-      return isAfter(d, startDate) && isBefore(d, endDate);
+      const isCorrectCurrency = (inv.currency || businessProfile.currency || 'USD') === selectedCurrency;
+      return isCorrectCurrency && isAfter(d, startDate) && isBefore(d, endDate);
     });
-  }, [invoices, timeframe, customStart, customEnd]);
+  }, [invoices, timeframe, customStart, customEnd, selectedCurrency, businessProfile.currency]);
 
   const metrics = useMemo(() => {
     let totalRevenue = 0;
@@ -209,6 +221,16 @@ const Reports: React.FC = () => {
             <option value="year">Past Year</option>
             <option value="custom">Custom Date Range</option>
           </select>
+
+          <select
+            value={selectedCurrency}
+            onChange={(e) => setSelectedCurrency(e.target.value)}
+            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:ring-2 focus:ring-purple-500 outline-none"
+          >
+            {uniqueCurrencies.map(curr => (
+              <option key={curr} value={curr}>{curr}</option>
+            ))}
+          </select>
           
           <button 
             onClick={handleExportCsv}
@@ -228,7 +250,7 @@ const Reports: React.FC = () => {
             </div>
           </div>
           <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Total Revenue</h3>
-          <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(metrics.totalRevenue)}</div>
+          <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(metrics.totalRevenue, selectedCurrency)}</div>
         </Card>
         <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
           <div className="flex justify-between items-start mb-4">
@@ -237,7 +259,7 @@ const Reports: React.FC = () => {
             </div>
           </div>
           <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Outstanding Balances</h3>
-          <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(metrics.outstandingBalance)}</div>
+          <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(metrics.outstandingBalance, selectedCurrency)}</div>
         </Card>
         <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
           <div className="flex justify-between items-start mb-4">
@@ -246,7 +268,7 @@ const Reports: React.FC = () => {
             </div>
           </div>
           <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Tax & VAT Collected</h3>
-          <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(metrics.totalTaxCollected)}</div>
+          <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatMoney(metrics.totalTaxCollected, selectedCurrency)}</div>
         </Card>
       </div>
 
@@ -265,7 +287,8 @@ const Reports: React.FC = () => {
                   tickFormatter={(value: any) => value > 1000 ? `${(value/1000).toFixed(0)}k` : value}
                 />
                 <Tooltip 
-                  formatter={(value: any) => formatMoney(value as number)}
+                  cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                  formatter={(value: any) => formatMoney(value as number, selectedCurrency)}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="revenue" fill="#0d9488" radius={[4, 4, 0, 0]} maxBarSize={40} />
@@ -282,18 +305,19 @@ const Reports: React.FC = () => {
                 <PieChart>
                   <Pie
                     data={pieChartData}
+                    dataKey="value"
+                    nameKey="name"
                     cx="50%"
                     cy="50%"
                     innerRadius={80}
                     outerRadius={120}
                     paddingAngle={5}
-                    dataKey="value"
                   >
                     {pieChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: any) => formatMoney(value as number)} />
+                  <Tooltip formatter={(value: any) => formatMoney(value as number, selectedCurrency)} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
