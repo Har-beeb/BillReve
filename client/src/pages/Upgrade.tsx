@@ -6,6 +6,7 @@ import { useAppStore } from '../store/useAppStore';
 const Upgrade: React.FC = () => {
   const { user, isProUser } = useAppStore();
   const [isSuccess, setIsSuccess] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'transfer'>('paystack');
 
   // The SaaS Master Key (Read from environment variables)
   const SAAS_PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_YOUR_SAAS_MASTER_KEY';
@@ -16,6 +17,7 @@ const Upgrade: React.FC = () => {
   const componentProps = {
     email: user?.email || 'user@example.com',
     amount: PRO_PRICE * 100, // Amount in kobo
+    plan: import.meta.env.VITE_PAYSTACK_PRO_PLAN_ID || 'PLN_placeholder123', // Add your Paystack Plan ID here for recurring subscription
     metadata: {
       custom_fields: [
          { display_name: "User ID", variable_name: "userId", value: user?.id || '' },
@@ -144,6 +146,24 @@ const Upgrade: React.FC = () => {
                   </div>
                 </div>
                 
+                {/* Payment Method Toggle */}
+                {!isProUser && (
+                  <div className="w-full flex items-center justify-between p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
+                    <button 
+                      onClick={() => setPaymentMethod('paystack')}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${paymentMethod === 'paystack' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-700 dark:text-purple-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                    >
+                      Card (Paystack)
+                    </button>
+                    <button 
+                      onClick={() => setPaymentMethod('transfer')}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${paymentMethod === 'transfer' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-700 dark:text-purple-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                    >
+                      Bank Transfer
+                    </button>
+                  </div>
+                )}
+                
                 {isProUser ? (
                   <button 
                     disabled
@@ -153,16 +173,46 @@ const Upgrade: React.FC = () => {
                   </button>
                 ) : (
                   <div className="w-full">
-                    <PaystackButton 
-                      {...componentProps} 
-                      className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-[0_8px_30px_rgb(147,51,234,0.3)] transition-all active:scale-[0.98] text-lg"
-                    />
+                    {paymentMethod === 'paystack' ? (
+                      <PaystackButton 
+                        {...componentProps} 
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-[0_8px_30px_rgb(147,51,234,0.3)] transition-all active:scale-[0.98] text-lg"
+                      />
+                    ) : (
+                      <div className="w-full text-left">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold mb-3">Transfer Details</p>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs text-slate-400 mb-0.5">Bank Name</p>
+                              <p className="font-semibold text-slate-900 dark:text-white">GTBank</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400 mb-0.5">Account Number</p>
+                              <p className="font-semibold text-slate-900 dark:text-white text-lg tracking-wider">0162562070</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400 mb-0.5">Account Name</p>
+                              <p className="font-semibold text-slate-900 dark:text-white">Issa Habeebullah O.</p>
+                            </div>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setIsSuccess(true)}
+                          className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 px-6 rounded-xl shadow-lg transition-all active:scale-[0.98] text-lg"
+                        >
+                          I have made the transfer
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                <p className="text-xs text-slate-400 mt-6 font-medium">
-                  Secure payment processing by Paystack
-                </p>
+                {paymentMethod === 'paystack' && !isProUser && (
+                  <p className="text-xs text-slate-400 mt-6 font-medium">
+                    Secure payment processing by Paystack
+                  </p>
+                )}
               </div>
             </div>
           </div>

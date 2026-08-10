@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/auth/AuthLayout';
@@ -16,6 +16,19 @@ const Register: React.FC = () => {
   const [showVerification, setShowVerification] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendCountdown > 0) {
+      interval = setInterval(() => {
+        setResendCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [resendCountdown]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +68,7 @@ const Register: React.FC = () => {
       
       // On success, show OTP verification screen instead of redirecting
       setShowVerification(true);
+      setResendCountdown(60); // Start 60s countdown on first send
       setError('');
     } catch (err: any) {
       setError(err.message || 'Failed to connect to server. Please try again.');
@@ -87,6 +101,7 @@ const Register: React.FC = () => {
 
   const handleResendOtp = async () => {
     try {
+      if (resendCountdown > 0) return;
       setLoading(true);
       setError('');
       const { error: resendError } = await supabase.auth.resend({
@@ -94,6 +109,7 @@ const Register: React.FC = () => {
         email,
       });
       if (resendError) throw resendError;
+      setResendCountdown(60); // Restart countdown on resend
       // Optional: show a success toast here if you have a toast system
     } catch (err: any) {
       setError(err.message || 'Failed to resend code. Please try again.');
@@ -155,10 +171,10 @@ const Register: React.FC = () => {
           <button
             type="button"
             onClick={handleResendOtp}
-            disabled={loading}
+            disabled={loading || resendCountdown > 0}
             className="w-full text-center text-sm text-purple-600 hover:text-purple-700 font-medium mt-4 disabled:opacity-70"
           >
-            Didn't receive code? Resend Code
+            {resendCountdown > 0 ? `Didn't receive code? Resend in ${resendCountdown}s` : "Didn't receive code? Resend Code"}
           </button>
         </form>
       ) : (
