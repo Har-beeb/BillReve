@@ -4,6 +4,7 @@ import { TrendingUp, Clock, AlertCircle, FileText, Plus, ArrowRight, Zap, BarCha
 import { Card, Badge } from '../components/ui';
 import { SplitButton } from '../components/ui/SplitButton';
 import { AiDraftModal } from '../components/AiDraftModal';
+import { GettingStartedChecklist } from '../components/onboarding/GettingStartedChecklist';
 import { useQuota } from '../hooks/useQuota';
 import { RevenueChat } from '../components/RevenueChat';
 import { formatMoney } from '../utils/formatters';
@@ -142,7 +143,9 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-fade-in-up pb-24">
+      <GettingStartedChecklist />
+      
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>

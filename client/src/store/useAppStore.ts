@@ -17,6 +17,7 @@ interface AppState {
   isAuthenticated: boolean;
   isInitialized: boolean;
   isProUser: boolean;
+  hasSkippedOnboarding: boolean;
   syncStatus: SyncStatus;
   isSidebarExpanded: boolean;
   theme: Theme;
@@ -31,6 +32,7 @@ interface AppState {
   businessProfile: BusinessProfile;
   taxSettings: TaxSetting[];
   setInitialized: (initialized: boolean) => void;
+  setHasSkippedOnboarding: (skipped: boolean) => void;
   setSyncStatus: (status: SyncStatus) => void;
   setProUser: (isPro: boolean) => void;
   toggleSidebar: () => void;
@@ -66,8 +68,9 @@ export const useAppStore = create<AppState>()(
       isAuthenticated: false,
       isInitialized: false,
       isProUser: false, // Default to free tier for MVP
+      hasSkippedOnboarding: false,
       syncStatus: 'synced',
-      isSidebarExpanded: false, // Collapsed by default
+      isSidebarExpanded: true, // Collapsed by default
       theme: 'light',
       colorTheme: 'default',
       customColor: '#8b5cf6', // default tailwind violet-500
@@ -91,6 +94,7 @@ export const useAppStore = create<AppState>()(
         { id: '2', name: 'WHT (5%)', rate: 5, isDeduction: true, isActive: false }
       ],
       setInitialized: (initialized) => set({ isInitialized: initialized }),
+      setHasSkippedOnboarding: (skipped) => set({ hasSkippedOnboarding: skipped }),
       setSyncStatus: (status) => set({ syncStatus: status }),
       setProUser: (isPro) => set({ isProUser: isPro }),
       toggleSidebar: () => set((state) => ({ isSidebarExpanded: !state.isSidebarExpanded })),

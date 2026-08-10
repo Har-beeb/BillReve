@@ -10,6 +10,7 @@ import { useAppStore } from '../store/useAppStore';
 import { syncEngine } from '../services/syncEngine';
 import { useNotifications } from '../hooks/useNotifications';
 import { Logo } from '../components/ui/Logo';
+import { OnboardingWizard } from '../components/onboarding/OnboardingWizard';
 
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -56,7 +57,7 @@ const generatePalette = (hex: string) => {
 };
 
 const MainLayout: React.FC = () => {
-  const { syncStatus, theme, colorTheme, customColor, fontFamily, toggleTheme, user, logout, isProUser, mobileNavStyle } = useAppStore();
+  const { syncStatus, theme, colorTheme, customColor, fontFamily, toggleTheme, user, logout, isProUser, mobileNavStyle, businessProfile, hasSkippedOnboarding } = useAppStore();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -166,8 +167,11 @@ const MainLayout: React.FC = () => {
     fontFamily: fontFamily === 'Inter' ? undefined : fontFamily
   };
 
+  const showOnboarding = !businessProfile.name && !hasSkippedOnboarding;
+
   return (
     <div className={`min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200 ${themeClass}`} style={customStyles}>
+      {showOnboarding && <OnboardingWizard />}
       {/* Desktop Sidebar (hidden on mobile) */}
       <aside 
         className={`hidden md:flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 sticky top-0 h-screen transition-[width] duration-300 ease-in-out will-change-[width] relative z-30 ${isSidebarExpanded ? 'w-64' : 'w-20'}`}

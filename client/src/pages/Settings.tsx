@@ -5,45 +5,34 @@ import { PreferencesSettings } from '../components/settings/PreferencesSettings'
 import { ProfileSettings } from '../components/settings/ProfileSettings';
 import { TaxSettings } from '../components/settings/TaxSettings';
 import { SyncSettings } from '../components/settings/SyncSettings';
-
-
+import { Swiper, SwiperSlide } from 'swiper/react';
+// @ts-ignore
+import 'swiper/css';
+import type { Swiper as SwiperType } from 'swiper';
 
 const TABS = ['account', 'preferences', 'profile', 'taxes', 'sync'] as const;
 type Tab = typeof TABS[number];
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('account');
-  const activeIndex = TABS.indexOf(activeTab);
-  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const contentContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
-  
-  const isProgrammaticScroll = useRef(false);
-  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
+  const swiperRef = useRef<{ swiper: SwiperType }>(null);
 
+  // Smooth scroll the header tabs horizontally without scrolling the whole page down
   useEffect(() => {
     const btn = tabRefs.current[activeTab];
-    if (btn && scrollContainerRef.current) {
-      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    const container = scrollContainerRef.current;
+    if (btn && container) {
+      const scrollLeft = btn.offsetLeft - container.offsetWidth / 2 + btn.offsetWidth / 2;
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
     }
   }, [activeTab]);
 
   const handleTabClick = (tab: Tab) => {
-    isProgrammaticScroll.current = true;
     setActiveTab(tab);
-    
-    const index = TABS.indexOf(tab);
-    if (contentContainerRef.current) {
-      contentContainerRef.current.scrollTo({
-        left: index * contentContainerRef.current.clientWidth,
-        behavior: 'smooth'
-      });
-      
-      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-      scrollTimeout.current = setTimeout(() => {
-        isProgrammaticScroll.current = false;
-      }, 600);
+    if (swiperRef.current?.swiper) {
+      swiperRef.current.swiper.slideTo(TABS.indexOf(tab));
     }
   };
 
@@ -73,12 +62,12 @@ const Settings: React.FC = () => {
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col h-[600px] sm:h-[700px] overflow-hidden">
         
         {/* Tab Headers */}
         <div 
           ref={scrollContainerRef}
-          className="flex border-b border-slate-200 dark:border-slate-700 overflow-x-auto hide-scrollbar scroll-smooth"
+          className="flex border-b border-slate-200 dark:border-slate-700 overflow-x-auto hide-scrollbar scroll-smooth shrink-0"
         >
           {TABS.map(tab => (
             <button
@@ -97,28 +86,32 @@ const Settings: React.FC = () => {
           ))}
         </div>
 
-        <div 
-          ref={contentContainerRef}
-          className="flex w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar touch-pan-x smooth-scroll"
-          onScroll={(e) => {
-            if (isProgrammaticScroll.current) return;
-            
-            const container = e.currentTarget;
-            const scrollLeft = container.scrollLeft;
-            const width = container.clientWidth;
-            if (width > 0) {
-              const newIndex = Math.round(scrollLeft / width);
-              if (newIndex !== activeIndex && TABS[newIndex]) {
-                setActiveTab(TABS[newIndex]);
-              }
-            }
-          }}
-        >
-          <div className="w-full shrink-0 snap-center p-6"><AccountSettings /></div>
-          <div className="w-full shrink-0 snap-center p-6"><PreferencesSettings /></div>
-          <div className="w-full shrink-0 snap-center p-6"><ProfileSettings /></div>
-          <div className="w-full shrink-0 snap-center p-6"><TaxSettings /></div>
-          <div className="w-full shrink-0 snap-center p-6"><SyncSettings /></div>
+        {/* Swipeable Pages */}
+        <div className="flex-1 min-h-0 w-full relative">
+          <Swiper
+            ref={swiperRef}
+            onSlideChange={(swiper) => setActiveTab(TABS[swiper.activeIndex])}
+            spaceBetween={0}
+            slidesPerView={1}
+            className="w-full h-full"
+            resistanceRatio={0} // Stops bouncy overscroll so it feels native
+          >
+            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
+              <AccountSettings />
+            </SwiperSlide>
+            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
+              <PreferencesSettings />
+            </SwiperSlide>
+            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
+              <ProfileSettings />
+            </SwiperSlide>
+            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
+              <TaxSettings />
+            </SwiperSlide>
+            <SwiperSlide className="h-full overflow-y-auto p-6 hide-scrollbar">
+              <SyncSettings />
+            </SwiperSlide>
+          </Swiper>
         </div>
       </div>
     </div>
