@@ -51,6 +51,22 @@ const Register: React.FC = () => {
       }
       
       if (emailExists) {
+        // Try to resend OTP. If it succeeds, the account exists but is UNCONFIRMED!
+        const { error: resendError } = await supabase.auth.resend({
+          type: 'signup',
+          email,
+        });
+        
+        if (!resendError) {
+          // It was an unconfirmed account. The code was resent successfully!
+          setShowVerification(true);
+          setResendCountdown(60);
+          setError('');
+          setLoading(false);
+          return;
+        }
+        
+        // If resend fails (e.g. user is already confirmed), throw the standard error
         throw new Error("An account with this email already exists.");
       }
 

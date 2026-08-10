@@ -72,8 +72,18 @@ serve(async (req) => {
       
       const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
 
-      // Welcome Email: Send if not sent yet
-      if (!emailFlags.welcome_sent && profile.email) {
+      // Fetch user confirmation status
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(profile.id);
+      
+      if (userError || !userData.user) {
+        console.error(`Could not fetch auth user for profile ${profile.id}:`, userError?.message);
+        continue;
+      }
+      
+      const isConfirmed = !!userData.user.email_confirmed_at;
+
+      // Welcome Email: Send if not sent yet, and email IS confirmed
+      if (!emailFlags.welcome_sent && profile.email && isConfirmed) {
         const success = await sendEmailWithRetry(
           profile.email,
           'Welcome to BillReve! 🎉',
@@ -94,8 +104,8 @@ serve(async (req) => {
         }
       }
 
-      // Day 3 Email: Send if older than 72 hours, not sent, and NOT pro
-      if (hoursSinceCreation >= 72 && !emailFlags.day3_sent && !profile.is_pro && profile.email) {
+      // Day 3 Email: Send if older than 72 hours, not sent, NOT pro, and email IS confirmed
+      if (hoursSinceCreation >= 72 && !emailFlags.day3_sent && !profile.is_pro && profile.email && isConfirmed) {
         const success = await sendEmailWithRetry(
           profile.email,
           'Unlock Your Business Potential with BillReve Pro! 🚀',
