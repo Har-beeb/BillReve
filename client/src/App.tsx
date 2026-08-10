@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import MainLayout from './layouts/MainLayout';
 import PublicLayout from './layouts/PublicLayout';
+import { useLocation } from 'react-router-dom';
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Quotes = React.lazy(() => import('./pages/Quotes'));
@@ -46,11 +47,52 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" />;
 };
 
-function App() {
-  const setSession = useAppStore(state => state.setSession);
+const ThemeController = () => {
+  const { pathname } = useLocation();
   const theme = useAppStore(state => state.theme);
   const colorTheme = useAppStore(state => state.colorTheme);
   const fontSize = useAppStore(state => state.fontSize);
+
+  useEffect(() => {
+    // Dark mode applies everywhere
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    const root = document.documentElement;
+    root.classList.remove('theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
+    root.style.removeProperty('--color-purple-600');
+    
+    // Apply font size globally
+    if (fontSize === 'small') {
+      root.style.fontSize = '14px';
+    } else if (fontSize === 'large') {
+      root.style.fontSize = '18px';
+    } else {
+      root.style.fontSize = '16px';
+    }
+
+    const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/', '/privacy', '/terms', '/about', '/changelog', '/help', '/guides', '/templates', '/contact'];
+    const isPublicRoute = publicPaths.includes(pathname) || pathname.startsWith('/pay/') || pathname.startsWith('/quote/');
+
+    if (!isPublicRoute) {
+      if (colorTheme !== 'default') {
+        root.classList.add(`theme-${colorTheme}`);
+      }
+
+      if (colorTheme === 'custom') {
+        root.style.setProperty('--color-purple-600', useAppStore.getState().customColor);
+      }
+    }
+  }, [pathname, theme, colorTheme, fontSize]);
+
+  return null;
+};
+
+function App() {
+  const setSession = useAppStore(state => state.setSession);
   const isInitialized = useAppStore(state => state.isInitialized);
 
   useEffect(() => {
@@ -125,37 +167,7 @@ function App() {
     };
   }, [setSession]);
 
-  useEffect(() => {
-    // Handle dark mode
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
 
-    // Handle color theme
-    const root = document.documentElement;
-    root.classList.remove('theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
-    
-    if (colorTheme !== 'default') {
-      root.classList.add(`theme-${colorTheme}`);
-    }
-
-    if (colorTheme === 'custom') {
-      root.style.setProperty('--color-purple-600', useAppStore.getState().customColor);
-    } else {
-      root.style.removeProperty('--color-purple-600');
-    }
-
-    // Apply font size globally
-    if (fontSize === 'small') {
-      root.style.fontSize = '14px';
-    } else if (fontSize === 'large') {
-      root.style.fontSize = '18px';
-    } else {
-      root.style.fontSize = '16px';
-    }
-  }, [theme, colorTheme, fontSize]);
 
   if (!isInitialized) {
     return (
@@ -168,6 +180,7 @@ function App() {
   return (
     <HelmetProvider>
       <BrowserRouter>
+        <ThemeController />
         <Toaster position="bottom-right" />
         <Suspense fallback={
           <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">

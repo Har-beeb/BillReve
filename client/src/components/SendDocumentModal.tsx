@@ -136,6 +136,11 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       
       const client = unsavedClient || await db.clients.get(document.clientId);
 
+      const finalEmail = clientEmail || client?.email;
+      if (!finalEmail) {
+        throw new Error('Client has no email address. Please update their profile.');
+      }
+
       // 2. Generate PDF as base64
       const pdfBase64 = await generateDocumentPdf(document, client, businessProfile, documentType.toUpperCase() as any, false);
       if (!pdfBase64) throw new Error('Failed to generate PDF document');
@@ -164,7 +169,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       // 4. Send to Supabase Edge Function
       const { data: result, error } = await supabase.functions.invoke('send-email', {
         body: {
-          to: clientEmail,
+          to: finalEmail,
           subject,
           html: htmlContent,
           attachments: [

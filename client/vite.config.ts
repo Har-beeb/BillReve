@@ -17,7 +17,7 @@ export default defineConfig({
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000 // 5 MB
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['logo.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'BillReve',
         short_name: 'BillReve',

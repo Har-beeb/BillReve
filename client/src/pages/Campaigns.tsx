@@ -109,6 +109,11 @@ const Campaigns: React.FC = () => {
   };
 
   const handleDraftAI = async () => {
+    if (!navigator.onLine) {
+      toast.error('You need an active internet connection to use AI features.');
+      return;
+    }
+    
     setIsDrafting(true);
     try {
       const response = await supabase.functions.invoke('ai/draft-campaign', {
