@@ -47,6 +47,7 @@ export interface Client {
   updatedAt: string;
   syncStatus: SyncStatus;
   deletedAt?: string;
+  isPurged?: boolean;
 }
 
 export interface Quote {
@@ -69,6 +70,7 @@ export interface Quote {
   updatedAt: string;
   syncStatus: SyncStatus;
   deletedAt?: string;
+  isPurged?: boolean;
   items: QuoteItem[];
   counterAmount?: number;
   clientMessage?: string;
@@ -107,6 +109,7 @@ export interface Invoice {
   updatedAt: string;
   syncStatus: SyncStatus;
   deletedAt?: string;
+  isPurged?: boolean;
   items: InvoiceItem[];
   counterAmount?: number;
   clientMessage?: string;

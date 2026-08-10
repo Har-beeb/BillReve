@@ -1,7 +1,7 @@
 import { db } from '../db/db';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/useAppStore';
-import type { Client, Invoice, Quote } from '../types';
+
 import toast from 'react-hot-toast';
 
 // Helper to convert camelCase keys to snake_case for Supabase
@@ -117,7 +117,10 @@ class SyncEngine {
 
     try {
       await this.pushLocalChanges();
+      
+      const syncStartTime = new Date().toISOString();
       await this.pullRemoteChanges();
+      localStorage.setItem('last_sync_time', syncStartTime);
       
       useAppStore.getState().setSyncStatus('synced');
       this.retryCount = 0;
@@ -223,6 +226,8 @@ class SyncEngine {
 
     const userId = session.user.id;
 
+    const lastSyncTime = localStorage.getItem('last_sync_time');
+
     // Helper to fetch in batches of 500 to prevent memory crashes on large datasets
     const fetchPaginated = async (table: string) => {
       let allData: any[] = [];
@@ -230,11 +235,16 @@ class SyncEngine {
       const limit = 500;
       
       while (true) {
-        const { data, error } = await supabase
+        let query = supabase
           .from(table)
           .select('*')
-          .eq('user_id', userId)
-          .range(from, from + limit - 1);
+          .eq('user_id', userId);
+          
+        if (lastSyncTime) {
+          query = query.gte('updated_at', lastSyncTime);
+        }
+        
+        const { data, error } = await query.range(from, from + limit - 1);
           
         if (error) {
           if (this.isAuthError(error)) {
@@ -260,35 +270,46 @@ class SyncEngine {
       fetchPaginated('quotes')
     ]);
 
-    if (clientsRes.data) {
-      const remoteClients = clientsRes.data.map(toCamelCase);
-      const remoteIds = new Set(remoteClients.map((c: any) => c.localId));
-      const localSynced = await db.clients.where('syncStatus').equals('synced').toArray();
-      const toDelete = localSynced.filter(c => !remoteIds.has(c.localId)).map(c => c.localId);
-      if (toDelete.length > 0) await db.clients.bulkDelete(toDelete);
+    const processRemoteData = async (table: any, remoteData: any[]) => {
+      if (!remoteData || remoteData.length === 0) return;
       
-      await db.clients.bulkPut(remoteClients.map((c: Client) => ({ ...c, syncStatus: 'synced' })));
-    }
-    
-    if (invoicesRes.data) {
-      const remoteInvoices = invoicesRes.data.map(toCamelCase);
-      const remoteIds = new Set(remoteInvoices.map((i: any) => i.localId));
-      const localSynced = await db.invoices.where('syncStatus').equals('synced').toArray();
-      const toDelete = localSynced.filter(i => !remoteIds.has(i.localId)).map(i => i.localId);
-      if (toDelete.length > 0) await db.invoices.bulkDelete(toDelete);
+      const remoteItems = remoteData.map(toCamelCase);
+      const toDeleteLocally: string[] = [];
+      const toPutLocally: any[] = [];
 
-      await db.invoices.bulkPut(remoteInvoices.map((i: Invoice) => ({ ...i, syncStatus: 'synced' })));
-    }
+      for (const remote of remoteItems) {
+        if (remote.isPurged) {
+          toDeleteLocally.push(remote.localId);
+          continue;
+        }
 
-    if (quotesRes.data) {
-      const remoteQuotes = quotesRes.data.map(toCamelCase);
-      const remoteIds = new Set(remoteQuotes.map((q: any) => q.localId));
-      const localSynced = await db.quotes.where('syncStatus').equals('synced').toArray();
-      const toDelete = localSynced.filter(q => !remoteIds.has(q.localId)).map(q => q.localId);
-      if (toDelete.length > 0) await db.quotes.bulkDelete(toDelete);
+        const local = await table.get(remote.localId);
+        if (local && local.syncStatus === 'pending') {
+          // LWW: Last-Write-Wins logic
+          const remoteTime = new Date(remote.updatedAt).getTime();
+          const localTime = new Date(local.updatedAt).getTime();
+          
+          // Priority statuses from client interactions override local stale edits
+          const isPriorityStatus = remote.status === 'ACCEPTED' || remote.status === 'COUNTERED' || remote.status === 'PAID' || remote.status === 'DECLINED';
+          
+          if (remoteTime > localTime || isPriorityStatus) {
+            toPutLocally.push({ ...remote, syncStatus: 'synced' });
+          }
+          // else local wins, do nothing, it will push next cycle
+        } else {
+          toPutLocally.push({ ...remote, syncStatus: 'synced' });
+        }
+      }
 
-      await db.quotes.bulkPut(remoteQuotes.map((q: Quote) => ({ ...q, syncStatus: 'synced' })));
-    }
+      if (toDeleteLocally.length > 0) await table.bulkDelete(toDeleteLocally);
+      if (toPutLocally.length > 0) await table.bulkPut(toPutLocally);
+    };
+
+    await Promise.all([
+      processRemoteData(db.clients, clientsRes.data || []),
+      processRemoteData(db.invoices, invoicesRes.data || []),
+      processRemoteData(db.quotes, quotesRes.data || [])
+    ]);
   }
 }
 

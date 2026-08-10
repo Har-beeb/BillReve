@@ -30,8 +30,8 @@ const Trash: React.FC = () => {
           const entity = 'invoiceNumber' in item ? 'INVOICE' : 'quoteNumber' in item ? 'QUOTE' : 'CLIENT';
           await table.delete(item.localId);
           await db.syncQueue.add({
-            id: uuidv4(), action: 'DELETE', entity,
-            payload: { local_id: item.localId }, status: 'pending', createdAt: new Date().toISOString()
+            id: uuidv4(), action: 'UPDATE', entity,
+            payload: { local_id: item.localId, is_purged: true }, status: 'pending', createdAt: new Date().toISOString()
           });
         }
       }
@@ -70,8 +70,8 @@ const Trash: React.FC = () => {
           } else if (type === 'delete') {
             await table.delete(item.localId);
             await db.syncQueue.add({
-              id: uuidv4(), action: 'DELETE', entity: itemEntity,
-              payload: { local_id: item.localId }, status: 'pending', createdAt: new Date().toISOString()
+              id: uuidv4(), action: 'UPDATE', entity: itemEntity,
+              payload: { local_id: item.localId, is_purged: true }, status: 'pending', createdAt: new Date().toISOString()
             });
           }
         }
@@ -92,8 +92,8 @@ const Trash: React.FC = () => {
           else if (entity === 'QUOTE') await db.quotes.delete(localId);
 
           await db.syncQueue.add({
-            id: uuidv4(), action: 'DELETE', entity,
-            payload: { local_id: localId }, status: 'pending', createdAt: new Date().toISOString()
+            id: uuidv4(), action: 'UPDATE', entity,
+            payload: { local_id: localId, is_purged: true }, status: 'pending', createdAt: new Date().toISOString()
           });
         }
       }
