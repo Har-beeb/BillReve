@@ -72,3 +72,19 @@ export const chatWithRevenue = async (payload: { prompt: string; data: any; busi
 
   return data.data;
 };
+
+export const generateCfoReport = async (payload: { data: any; businessProfile?: any; metrics: any }) => {
+  const { data, error } = await supabase.functions.invoke('ai/cfo-report', {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to generate CFO report');
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message || 'Failed to generate CFO report');
+  }
+
+  return data.data;
+};

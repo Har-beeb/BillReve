@@ -75,6 +75,8 @@ serve(async (req) => {
         return await handleDraftCampaign(aiClient, body);
       case 'insights':
         return await handleInsights(aiClient, body);
+      case 'cfo-report':
+        return await handleCfoReport(aiClient, body);
       default:
         return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -430,5 +432,63 @@ CRITICAL: You MUST respond ONLY with a valid JSON object matching this schema:
   return new Response(JSON.stringify({
     success: true,
     data: parsedResponse
+  }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+async function handleCfoReport(aiClient: GoogleGenAI, body: any) {
+  const schema = z.object({
+    data: z.object({
+      invoices: z.array(z.any()),
+      quotes: z.array(z.any()).optional(),
+      clients: z.array(z.any())
+    }),
+    businessProfile: z.any().optional(),
+    metrics: z.object({
+      totalRevenue: z.number(),
+      outstandingBalance: z.number(),
+      totalTaxCollected: z.number()
+    })
+  });
+
+  const validatedData = schema.parse(body);
+  const businessDataStr = JSON.stringify({
+    metrics: validatedData.metrics,
+    invoices: validatedData.data.invoices,
+    clients: validatedData.data.clients
+  }, null, 2);
+  const defaultCurrency = validatedData.businessProfile?.currency || 'USD';
+
+  const systemPrompt = `You are an expert Chief Financial Officer (CFO).
+Your task is to analyze the provided business data and generate a comprehensive "Financial Health & Action Report".
+
+Business Context:
+- Name: ${validatedData.businessProfile?.name || 'A business'}
+- Industry: ${validatedData.businessProfile?.industry || 'Unspecified'}
+- Currency: ${defaultCurrency}
+
+Data Provided:
+\`\`\`json
+${businessDataStr}
+\`\`\`
+
+Instructions for the Report:
+1. Format your response entirely in valid Markdown. Use headings, bullet points, and bold text for readability.
+2. Structure the report as follows:
+   - **Executive Summary:** A 2-3 sentence overview of their financial health based on total revenue and outstanding balances.
+   - **Cash Flow Analysis:** Breakdown of what has been paid vs what is outstanding.
+   - **Client Insights:** Identify the top paying clients and any clients with large outstanding balances.
+   - **Action Plan:** Provide 3 specific, actionable steps they should take today (e.g., "Chase Client X for the overdue Invoice #0012 for ${defaultCurrency}500").
+3. Do not include raw JSON data in your output. Synthesize the numbers into readable text.
+
+Generate the report now.`;
+
+  const response = await aiClient.models.generateContent({
+    model: "gemini-3.5-flash-lite",
+    contents: systemPrompt,
+  });
+
+  return new Response(JSON.stringify({
+    success: true,
+    data: { text: response.text?.trim() }
   }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }

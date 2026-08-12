@@ -10,6 +10,7 @@ import { generateTaxReportCsv } from '../utils/csvGenerator';
 import { useAppStore } from '../store/useAppStore';
 import toast from 'react-hot-toast';
 import { RevenueChat } from '../components/RevenueChat';
+import { AICfoReport } from '../components/ui/AICfoReport';
 
 type Timeframe = 'day' | 'week' | 'month' | '3month' | '6month' | 'year' | 'custom';
 
@@ -189,60 +190,67 @@ const Reports: React.FC = () => {
           <p className="text-slate-500 dark:text-slate-400">Deep dive into your business analytics.</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
           {timeframe === 'custom' && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <input
                 type="date"
                 value={customStart}
                 onChange={e => setCustomStart(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
               />
               <span className="text-slate-500 text-sm">to</span>
               <input
                 type="date"
                 value={customEnd}
                 onChange={e => setCustomEnd(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
               />
             </div>
           )}
           
-          <select 
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:ring-2 focus:ring-purple-500 outline-none"
-          >
-            <option value="day">Today</option>
-            <option value="week">Past Week</option>
-            <option value="month">Past Month</option>
-            <option value="3month">Past 3 Months</option>
-            <option value="6month">Past 6 Months</option>
-            <option value="year">Past Year</option>
-            <option value="custom">Custom Date Range</option>
-          </select>
+          <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+            <select 
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value as Timeframe)}
+              className="flex-1 min-w-0 px-2 sm:px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm font-medium focus:ring-2 focus:ring-purple-500 outline-none"
+            >
+              <option value="day">Today</option>
+              <option value="week">Past Week</option>
+              <option value="month">Past Month</option>
+              <option value="3month">Past 3 Months</option>
+              <option value="6month">Past 6 Months</option>
+              <option value="year">Past Year</option>
+              <option value="custom">Custom</option>
+            </select>
 
-          <select
-            value={selectedCurrency}
-            onChange={(e) => setSelectedCurrency(e.target.value)}
-            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium focus:ring-2 focus:ring-purple-500 outline-none"
-          >
-            {uniqueCurrencies.map(curr => (
-              <option key={curr} value={curr}>{curr}</option>
-            ))}
-          </select>
-          
-          <button 
-            onClick={handleExportCsv}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm"
-          >
-            <Download size={18} />
-            Export Tax Report
-          </button>
+            <select
+              value={selectedCurrency}
+              onChange={(e) => setSelectedCurrency(e.target.value)}
+              className="w-20 shrink-0 px-2 sm:px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm font-medium focus:ring-2 focus:ring-purple-500 outline-none"
+            >
+              {uniqueCurrencies.map(curr => (
+                <option key={curr} value={curr}>{curr}</option>
+              ))}
+            </select>
+            
+            <button 
+              onClick={handleExportCsv}
+              className="shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm text-xs sm:text-sm"
+              title="Export Tax Report"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">Export Tax Report</span>
+              <span className="inline sm:hidden">Export</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <AICfoReport metrics={metrics} invoices={filteredInvoices} clients={clients} />
+
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
           <div className="flex justify-between items-start mb-4">
             <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400 flex items-center justify-center">
