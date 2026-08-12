@@ -12,18 +12,18 @@ const AuthInput: React.FC<AuthInputProps> = ({ label, type, ...props }) => {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{label}</label>
       <div className="relative">
         <input
           type={currentType}
-          className={`w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-slate-900 transition-shadow text-sm placeholder:text-slate-400 ${isPassword ? 'pr-12' : ''}`}
+          className={`w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-slate-900 dark:text-white transition-shadow text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 ${isPassword ? 'pr-12' : ''}`}
           {...props}
         />
         {isPassword && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none"
             aria-label="Toggle password visibility"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

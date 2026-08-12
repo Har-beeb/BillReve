@@ -165,15 +165,41 @@ export const RevenueChat: React.FC = () => {
 
   const handleExecuteAction = async (msgId: string, action: Action) => {
     try {
+      // Remove the action from the original message so it doesn't render duplicate buttons
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, action: undefined } : m));
+      
       const now = new Date().toISOString();
       if (action.type === 'CREATE_INVOICE' || action.type === 'CREATE_QUOTE') {
         const payload = action.payload;
-        const formattedItems = (payload.items || []).map((item: any) => ({
-          description: item.description || 'Item',
-          quantity: 1,
-          unitPrice: item.amount || 0,
-          amount: item.amount || 0
-        }));
+        const formattedItems = (payload.items || []).map((item: any) => {
+          const qty = item.quantity || 1;
+          const price = item.unitPrice || item.rate || item.amount || 0;
+          return {
+            id: item.id || Date.now().toString() + Math.random().toString(),
+            description: item.description || 'Item',
+            quantity: qty,
+            unitPrice: price,
+            amount: qty * price
+          };
+        });
+        
+        const subtotal = formattedItems.reduce((sum: number, item: any) => sum + item.amount, 0) || (payload.amount || 0);
+        let total = subtotal;
+        
+        const formattedTaxes = (payload.taxes || []).map((t: any) => {
+          const taxAmt = t.type === 'PERCENTAGE' ? (subtotal * (t.rate / 100)) : t.rate;
+          return {
+            id: t.id || Date.now().toString() + Math.random().toString(),
+            name: t.name || 'Tax',
+            rate: t.rate || 0,
+            type: t.type || 'PERCENTAGE',
+            amount: taxAmt
+          };
+        });
+        
+        formattedTaxes.forEach((t: any) => {
+          total += t.amount || 0;
+        });
         
         const invoiceCount = await db.invoices.count();
         const quoteCount = await db.quotes.count();
@@ -188,13 +214,13 @@ export const RevenueChat: React.FC = () => {
             invoiceNumber: nextNum,
             description: payload.description,
             notes: payload.notes || '',
-            dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            dueDate: payload.dueDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             items: formattedItems,
-            subtotal: payload.amount || 0,
-            total: payload.amount || 0,
+            subtotal: subtotal,
+            total: total,
             status: 'DRAFT' as const,
             currency: businessProfile.currency || 'USD',
-            taxes: [],
+            taxes: formattedTaxes,
             amountPaid: 0,
             isRecurring: false,
             syncStatus: 'pending' as const,
@@ -231,13 +257,14 @@ export const RevenueChat: React.FC = () => {
             quoteNumber: nextNum,
             description: payload.description,
             notes: payload.notes || '',
-            expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            expiresAt: payload.expiresAt || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             items: formattedItems,
-            subtotal: payload.amount || 0,
-            total: payload.amount || 0,
+            subtotal: subtotal,
+            total: total,
             status: 'DRAFT' as const,
             currency: businessProfile.currency || 'USD',
-            taxes: [],
+            taxes: formattedTaxes,
+            allowCounterOffer: payload.allowCounterOffer ?? false,
             syncStatus: 'pending' as const,
             createdAt: now,
             updatedAt: now
@@ -419,7 +446,7 @@ export const RevenueChat: React.FC = () => {
                 ) : (
                   <>
                     {formatMessage(msg.content)}
-                    {msg.action && (
+                    {msg.action && msg.action.type !== 'DOCUMENT_CREATED' && (
                       <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-900 border border-purple-200 dark:border-purple-900/50 rounded-lg">
                         <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-2">
                           Action Required: {msg.action.type.replace('_', ' ')}

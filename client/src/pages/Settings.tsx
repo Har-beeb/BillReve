@@ -33,27 +33,16 @@ const Settings: React.FC = () => {
     setActiveTab(tab);
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    // Only handle primary pointer (usually left click or first touch)
-    if (!e.isPrimary) return;
-    touchStartX.current = e.clientX;
-    touchStartY.current = e.clientY;
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
   };
 
-  const handlePointerUp = (e: React.TouchEvent | React.PointerEvent) => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
     
-    // Support both TouchEvent and PointerEvent
-    let touchEndX = 0;
-    let touchEndY = 0;
-    
-    if ('changedTouches' in e) {
-      touchEndX = e.changedTouches[0].clientX;
-      touchEndY = e.changedTouches[0].clientY;
-    } else {
-      touchEndX = (e as React.PointerEvent).clientX;
-      touchEndY = (e as React.PointerEvent).clientY;
-    }
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
     
     const deltaX = touchStartX.current - touchEndX;
     const deltaY = touchStartY.current - touchEndY;
@@ -94,12 +83,12 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
+    <div className="w-full max-w-4xl mx-auto space-y-6 animate-fade-in-up min-w-0">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col h-[600px] sm:h-[700px] overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col h-auto overflow-hidden min-w-0">
         
         {/* Tab Headers */}
         <div 
@@ -125,20 +114,19 @@ const Settings: React.FC = () => {
 
         {/* Swipeable Pages Container */}
         <div 
-          className="flex-1 min-h-0 w-full relative overflow-hidden"
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onTouchEnd={handlePointerUp} // Fallback for pure touch devices that might not fire pointer events perfectly
+          className="w-full relative overflow-x-hidden min-w-0 flex-1"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           <div 
-            className="w-full h-full flex transition-transform duration-300 ease-out"
+            className="w-full flex transition-transform duration-300 ease-out items-start"
             style={{ transform: `translateX(-${activeIndex * 100}%)` }}
           >
-            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><AccountSettings /></div>
-            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><PreferencesSettings /></div>
-            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><ProfileSettings /></div>
-            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><TaxSettings /></div>
-            <div className="w-full h-full flex-shrink-0 overflow-y-auto p-6 hide-scrollbar"><SyncSettings /></div>
+            <div className={`w-full flex-shrink-0 p-4 sm:p-6 transition-opacity duration-300 ${activeTab === 'account' ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden'}`}><AccountSettings /></div>
+            <div className={`w-full flex-shrink-0 p-4 sm:p-6 transition-opacity duration-300 ${activeTab === 'preferences' ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden'}`}><PreferencesSettings /></div>
+            <div className={`w-full flex-shrink-0 p-4 sm:p-6 transition-opacity duration-300 ${activeTab === 'profile' ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden'}`}><ProfileSettings /></div>
+            <div className={`w-full flex-shrink-0 p-4 sm:p-6 transition-opacity duration-300 ${activeTab === 'taxes' ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden'}`}><TaxSettings /></div>
+            <div className={`w-full flex-shrink-0 p-4 sm:p-6 transition-opacity duration-300 ${activeTab === 'sync' ? 'opacity-100 h-auto' : 'opacity-0 h-0 overflow-hidden'}`}><SyncSettings /></div>
           </div>
         </div>
       </div>

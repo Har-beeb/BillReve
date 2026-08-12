@@ -189,8 +189,8 @@ const Login: React.FC = () => {
 
           <div className="flex items-center justify-between pt-1 pb-2">
             <label className="flex items-center gap-2 cursor-pointer group">
-              <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 bg-white" />
-              <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Remember me</span>
+              <input type="checkbox" className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 bg-white dark:bg-slate-800" />
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Remember me</span>
             </label>
             <Link to="/forgot-password" className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors">Forgot password?</Link>
           </div>
@@ -204,18 +204,18 @@ const Login: React.FC = () => {
           </button>
           
           <div className="relative flex items-center py-2">
-            <div className="flex-grow border-t border-slate-200"></div>
-            <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">or sign in with</span>
-            <div className="flex-grow border-t border-slate-200"></div>
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+            <span className="flex-shrink-0 mx-4 text-slate-400 dark:text-slate-500 text-sm">or sign in with</span>
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
           </div>
 
           <OAuthButton provider="google" onClick={handleOAuthLogin} />
         </form>
       )}
 
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
         Don't have an account?{' '}
-        <Link to="/register" className="font-semibold text-purple-600 hover:text-purple-700 transition-colors">
+        <Link to="/register" className="font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">
           Sign up
         </Link>
       </p>

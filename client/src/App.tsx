@@ -101,7 +101,7 @@ function App() {
       if (sessionUser) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_pro, pro_expires_at, name, email, phone, address, bank_name, account_name, account_number, country, currency, logo_url')
+          .select('is_pro, pro_expires_at, name, email, phone, address, bank_name, account_name, account_number, country, currency, logo_url, industry, business_description')
           .eq('id', sessionUser.id)
           .single();
           
@@ -120,6 +120,8 @@ function App() {
             country: profile.country || store.businessProfile.country,
             currency: profile.currency || store.businessProfile.currency,
             logoUrl: profile.logo_url || store.businessProfile.logoUrl,
+            industry: profile.industry || store.businessProfile.industry,
+            businessDescription: profile.business_description || store.businessProfile.businessDescription,
             bankAccounts: profile.bank_name ? [
               {
                 id: '1',

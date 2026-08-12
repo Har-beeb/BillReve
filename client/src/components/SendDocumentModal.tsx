@@ -65,7 +65,21 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
   }, [isOpen, documentId, documentType]);
 
   const handleDraftEmail = async () => {
-    if (!documentDetails || !clientDetails) return;
+    const targetDoc = documentDetails || unsavedDocument;
+    let targetClient = clientDetails || unsavedClient;
+    
+    if (!targetDoc) return;
+    
+    // Fallback fetch if targetClient is missing for any reason
+    if (!targetClient && targetDoc.clientId) {
+      targetClient = await db.clients.get(targetDoc.clientId);
+    }
+    
+    if (!targetClient) {
+      toast.error('Client details could not be loaded. Please try again.');
+      return;
+    }
+
     if (!navigator.onLine) {
       toast.error('You need to be online to draft emails with AI.');
       return;
@@ -73,11 +87,11 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     
     setIsDrafting(true);
     try {
-      const isOverdue = documentType === 'Invoice' && documentDetails.dueDate && new Date(documentDetails.dueDate) < new Date();
+
+      const isOverdue = documentType === 'Invoice' && targetDoc.dueDate && new Date(targetDoc.dueDate) < new Date();
       
-      // Fetch client history (past invoices and quotes) to personalize the draft
-      const pastInvoices = await db.invoices.where('clientId').equals(clientDetails.localId).filter(x => !x.deletedAt).toArray();
-      const pastQuotes = await db.quotes.where('clientId').equals(clientDetails.localId).filter(x => !x.deletedAt).toArray();
+      const pastInvoices = await db.invoices.where('clientId').equals(targetDoc.clientId).filter(x => !x.deletedAt).toArray();
+      const pastQuotes = await db.quotes.where('clientId').equals(targetDoc.clientId).filter(x => !x.deletedAt).toArray();
       
       const clientHistory = {
         totalInvoices: pastInvoices.length,
@@ -88,11 +102,11 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
 
       const draft = await draftAiEmail({
         documentType: documentType.toUpperCase() as 'QUOTE' | 'INVOICE',
-        documentDetails,
-        clientDetails,
+        documentDetails: targetDoc,
+        clientDetails: targetClient,
         clientHistory,
         businessName: businessProfile.name || 'Your Business',
-        currency: documentDetails.currency || 'USD',
+        currency: targetDoc.currency || 'USD',
         isOverdue: isOverdue || false,
         businessProfile
       });
@@ -114,7 +128,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
     ? `${window.location.origin}/pay/${documentId}`
     : `${window.location.origin}/quote/${documentId}`;
 
-  const isOverdue = documentDetails && documentType === 'Invoice' && documentDetails.dueDate && new Date(documentDetails.dueDate) < new Date();
+  const isOverdue = (documentDetails || unsavedDocument) && documentType === 'Invoice' && (documentDetails?.dueDate || unsavedDocument?.dueDate) && new Date(documentDetails?.dueDate || unsavedDocument?.dueDate) < new Date();
 
   const handleSendEmail = async () => {
     if (!navigator.onLine) {
@@ -284,12 +298,12 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
               <ProFeature isProUser={isProUser} className="inline-block">
                 <button
                   onClick={handleDraftEmail}
-                  disabled={isDrafting || !documentDetails}
+                  disabled={isDrafting || (!documentDetails && !unsavedDocument)}
                   className="flex-none px-3 py-1.5 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-medium rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Draft a professional message using AI"
                 >
-                  {isDrafting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} className={documentType === 'Invoice' && documentDetails?.dueDate && new Date(documentDetails.dueDate) < new Date() ? 'animate-pulse text-red-500' : ''} />}
-                  {documentType === 'Invoice' && documentDetails?.dueDate && new Date(documentDetails.dueDate) < new Date() 
+                  {isDrafting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} className={isOverdue ? 'animate-pulse text-red-500' : ''} />}
+                  {isOverdue 
                     ? 'AI Draft Reminder' 
                     : 'AI Draft Message'}
                 </button>

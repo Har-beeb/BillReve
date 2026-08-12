@@ -93,9 +93,15 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   // Tax state
   const [appliedTaxes, setAppliedTaxes] = useState<Set<string>>(() => {
     if (initialDoc?.taxes) {
-      return new Set(initialDoc.taxes.map((t: any) => taxSettings.find(ts => ts.name === t.name)?.id).filter(Boolean));
+      return new Set(initialDoc.taxes.map((t: any) => {
+        const found = taxSettings.find(ts => 
+          ts.name.toLowerCase() === t.name.toLowerCase() ||
+          ts.name.toLowerCase().includes(t.name.toLowerCase()) ||
+          t.name.toLowerCase().includes(ts.name.toLowerCase())
+        );
+        return found?.id;
+      }).filter(Boolean));
     }
-    // No default tax setting property available, so start empty or based on logic if needed
     return new Set();
   });
   

@@ -26,10 +26,10 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
   }, []);
 
   return (
-    <div className="min-h-screen flex bg-white font-inter font-sans">
+    <div className="min-h-screen flex bg-white dark:bg-slate-900 font-inter font-sans">
       
       {/* Left side: Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-16 md:px-24 xl:px-32 relative animate-fade-in bg-white z-10 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.05)]">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-16 md:px-24 xl:px-32 relative animate-fade-in bg-white dark:bg-slate-900 z-10 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.05)]">
         <div className="max-w-md w-full mx-auto relative pt-12 sm:pt-0">
           
           <Link to="/" className="absolute top-0 left-0 sm:-top-16 sm:left-0 flex items-center gap-2 text-sm text-slate-500 hover:text-purple-600 transition-colors font-medium">
@@ -40,11 +40,11 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
           {/* Brand */}
           <Link to="/" className="flex items-center gap-3 mb-6 inline-flex hover:opacity-90 transition-opacity">
             <Logo size="sm" className="!mb-0" />
-            <span className="font-['Outfit'] font-black text-2xl tracking-tight text-slate-900">BillReve</span>
+            <span className="font-['Outfit'] font-black text-2xl tracking-tight text-slate-900 dark:text-white">BillReve</span>
           </Link>
 
-          <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">{title}</h2>
-          <p className="text-slate-500 mb-5 text-sm">{subtitle}</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">{title}</h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-5 text-sm">{subtitle}</p>
 
           {children}
         </div>

@@ -375,7 +375,7 @@ const PublicQuote: React.FC = () => {
                       step="0.01"
                       value={counterAmount}
                       onChange={(e) => setCounterAmount(Number(e.target.value) || '')}
-                      className="w-full pl-8 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-black dark:text-black"
+                      className="w-full pl-14 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-black dark:text-black"
                       placeholder="e.g. 5000"
                     />
                   </div>
