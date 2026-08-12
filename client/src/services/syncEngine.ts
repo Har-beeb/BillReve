@@ -283,8 +283,24 @@ class SyncEngine {
           continue;
         }
 
+        // Propagate soft-deletes across devices
+        if (remote.deletedAt) {
+          const local = await table.get(remote.localId);
+          if (local && !local.deletedAt) {
+            // Remote has been soft-deleted but local doesn't know yet
+            toPutLocally.push({ ...remote, syncStatus: 'synced' });
+          } else if (!local) {
+            // Item doesn't exist locally yet but is deleted remotely — no need to create it
+          } else {
+            // Both sides know it's deleted, keep remote version
+            toPutLocally.push({ ...remote, syncStatus: 'synced' });
+          }
+          continue;
+        }
+
         const local = await table.get(remote.localId);
         if (local && local.syncStatus === 'pending') {
+
           // LWW: Last-Write-Wins logic
           const remoteTime = new Date(remote.updatedAt).getTime();
           const localTime = new Date(local.updatedAt).getTime();

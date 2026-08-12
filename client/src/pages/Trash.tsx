@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { Trash2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Trash2, RefreshCw, AlertCircle, CheckSquare } from 'lucide-react';
 import { EmptyState, LongPressable } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
 import { useSelection } from '../hooks/useSelection';
@@ -47,6 +47,8 @@ const Trash: React.FC = () => {
 
   const [processingId, setProcessingId] = React.useState<string | null>(null);
   const [modalConfig, setModalConfig] = React.useState<{ isOpen: boolean, type: 'restore' | 'delete', entity: 'CLIENT' | 'INVOICE' | 'QUOTE' | 'BULK', localId: string, itemName: string } | null>(null);
+  // Suppress click event that fires right after a long-press
+  const longPressJustFired = useRef(false);
 
   const confirmAction = async () => {
     if (!modalConfig) return;
@@ -110,8 +112,16 @@ const Trash: React.FC = () => {
     return (
       <LongPressable
         key={item.id}
-        onLongPress={() => toggleSelect(item.localId)}
-        onClick={() => { if (selectedIds.size > 0) toggleSelect(item.localId); }}
+        onLongPress={() => {
+          longPressJustFired.current = true;
+          toggleSelect(item.localId);
+          // Reset after a short delay to allow the onClick to be suppressed
+          setTimeout(() => { longPressJustFired.current = false; }, 400);
+        }}
+        onClick={() => {
+          if (longPressJustFired.current) return;
+          if (selectedIds.size > 0) toggleSelect(item.localId);
+        }}
         className={`group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 transition-colors gap-2 md:gap-0 ${selectedIds.has(item.localId) ? 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-l-purple-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 border-transparent'}`}
       >
         <div className="flex md:hidden items-start gap-3 w-full">
@@ -223,7 +233,7 @@ const Trash: React.FC = () => {
         document.body
       )}
 
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-start flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Trash2 className="text-red-500" /> Trash
@@ -233,20 +243,36 @@ const Trash: React.FC = () => {
           </p>
         </div>
 
-        {selectedIds.size > 0 && (
-          <div className="flex gap-2 animate-in fade-in slide-in-from-bottom-2">
-            <button 
-              onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'BULK', localId: 'bulk', itemName: `${selectedIds.size} selected items` })}
-              className="px-3 md:px-4 py-2 bg-white dark:bg-slate-800 text-blue-600 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
+        {!isEmpty && (
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Select All — visible on mobile & desktop when items exist */}
+            <button
+              onClick={() => {
+                if (selectedIds.size === allItems.length) clearSelection();
+                else setSelectedIds(new Set(allItems.map(i => i.localId)));
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-purple-300 dark:hover:border-purple-700 transition-colors shadow-sm"
             >
-              Restore ({selectedIds.size})
+              <CheckSquare size={15} />
+              {selectedIds.size === allItems.length ? 'Deselect All' : 'Select All'}
             </button>
-            <button 
-              onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'BULK', localId: 'bulk', itemName: `${selectedIds.size} selected items` })}
-              className="px-3 md:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
-            >
-              Delete ({selectedIds.size})
-            </button>
+
+            {selectedIds.size > 0 && (
+              <>
+                <button 
+                  onClick={() => setModalConfig({ isOpen: true, type: 'restore', entity: 'BULK', localId: 'bulk', itemName: `${selectedIds.size} selected items` })}
+                  className="px-3 md:px-4 py-2 bg-white dark:bg-slate-800 text-blue-600 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
+                >
+                  Restore ({selectedIds.size})
+                </button>
+                <button 
+                  onClick={() => setModalConfig({ isOpen: true, type: 'delete', entity: 'BULK', localId: 'bulk', itemName: `${selectedIds.size} selected items` })}
+                  className="px-3 md:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
+                >
+                  Delete ({selectedIds.size})
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -78,7 +78,10 @@ const PublicInvoice: React.FC = () => {
           const { data } = await supabase
             .rpc('get_public_profile', { p_id: invoiceData.user_id })
             .maybeSingle();
-          if (data) profileData = data;
+          if (data) {
+            profileData = data;
+            profileData.bankAccounts = (data as any).bank_accounts || [];
+          }
           else throw new Error('Profile not found');
         } catch (e) {
           const storageStr = localStorage.getItem('billflow-storage');

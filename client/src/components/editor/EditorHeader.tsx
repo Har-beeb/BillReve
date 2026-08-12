@@ -127,7 +127,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
               />
             </div>
 
-          {(type === 'INVOICE' || (businessProfile.bankAccounts && businessProfile.bankAccounts.length > 0)) && (
+          {(type === 'INVOICE' && businessProfile.bankAccounts && businessProfile.bankAccounts.length > 0) && (
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Receiving Bank</label>
               <div className="relative group">

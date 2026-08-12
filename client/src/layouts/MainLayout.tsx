@@ -167,7 +167,7 @@ const MainLayout: React.FC = () => {
     fontFamily: fontFamily === 'Inter' ? undefined : fontFamily
   };
 
-  const showOnboarding = !businessProfile.name && !hasSkippedOnboarding;
+  const showOnboarding = (!businessProfile.name || !businessProfile.industry || !businessProfile.businessDescription) && !hasSkippedOnboarding;
 
   return (
     <div className={`min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200 ${themeClass}`} style={customStyles}>
