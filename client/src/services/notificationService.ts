@@ -104,9 +104,21 @@ class NotificationService {
       .subscribe();
   }
 
-  private handleDocumentUpdate(type: 'Invoice' | 'Quote', oldDoc: any, newDoc: any) {
-    // Only trigger if status changed
-    if (oldDoc.status === newDoc.status) return;
+  private async handleDocumentUpdate(type: 'Invoice' | 'Quote', oldDoc: any, newDoc: any) {
+    // Ignore if document is being deleted
+    if (newDoc.deleted_at || newDoc.is_purged) return;
+
+    // Supabase oldDoc might only contain the primary key, so oldDoc.status is undefined.
+    // We check the local DB to see if the status actually changed.
+    const table = type === 'Invoice' ? db.invoices : db.quotes;
+    if (newDoc.local_id) {
+      const existing = await table.get(newDoc.local_id);
+      if (existing && existing.status === newDoc.status) {
+        return; // Status hasn't changed, ignore
+      }
+    } else if (oldDoc.status === newDoc.status) {
+      return;
+    }
 
     const identifier = newDoc.invoice_number || newDoc.quote_number || 'Draft';
     let title = '';
