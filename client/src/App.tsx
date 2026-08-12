@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import MainLayout from './layouts/MainLayout';
 import PublicLayout from './layouts/PublicLayout';
 import { useLocation } from 'react-router-dom';
+import { UpdatePrompt } from './components/ui/UpdatePrompt';
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Quotes = React.lazy(() => import('./pages/Quotes'));
@@ -190,6 +191,7 @@ function App() {
       <BrowserRouter>
         <ThemeController />
         <Toaster position="bottom-right" />
+        <UpdatePrompt />
         <Suspense fallback={
           <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
             <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
