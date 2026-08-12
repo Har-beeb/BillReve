@@ -34,6 +34,7 @@ export const OnboardingWizard: React.FC = () => {
     email: businessProfile.email || '',
     phone: businessProfile.phone || '',
     industry: businessProfile.industry || 'Technology',
+    businessDescription: businessProfile.businessDescription || '',
     country: businessProfile.country || 'Nigeria',
     currency: businessProfile.currency || 'NGN',
     logoUrl: businessProfile.logoUrl || '',
@@ -135,7 +136,7 @@ export const OnboardingWizard: React.FC = () => {
 
         {/* Content Container */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
-          <div className="relative h-[420px] overflow-hidden">
+          <div className="relative h-[500px] overflow-hidden">
             <AnimatePresence initial={false} custom={direction}>
               
               {/* STEP 0: Basics */}
@@ -212,6 +213,17 @@ export const OnboardingWizard: React.FC = () => {
                         <option value="Retail">Retail</option>
                         <option value="Other">Other</option>
                       </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Business Description <span className="text-slate-400 font-normal">(optional)</span></label>
+                      <textarea
+                        value={profile.businessDescription}
+                        onChange={e => setProfile({...profile, businessDescription: e.target.value})}
+                        rows={2}
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+                        placeholder="e.g. We build custom software for SMEs in Africa"
+                      />
                     </div>
                   </div>
                 </motion.div>
