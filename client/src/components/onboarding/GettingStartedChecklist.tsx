@@ -10,9 +10,9 @@ export const GettingStartedChecklist: React.FC = () => {
   const { businessProfile } = useAppStore();
   const navigate = useNavigate();
 
-  // Use live Dexie queries for accurate real-time counts
-  const clientCount = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).count(), [], 0);
-  const invoiceCount = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).count(), [], 0);
+  // Use live Dexie queries for accurate real-time counts. Remove default value so we can detect loading state.
+  const clientCount = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).count());
+  const invoiceCount = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).count());
   
   const [aiUsed, setAiUsed] = useState(localStorage.getItem('billreve_ai_used') === 'true');
 
@@ -72,7 +72,9 @@ export const GettingStartedChecklist: React.FC = () => {
   
   const [isDismissed, setIsDismissed] = useState(localStorage.getItem('billreve_checklist_dismissed') === 'true');
 
-  if (isDismissed || isAllComplete) {
+  const isLoading = clientCount === undefined || invoiceCount === undefined;
+
+  if (isLoading || isDismissed || isAllComplete) {
     return null;
   }
 
