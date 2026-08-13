@@ -186,7 +186,7 @@ const MainLayout: React.FC = () => {
             }`}
         />
 
-        <div className={`p-6 font-bold text-2xl text-[#9333ea] flex items-center justify-start h-20`}>
+        <div className={`p-6 font-bold text-2xl flex items-center justify-start h-20 text-black dark:text-white`}>
           <Logo size="sm" className="flex-shrink-0" />
           <span className={`font-['Outfit'] font-black overflow-hidden whitespace-nowrap text-2xl transition-all duration-300 ease-out ${isSidebarExpanded ? 'max-w-[150px] opacity-100 ml-3 translate-x-0' : 'max-w-0 opacity-0 ml-0 -translate-x-4'}`}>
             BillReve
@@ -268,7 +268,7 @@ const MainLayout: React.FC = () => {
                 <Logo size="sm" className="flex-shrink-0" />
               )}
               {mobileNavStyle === 'drawer' && (
-                <span className="font-['Outfit'] font-black text-2xl text-[#9333ea] tracking-tight">BillReve</span>
+                <span className="font-['Outfit'] font-black text-2xl text-black dark:text-white tracking-tight">BillReve</span>
               )}
             </div>
           </div>
@@ -460,9 +460,9 @@ const MainLayout: React.FC = () => {
           {/* Drawer */}
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-black dark:text-white">
                 <Logo size="sm" className="!mb-0 flex-shrink-0" />
-                <span className="font-['Outfit'] font-black text-2xl text-[#9333ea] mt-0.5">BillReve</span>
+                <span className="font-['Outfit'] font-black text-2xl mt-0.5">BillReve</span>
               </div>
               <button
                 type="button"

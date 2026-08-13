@@ -290,7 +290,8 @@ class SyncEngine {
             // Remote has been soft-deleted but local doesn't know yet
             toPutLocally.push({ ...remote, syncStatus: 'synced' });
           } else if (!local) {
-            // Item doesn't exist locally yet but is deleted remotely — no need to create it
+            // Item doesn't exist locally yet but is deleted remotely — create it so it shows in Trash
+            toPutLocally.push({ ...remote, syncStatus: 'synced' });
           } else {
             // Both sides know it's deleted, keep remote version
             toPutLocally.push({ ...remote, syncStatus: 'synced' });
