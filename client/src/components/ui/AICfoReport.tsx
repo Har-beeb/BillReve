@@ -4,6 +4,7 @@ import { generateCfoReport } from '../../api/ai';
 import { useAppStore } from '../../store/useAppStore';
 import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface AICfoReportProps {
   metrics: {
@@ -57,7 +58,7 @@ export const AICfoReport: React.FC<AICfoReportProps> = ({ metrics, invoices, cli
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
       <div className="p-6 border-b border-slate-100 dark:border-slate-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
             <Bot className="text-white" size={24} />
           </div>
           <div>
@@ -91,8 +92,8 @@ export const AICfoReport: React.FC<AICfoReportProps> = ({ metrics, invoices, cli
 
       {reportText && (
         <div className="p-6 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
-          <div className="prose prose-slate dark:prose-invert max-w-none prose-h2:text-xl prose-h2:mb-4 prose-h3:text-lg prose-p:text-sm prose-li:text-sm">
-            <ReactMarkdown>{reportText}</ReactMarkdown>
+          <div className="prose prose-slate dark:prose-invert max-w-none prose-h2:text-xl prose-h2:mb-4 prose-h3:text-lg prose-p:text-sm prose-li:text-sm overflow-x-auto prose-table:w-full prose-td:border prose-th:border prose-td:border-slate-200 dark:prose-td:border-slate-700 prose-th:border-slate-200 dark:prose-th:border-slate-700 prose-th:bg-slate-100 dark:prose-th:bg-slate-800 prose-td:p-2 prose-th:p-2 prose-table:table-auto">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{reportText}</ReactMarkdown>
           </div>
         </div>
       )}

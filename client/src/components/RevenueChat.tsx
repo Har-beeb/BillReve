@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { MessageSquare, X, Send, Loader2, User, Copy, Check, CheckCircle, Bot, Sparkles } from 'lucide-react';
 import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
@@ -394,8 +395,8 @@ export const RevenueChat: React.FC = () => {
 
   const formatMessage = (text: string) => {
     return (
-      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-800 prose-pre:text-slate-100 text-sm">
-        <ReactMarkdown>{text}</ReactMarkdown>
+      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-800 prose-pre:text-slate-100 text-sm overflow-x-auto prose-table:w-full prose-td:border prose-th:border prose-td:border-slate-200 dark:prose-td:border-slate-700 prose-th:border-slate-200 dark:prose-th:border-slate-700 prose-th:bg-slate-100 dark:prose-th:bg-slate-800 prose-td:p-2 prose-th:p-2 prose-table:table-auto">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
       </div>
     );
   };
