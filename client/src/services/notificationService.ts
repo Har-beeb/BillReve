@@ -101,24 +101,41 @@ class NotificationService {
           this.handleDocumentUpdate('Quote', payload.old, payload.new);
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'clients', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          this.handleDocumentUpdate('Client', payload.old, payload.new);
+        }
+      )
       .subscribe();
   }
 
-  private async handleDocumentUpdate(type: 'Invoice' | 'Quote', oldDoc: any, newDoc: any) {
-    // Ignore if document is being deleted
-    if (newDoc.deleted_at || newDoc.is_purged) return;
+  private async handleDocumentUpdate(type: 'Invoice' | 'Quote' | 'Client', oldDoc: any, newDoc: any) {
+    // Sync if document is being soft-deleted or purged, but don't show notification
+    if (newDoc.deleted_at || newDoc.is_purged) {
+      await this.syncLocalDatabase(type, newDoc);
+      return;
+    }
 
     // Supabase oldDoc might only contain the primary key, so oldDoc.status is undefined.
     // We check the local DB to see if the status actually changed.
-    const table = type === 'Invoice' ? db.invoices : db.quotes;
+    let table;
+    if (type === 'Invoice') table = db.invoices;
+    else if (type === 'Quote') table = db.quotes;
+    else table = db.clients;
+    
     if (newDoc.local_id) {
-      const existing = await table.get(newDoc.local_id);
+      const existing: any = await table.get(newDoc.local_id);
       if (existing && existing.status === newDoc.status) {
         return; // Status hasn't changed, ignore
       }
     } else if (oldDoc.status === newDoc.status) {
       return;
     }
+
+    // Clients don't have a status that triggers notifications
+    if (type === 'Client') return;
 
     const identifier = newDoc.invoice_number || newDoc.quote_number || 'Draft';
     let title = '';
@@ -145,9 +162,13 @@ class NotificationService {
     this.showNotification(title, { body });
   }
 
-  private async syncLocalDatabase(type: 'Invoice' | 'Quote', serverDoc: any) {
+  private async syncLocalDatabase(type: 'Invoice' | 'Quote' | 'Client', serverDoc: any) {
     try {
-      const table = type === 'Invoice' ? db.invoices : db.quotes;
+      let table: any;
+      if (type === 'Invoice') table = db.invoices;
+      else if (type === 'Quote') table = db.quotes;
+      else table = db.clients;
+      
       const localId = serverDoc.local_id;
       
       if (localId) {
@@ -156,16 +177,18 @@ class NotificationService {
         
         // Update local status to match the server if the document exists
         if (existing) {
-          await table.update(localId, { status: serverDoc.status, updatedAt: serverDoc.updated_at });
+          const updates: any = { updatedAt: serverDoc.updated_at };
+          if (serverDoc.status !== undefined) updates.status = serverDoc.status;
+          if (serverDoc.deleted_at !== undefined) updates.deletedAt = serverDoc.deleted_at;
+          if (serverDoc.is_purged !== undefined) updates.isPurged = serverDoc.is_purged;
+          
+          await table.update(localId, updates);
           
           // Re-fetch items into Zustand store so the UI updates
           const store = useAppStore.getState();
           
           if (type === 'Invoice') {
-            store.setSession(store.session); // Hack to trigger re-render if needed, though Zustand array mutation handles it better
-            // A better way is to update the item in the array if we expose an update function
-            // For now, we will rely on SyncEngine which runs periodically to catch this up,
-            // but the status is instantly patched in Dexie.
+            store.setSession(store.session); // Hack to trigger re-render if needed
           }
         }
       }
