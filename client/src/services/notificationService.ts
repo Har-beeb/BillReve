@@ -112,21 +112,26 @@ class NotificationService {
   }
 
   private async handleDocumentUpdate(type: 'Invoice' | 'Quote' | 'Client', oldDoc: any, newDoc: any) {
-    // Sync if document is being soft-deleted or purged, but don't show notification
-    if (newDoc.deleted_at || newDoc.is_purged) {
-      await this.syncLocalDatabase(type, newDoc);
-      return;
-    }
-
-    // Supabase oldDoc might only contain the primary key, so oldDoc.status is undefined.
-    // We check the local DB to see if the status actually changed.
-    let table;
+    let table: any;
     if (type === 'Invoice') table = db.invoices;
     else if (type === 'Quote') table = db.quotes;
     else table = db.clients;
     
+    // Sync if document is being soft-deleted or purged, but don't show notification
+    if (newDoc.deleted_at || newDoc.is_purged) {
+      await this.syncLocalDatabase(type, newDoc, table);
+      return;
+    }
+
     if (newDoc.local_id) {
       const existing: any = await table.get(newDoc.local_id);
+      
+      // If it exists locally as deleted, but remote says it's not deleted, it's a restore
+      if (existing && existing.deletedAt && !newDoc.deleted_at) {
+        await this.syncLocalDatabase(type, newDoc, table);
+        return;
+      }
+      
       if (existing && existing.status === newDoc.status) {
         return; // Status hasn't changed, ignore
       }
@@ -157,18 +162,13 @@ class NotificationService {
 
     // Force sync the local database to get the latest status
     // since the server changed it (e.g. from a public link interaction)
-    this.syncLocalDatabase(type, newDoc);
+    this.syncLocalDatabase(type, newDoc, table);
 
     this.showNotification(title, { body });
   }
 
-  private async syncLocalDatabase(type: 'Invoice' | 'Quote' | 'Client', serverDoc: any) {
+  private async syncLocalDatabase(type: 'Invoice' | 'Quote' | 'Client', serverDoc: any, table: any) {
     try {
-      let table: any;
-      if (type === 'Invoice') table = db.invoices;
-      else if (type === 'Quote') table = db.quotes;
-      else table = db.clients;
-      
       const localId = serverDoc.local_id;
       
       if (localId) {
