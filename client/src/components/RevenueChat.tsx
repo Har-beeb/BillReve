@@ -45,6 +45,13 @@ export const RevenueChat: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (isOpen) {
+      if (localStorage.getItem('billreve_ai_used') !== 'true') {
+        localStorage.setItem('billreve_ai_used', 'true');
+        window.dispatchEvent(new Event('storage'));
+      }
+    }
+    
     if (!isTyping && isOpen) {
       setTimeout(() => {
         inputRef.current?.focus();
@@ -64,6 +71,10 @@ export const RevenueChat: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
+    
+    const handleOpenChat = () => setIsOpen(true);
+    document.addEventListener('open-revenue-chat', handleOpenChat);
+    return () => document.removeEventListener('open-revenue-chat', handleOpenChat);
   }, []);
 
   useEffect(() => {

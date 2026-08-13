@@ -236,9 +236,6 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       const defaultText = `Hi there,\n\nPlease find the link to your ${documentType} for the amount of ${amount} below:\n\n${publicLink}\n\nThank you!`;
     const messageToSend = customMessage.trim() ? `${customMessage.trim()}\n\n${publicLink}` : defaultText;
     const text = encodeURIComponent(messageToSend);
-    // Using wa.me which will open WhatsApp app or web depending on device
-    window.open(`https://wa.me/?text=${text}`, '_blank');
-    
     try {
       // Update status to SENT
       if (!skipDbUpdate) {
@@ -256,14 +253,17 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       console.error('Failed to update status', e);
     }
     
-    // Immediately sync so it appears as SENT on other devices
-    syncEngine.sync();
-
     if (onSendSuccess) {
       await onSendSuccess('WHATSAPP');
     }
 
+    // Immediately sync so it appears as SENT on other devices
+    syncEngine.sync();
+
     onClose();
+
+    // Using wa.me which will open WhatsApp app or web depending on device
+    window.open(`https://wa.me/?text=${text}`, '_blank');
     } catch (err) {
       console.error('Failed to prepare WhatsApp:', err);
       toast.error('Failed to prepare WhatsApp message.');

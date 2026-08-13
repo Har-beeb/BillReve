@@ -185,6 +185,9 @@ export const useAppStore = create<AppState>()(
           
           // Clear any remaining storage
           localStorage.removeItem('billreve-storage');
+          localStorage.removeItem('last_sync_time');
+          localStorage.removeItem('billreve_ai_used');
+          localStorage.removeItem('billreve_checklist_dismissed');
           
           // Delay reload slightly to ensure Zustand finishes writing/clearing
           setTimeout(() => {
