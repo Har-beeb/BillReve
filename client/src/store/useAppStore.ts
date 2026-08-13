@@ -148,15 +148,11 @@ export const useAppStore = create<AppState>()(
       },
       logout: async () => {
         await supabase.auth.signOut();
-        
-        // Reset state so Zustand overwrites local storage with clean defaults
+        // Reset state but KEEP user preferences (theme, font, etc)
         set({ 
           user: null, 
           session: null, 
           isAuthenticated: false,
-          colorTheme: 'default',
-          customColor: '#9333ea',
-          fontFamily: 'Inter',
           businessProfile: {
             name: 'BillReve',
             email: 'hello@billreve.app',
@@ -183,11 +179,8 @@ export const useAppStore = create<AppState>()(
             db.syncQueue.clear()
           ]);
           
-          // Clear any remaining storage
-          localStorage.removeItem('billreve-storage');
+          // Only clear sync time so another user logging in gets a fresh sync
           localStorage.removeItem('last_sync_time');
-          localStorage.removeItem('billreve_ai_used');
-          localStorage.removeItem('billreve_checklist_dismissed');
           
           // Delay reload slightly to ensure Zustand finishes writing/clearing
           setTimeout(() => {

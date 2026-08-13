@@ -156,7 +156,9 @@ class NotificationService {
       title = `Payment Received! 💸`;
       body = `${type} ${identifier} has been marked as paid.`;
     } else {
-      // Don't notify for other status changes (like DRAFT -> PENDING)
+      // Don't notify for other status changes (like DRAFT -> SENT)
+      // but STILL sync the local database!
+      this.syncLocalDatabase(type, newDoc, table);
       return;
     }
 
