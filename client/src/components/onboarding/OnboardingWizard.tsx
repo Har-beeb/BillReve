@@ -24,7 +24,7 @@ const slideVariants = {
 };
 
 export const OnboardingWizard: React.FC = () => {
-  const { businessProfile, updateBusinessProfile, setHasSkippedOnboarding, colorTheme, setColorTheme } = useAppStore();
+  const { businessProfile, updateBusinessProfile, setHasSkippedOnboarding, colorTheme, setColorTheme, customColor, setCustomColor } = useAppStore();
   
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1); // 1 for forward, -1 for backward
@@ -105,14 +105,14 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   const THEMES = [
-    { id: 'default', name: 'Purple', class: 'bg-purple-600' },
-    { id: 'wine', name: 'Wine', class: 'bg-rose-900' },
-    { id: 'ocean', name: 'Ocean', class: 'bg-blue-600' },
-    { id: 'emerald', name: 'Emerald', class: 'bg-emerald-600' },
-    { id: 'slate', name: 'Slate', class: 'bg-slate-800' },
-    { id: 'sunset', name: 'Sunset', class: 'bg-orange-500' },
-    { id: 'mustard', name: 'Mustard', class: 'bg-yellow-500' },
-    { id: 'cherry', name: 'Cherry', class: 'bg-red-600' },
+    { id: 'default', name: 'Purple', class: 'bg-[#9333ea]' },
+    { id: 'wine', name: 'Wine', class: 'bg-[#881337]' },
+    { id: 'ocean', name: 'Ocean', class: 'bg-[#2563eb]' },
+    { id: 'emerald', name: 'Emerald', class: 'bg-[#059669]' },
+    { id: 'slate', name: 'Slate', class: 'bg-[#1e293b]' },
+    { id: 'sunset', name: 'Sunset', class: 'bg-[#f97316]' },
+    { id: 'mustard', name: 'Mustard', class: 'bg-[#eab308]' },
+    { id: 'cherry', name: 'Cherry', class: 'bg-[#dc2626]' },
   ] as const;
 
   return (
@@ -374,9 +374,37 @@ export const OnboardingWizard: React.FC = () => {
                             }`}
                             title={t.name}
                           >
-                            {colorTheme === t.id && <CheckCircle2 className="w-5 h-5 text-white" />}
+                            {colorTheme === t.id && <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />}
                           </button>
                         ))}
+                        
+                        <div className="relative group flex shrink-0">
+                          <button
+                            onClick={() => setColorTheme('custom')}
+                            style={{ backgroundColor: colorTheme === 'custom' ? customColor : '#ffffff' }}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-110 overflow-hidden ${
+                              colorTheme === 'custom' ? 'ring-4 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-purple-600 dark:ring-purple-400' : 'border border-slate-300 dark:border-slate-600 border-dashed'
+                            }`}
+                            title="Custom Color"
+                          >
+                            {colorTheme === 'custom' ? (
+                               <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
+                            ) : (
+                               <div className="w-full h-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 opacity-80 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                 <Palette className="w-4 h-4 text-white drop-shadow-md" />
+                               </div>
+                            )}
+                          </button>
+                          {colorTheme === 'custom' && (
+                            <input
+                              type="color"
+                              value={customColor}
+                              onChange={(e) => setCustomColor(e.target.value)}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-full"
+                              title="Pick a custom color"
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
