@@ -43,7 +43,11 @@ const Login: React.FC = () => {
       
       navigate('/dashboard'); // Redirect to dashboard on success
     } catch (err: any) {
-      const errorMsg = err.message || '';
+      let errorMsg = err.message || '';
+      if (errorMsg.toLowerCase().includes('failed to fetch') || errorMsg.toLowerCase().includes('networkerror')) {
+        errorMsg = 'Network error: Please check your internet connection and try again.';
+      }
+      
       if (errorMsg.toLowerCase().includes('email not confirmed')) {
         // Auto trigger a resend and show the screen
         const { error: resendError } = await supabase.auth.resend({

@@ -14,10 +14,11 @@ const Upgrade: React.FC = () => {
   const PRO_PRICE = 3500;
   const ORIGINAL_PRICE = 5000;
 
-  const componentProps = {
+  const paystackPlan = import.meta.env.VITE_PAYSTACK_PRO_PLAN_ID;
+
+  const componentProps: any = {
     email: user?.email || 'user@example.com',
     amount: PRO_PRICE * 100, // Amount in kobo
-    plan: import.meta.env.VITE_PAYSTACK_PRO_PLAN_ID || 'PLN_placeholder123', // Add your Paystack Plan ID here for recurring subscription
     metadata: {
       custom_fields: [
          { display_name: "User ID", variable_name: "userId", value: user?.id || '' },
@@ -36,6 +37,10 @@ const Upgrade: React.FC = () => {
       console.log('Payment closed');
     },
   };
+
+  if (paystackPlan) {
+    componentProps.plan = paystackPlan;
+  }
 
   const features = [
     { icon: <Bot className="text-purple-400 w-6 h-6" />, title: "AI Document Drafting", desc: "Generate professional quotes and invoices instantly with AI." },

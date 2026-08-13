@@ -87,7 +87,11 @@ const Register: React.FC = () => {
       setResendCountdown(60); // Start 60s countdown on first send
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to connect to server. Please try again.');
+      let errorMsg = err.message || 'Failed to connect to server. Please try again.';
+      if (errorMsg.toLowerCase().includes('failed to fetch') || errorMsg.toLowerCase().includes('networkerror')) {
+        errorMsg = 'Network error: Please check your internet connection and try again.';
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

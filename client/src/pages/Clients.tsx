@@ -13,6 +13,7 @@ import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { useQuota } from '../hooks/useQuota';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAppStore } from '../store/useAppStore';
 
@@ -425,19 +426,25 @@ const Clients: React.FC = () => {
               <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-3">Recent Invoices</h3>
               <div className="space-y-2">
                  {getClientMetrics(selectedClient.localId).invoices.length > 0 ? (
-                   getClientMetrics(selectedClient.localId).invoices.map(inv => (
-                     <div key={inv.localId} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <FileText size={16} className="text-purple-500"/>
-                          <span className="font-medium text-sm">{inv.localId}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold text-sm">{formatMoney(inv.total, inv.currency)}</span>
-                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                          <Badge variant={inv.status.toLowerCase() as any} className="ml-2 scale-75 origin-right">{inv.status}</Badge>
-                        </div>
-                     </div>
-                   ))
+                   getClientMetrics(selectedClient.localId).invoices.map(inv => {
+                     const isInvoice = 'invoiceNumber' in inv;
+                     const displayNum = isInvoice ? inv.invoiceNumber : (inv as any).quoteNumber;
+                     const link = isInvoice ? `/invoices?id=${inv.localId}` : `/quotes?id=${inv.localId}`;
+                     
+                     return (
+                       <Link key={inv.localId} to={link} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <FileText size={16} className="text-purple-500"/>
+                            <span className="font-medium text-sm">{displayNum || 'Draft'}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-semibold text-sm">{formatMoney(inv.total, inv.currency)}</span>
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            <Badge variant={inv.status.toLowerCase() as any} className="ml-2 scale-75 origin-right">{inv.status}</Badge>
+                          </div>
+                       </Link>
+                     );
+                   })
                  ) : (
                    <p className="text-sm text-slate-500 italic">No invoices found for this client.</p>
                  )}

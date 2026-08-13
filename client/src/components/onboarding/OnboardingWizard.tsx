@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, Globe2, Palette, Upload, CheckCircle2, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Logo } from '../ui/Logo';
+import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
 const slideVariants = {
@@ -33,7 +34,7 @@ export const OnboardingWizard: React.FC = () => {
     name: businessProfile.name || '',
     email: businessProfile.email || '',
     phone: businessProfile.phone || '',
-    industry: businessProfile.industry || 'Technology',
+    industry: businessProfile.industry || 'Software & Tech',
     businessDescription: businessProfile.businessDescription || '',
     country: businessProfile.country || 'Nigeria',
     currency: businessProfile.currency || 'NGN',
@@ -61,12 +62,30 @@ export const OnboardingWizard: React.FC = () => {
     toast.success('You can complete your profile later in Settings.');
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     updateBusinessProfile({
       ...businessProfile,
       ...profile,
     });
     setHasSkippedOnboarding(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        await supabase.from('profiles').update({
+          name: profile.name,
+          phone: profile.phone,
+          industry: profile.industry,
+          business_description: profile.businessDescription,
+          country: profile.country,
+          currency: profile.currency,
+          logo_url: profile.logoUrl || null,
+        }).eq('id', session.user.id);
+      }
+    } catch (e) {
+      console.error('Error saving profile to database during onboarding:', e);
+    }
+    
     toast.success('Business Profile created! Welcome to BillReve.');
   };
 
@@ -136,7 +155,7 @@ export const OnboardingWizard: React.FC = () => {
 
         {/* Content Container */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
-          <div className="relative h-[500px] overflow-hidden">
+          <div className="relative min-h-[500px] overflow-hidden">
             <AnimatePresence initial={false} custom={direction}>
               
               {/* STEP 0: Basics */}
@@ -149,9 +168,9 @@ export const OnboardingWizard: React.FC = () => {
                   animate="center"
                   exit="exit"
                   transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-                  className="absolute inset-0 p-8 flex flex-col"
+                  className="absolute inset-0 p-8 flex flex-col h-full overflow-y-auto"
                 >
-                  <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center gap-3 mb-6 shrink-0">
                     <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
                       <Building2 className="w-6 h-6" />
                     </div>
@@ -206,11 +225,14 @@ export const OnboardingWizard: React.FC = () => {
                         onChange={e => setProfile({...profile, industry: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       >
-                        <option value="Technology">Technology</option>
-                        <option value="Consulting">Consulting</option>
-                        <option value="Design">Design & Creative</option>
-                        <option value="Finance">Finance</option>
-                        <option value="Retail">Retail</option>
+                        <option value="Freelance & Creative">Freelance & Creative</option>
+                        <option value="Agency & Consulting">Agency & Consulting</option>
+                        <option value="Software & Tech">Software & Tech</option>
+                        <option value="E-commerce & Retail">E-commerce & Retail</option>
+                        <option value="Real Estate & Construction">Real Estate & Construction</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Education">Education</option>
+                        <option value="Logistics">Logistics</option>
                         <option value="Other">Other</option>
                       </select>
                     </div>
