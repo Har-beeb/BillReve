@@ -116,14 +116,14 @@ export const OnboardingWizard: React.FC = () => {
   ] as const;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-start md:justify-center p-4 sm:p-8 overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-start md:justify-center p-4 sm:p-8 overflow-hidden pt-6">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-2xl relative z-10">
+      <div className="w-full max-w-2xl relative z-10 flex flex-col h-full max-h-[100dvh] pb-4 md:pb-0 md:h-auto md:max-h-[90vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -137,7 +137,7 @@ export const OnboardingWizard: React.FC = () => {
         </div>
 
         {/* Progress Bar */}
-        <div className="mb-8">
+        <div className="mb-4 md:mb-8 shrink-0">
           <div className="flex justify-between mb-2">
             {[0, 1, 2].map(i => (
               <div 
@@ -154,7 +154,7 @@ export const OnboardingWizard: React.FC = () => {
         </div>
 
         {/* Content Container */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden flex flex-col h-[85vh] md:h-[650px] md:max-h-[85vh]">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden flex flex-col flex-1 min-h-0 md:h-[600px]">
           <div className="relative flex-1 overflow-hidden">
             <AnimatePresence initial={false} custom={direction}>
               
