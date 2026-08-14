@@ -5,8 +5,9 @@
 ## 🌟 Key Features
 
 - **Offline-First Architecture**: Built with Dexie.js (IndexedDB), allowing full functionality without an internet connection. Data syncs automatically to the cloud when online.
-- **AI-Powered Workflows**: Integrated with Google Gemini to automatically draft professional email campaigns and enhance invoice/quote terms & notes.
+- **AI-Powered Workflows**: Integrated with Google Gemini to automatically draft professional email campaigns, enhance invoice/quote terms, and act as a conversational assistant (RevenueChat) capable of building documents and answering financial queries.
 - **Dynamic Document Editor**: A highly intuitive, drag-and-drop enabled document editor for creating quotes and invoices with real-time totals, tax, and discount calculations.
+- **Smart Quote Looping**: Advanced quote negotiation flow featuring Counter Offers, Minimum Counter Limits, Contextual Decline Reasons, and a Redraft mechanism to continuously loop negotiations without generating new links.
 - **Customizable Branding**: Users can upload their logos, customize the app's color theme, typography, and layout preferences.
 - **Secure Authentication**: Powered by Supabase Auth, supporting both Email/Password and Google OAuth.
 - **Export & Share**: Generate pixel-perfect PDFs or share secure public links for clients to view and pay invoices online.

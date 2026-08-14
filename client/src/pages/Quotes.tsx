@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Plus, Download, RefreshCw, FileText } from 'lucide-react';
+import { Search, Plus, Download, RefreshCw, FileText, MessageSquare } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Badge, ProFeature } from '../components/ui';
 import { formatMoney, formatDate } from '../utils/formatters';
@@ -607,7 +607,9 @@ const Quotes: React.FC = () => {
                          ] : []),
                          ...(quote.status === 'COUNTERED' ? [
                            { label: 'Accept Counter', onClick: () => handleRespondToCounter(quote, true) },
-                           { label: 'Decline Offer', onClick: () => handleRespondToCounter(quote, false) },
+                           { label: 'Decline Offer', onClick: () => handleRespondToCounter(quote, false) }
+                         ] : []),
+                         ...(quote.status === 'COUNTERED' || quote.status === 'DECLINED' ? [
                            { label: 'Redraft Quote', onClick: () => navigate('/quotes/new', { state: { quote: { ...quote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }) }
                          ] : []),
                          { label: 'Copy Link', onClick: () => {
@@ -679,7 +681,9 @@ const Quotes: React.FC = () => {
                 ] : []),
                 ...(selectedQuote.status === 'COUNTERED' ? [
                   { label: 'Accept Counter', onClick: () => handleRespondToCounter(selectedQuote, true) },
-                  { label: 'Decline Offer', onClick: () => handleRespondToCounter(selectedQuote, false) },
+                  { label: 'Decline Offer', onClick: () => handleRespondToCounter(selectedQuote, false) }
+                ] : []),
+                ...(selectedQuote.status === 'COUNTERED' || selectedQuote.status === 'DECLINED' ? [
                   { label: 'Redraft Quote', onClick: () => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: { ...selectedQuote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }); } }
                 ] : []),
                 { label: 'Copy Link', onClick: () => {
@@ -735,6 +739,17 @@ const Quotes: React.FC = () => {
                       Redraft Quote
                     </button>
                   </div>
+                </div>
+              )}
+              {(selectedQuote.status === 'COUNTERED' || selectedQuote.status === 'DECLINED') && (
+                <div className="mt-4">
+                    <button 
+                      onClick={() => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: { ...selectedQuote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }); }}
+                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                    >
+                      <MessageSquare size={16} />
+                      Redraft Quote
+                    </button>
                 </div>
               )}
             </div>

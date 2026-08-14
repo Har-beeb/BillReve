@@ -5,6 +5,14 @@ import { Zap, ShieldCheck, Sparkles } from 'lucide-react';
 
 const updates = [
   {
+    version: 'v1.6.0',
+    date: 'August 14, 2026',
+    title: 'Smart Quote Looping & Minimum Counter Pricing',
+    description: 'We have massively upgraded the way quotes are handled! Engage in continuous negotiations with your clients without ever needing to generate a new quote link. Plus, your Revenue AI just got smarter about your rules.',
+    features: ['Quote Redrafting Loop', 'Minimum Counter Offer Pricing', 'Decline Context Reasons', 'RevenueChat Quote-Awareness Upgrades', 'UI/UX Polish for Desktop Onboarding'],
+    icon: <Sparkles className="text-purple-500" size={24} />
+  },
+  {
     version: 'v1.5.0',
     date: 'August 8, 2026',
     title: 'Revenue AI Integration',

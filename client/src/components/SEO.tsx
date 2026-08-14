@@ -10,7 +10,7 @@ interface SEOProps {
 
 export const SEO: React.FC<SEOProps> = ({ 
   title, 
-  description = "BillReve is the modern, intelligent invoicing and billing platform for freelancers and agencies.", 
+  description = "BillReve is the modern, AI-powered invoicing and billing platform for freelancers and agencies. Create smart quotes, track payments, and automate your finances.", 
   image = "https://billreve.app/pwa-512x512.png", 
   url = "https://billreve.app" 
 }) => {

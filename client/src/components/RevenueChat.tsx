@@ -277,6 +277,7 @@ export const RevenueChat: React.FC = () => {
             currency: businessProfile.currency || 'USD',
             taxes: formattedTaxes,
             allowCounterOffer: payload.allowCounterOffer ?? false,
+            minimumCounterAmount: payload.minimumCounterAmount,
             syncStatus: 'pending' as const,
             createdAt: now,
             updatedAt: now
