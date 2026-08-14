@@ -741,6 +741,16 @@ const Quotes: React.FC = () => {
                   </div>
                 </div>
               )}
+              {selectedQuote.status === 'DECLINED' && selectedQuote.clientMessage && (
+                <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-left">
+                  <div className="text-red-800 dark:text-red-300 font-semibold mb-1">
+                    Client's Reason for Declining:
+                  </div>
+                  <div className="text-red-700 dark:text-red-400 text-sm italic">
+                    "{selectedQuote.clientMessage}"
+                  </div>
+                </div>
+              )}
               {(selectedQuote.status === 'COUNTERED' || selectedQuote.status === 'DECLINED') && (
                 <div className="mt-4">
                     <button 
