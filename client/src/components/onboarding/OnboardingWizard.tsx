@@ -154,7 +154,7 @@ export const OnboardingWizard: React.FC = () => {
         </div>
 
         {/* Content Container */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden flex flex-col h-[85vh] md:h-auto md:max-h-[80vh]">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden flex flex-col h-[85vh] md:h-[650px] md:max-h-[85vh]">
           <div className="relative flex-1 overflow-hidden">
             <AnimatePresence initial={false} custom={direction}>
               

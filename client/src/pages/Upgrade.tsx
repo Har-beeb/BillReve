@@ -1,46 +1,13 @@
 import React, { useState } from 'react';
-import { PaystackButton } from 'react-paystack';
 import { CheckCircle2, Star, Check, Zap, Palette, FileSpreadsheet, Bot, Send } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 const Upgrade: React.FC = () => {
-  const { user, isProUser } = useAppStore();
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'transfer'>('paystack');
-
-  // The SaaS Master Key (Read from environment variables)
-  const SAAS_PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_YOUR_SAAS_MASTER_KEY';
+  const { isProUser } = useAppStore();
+  const [isPending, setIsPending] = useState(false);
   
   const PRO_PRICE = 3500;
   const ORIGINAL_PRICE = 5000;
-
-  const paystackPlan = import.meta.env.VITE_PAYSTACK_PRO_PLAN_ID;
-
-  const componentProps: any = {
-    email: user?.email || 'user@example.com',
-    amount: PRO_PRICE * 100, // Amount in kobo
-    metadata: {
-      custom_fields: [
-         { display_name: "User ID", variable_name: "userId", value: user?.id || '' },
-         { display_name: "Payment Type", variable_name: "type", value: "saas_subscription" }
-      ]
-    },
-    // 'account' = merchant bears the fee, user pays exactly ₦3,500
-    bearer: 'account' as 'account' | 'subaccount',
-    publicKey: SAAS_PAYSTACK_PUBLIC_KEY,
-    text: "Upgrade to Pro Now",
-    onSuccess: (reference: any) => {
-      console.log('Subscription Payment Success:', reference);
-      setIsSuccess(true);
-    },
-    onClose: () => {
-      console.log('Payment closed');
-    },
-  };
-
-  if (paystackPlan) {
-    componentProps.plan = paystackPlan;
-  }
 
   const features = [
     { icon: <Bot className="text-purple-400 w-6 h-6" />, title: "AI Document Drafting", desc: "Generate professional quotes and invoices instantly with AI." },
@@ -58,14 +25,17 @@ const Upgrade: React.FC = () => {
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/10 dark:bg-indigo-900/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl w-full z-10 animate-fade-in-up">
-        {isSuccess ? (
+        {isPending ? (
           <div className="max-w-lg mx-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 p-12 text-center animate-scale-in">
-            <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-12 h-12 text-green-500" />
+            <div className="w-24 h-24 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-12 h-12 text-purple-600 dark:text-purple-400" />
             </div>
-            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-3">Welcome to Pro!</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
-              Your subscription is active. Please log out and back in to sync your new premium capabilities.
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-3">Verification Pending</h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 mb-4">
+              Thank you for upgrading! We are currently verifying your bank transfer.
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-500 mb-8">
+              Your account will be upgraded to Pro manually within 24 hours. For faster verification, please send your payment receipt to <strong>support@billreve.app</strong>.
             </p>
             <button 
               onClick={() => window.location.href = '/'}
@@ -151,21 +121,12 @@ const Upgrade: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Payment Method Toggle */}
+                {/* Payment Method - Temporarily locked to transfer for Hackathon */}
                 {!isProUser && (
-                  <div className="w-full flex items-center justify-between p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
-                    <button 
-                      onClick={() => setPaymentMethod('paystack')}
-                      className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${paymentMethod === 'paystack' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-700 dark:text-purple-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
-                    >
-                      Card (Paystack)
-                    </button>
-                    <button 
-                      onClick={() => setPaymentMethod('transfer')}
-                      className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${paymentMethod === 'transfer' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-700 dark:text-purple-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
-                    >
-                      Bank Transfer
-                    </button>
+                  <div className="w-full p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl mb-6">
+                    <p className="text-sm font-medium text-purple-800 dark:text-purple-300 text-center">
+                      Card payments (Paystack) are temporarily unavailable while we complete our business verification. Please use Bank Transfer.
+                    </p>
                   </div>
                 )}
                 
@@ -178,45 +139,32 @@ const Upgrade: React.FC = () => {
                   </button>
                 ) : (
                   <div className="w-full">
-                    {paymentMethod === 'paystack' ? (
-                      <PaystackButton 
-                        {...componentProps} 
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-[0_8px_30px_rgb(147,51,234,0.3)] transition-all active:scale-[0.98] text-lg"
-                      />
-                    ) : (
-                      <div className="w-full text-left">
-                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
-                          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold mb-3">Transfer Details</p>
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-xs text-slate-400 mb-0.5">Bank Name</p>
-                              <p className="font-semibold text-slate-900 dark:text-white">GTBank</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-400 mb-0.5">Account Number</p>
-                              <p className="font-semibold text-slate-900 dark:text-white text-lg tracking-wider">0162562070</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-slate-400 mb-0.5">Account Name</p>
-                              <p className="font-semibold text-slate-900 dark:text-white">Issa Habeebullah O.</p>
-                            </div>
+                    <div className="w-full text-left">
+                      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold mb-3">Transfer Details</p>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs text-slate-400 mb-0.5">Bank Name</p>
+                            <p className="font-semibold text-slate-900 dark:text-white">GTBank</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-0.5">Account Number</p>
+                            <p className="font-semibold text-slate-900 dark:text-white text-lg tracking-wider">0162562070</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-0.5">Account Name</p>
+                            <p className="font-semibold text-slate-900 dark:text-white">Issa Habeebullah O.</p>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => setIsSuccess(true)}
-                          className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 px-6 rounded-xl shadow-lg transition-all active:scale-[0.98] text-lg"
-                        >
-                          I have made the transfer
-                        </button>
                       </div>
-                    )}
+                      <button 
+                        onClick={() => setIsPending(true)}
+                        className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 px-6 rounded-xl shadow-lg transition-all active:scale-[0.98] text-lg"
+                      >
+                        I have made the transfer
+                      </button>
+                    </div>
                   </div>
-                )}
-                
-                {paymentMethod === 'paystack' && !isProUser && (
-                  <p className="text-xs text-slate-400 mt-6 font-medium">
-                    Secure payment processing by Paystack
-                  </p>
                 )}
               </div>
             </div>
