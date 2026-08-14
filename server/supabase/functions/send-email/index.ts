@@ -20,7 +20,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
-  const { to, subject, html, attachments, fromName } = payload;
+  const { to, subject, html, attachments, fromName, replyTo } = payload;
   const authHeader = req.headers.get('Authorization');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   const isPublicContact = to === 'support@billreve.app' || (Array.isArray(to) && to.length === 1 && to[0] === 'support@billreve.app');
@@ -80,9 +80,9 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: fromName ? `${fromName} <noreply@billreve.app>` : "BillReve <hello@billreve.app>",
+        from: fromName ? `${fromName} <noreply@billreve.app>` : "BillReve <noreply@billreve.app>",
         to: Array.isArray(to) ? to : [to],
-        reply_to: "hello@billreve.app",
+        reply_to: replyTo || "support@billreve.app",
         subject: subject || "Update from BillReve",
         html: html || "<p>Please see the attached document.</p>",
         attachments: attachments || [],

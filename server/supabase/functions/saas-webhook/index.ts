@@ -102,7 +102,7 @@ serve(async (req) => {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <hello@billreve.app>',
+                from: Deno.env.get('RESEND_FROM_EMAIL') || 'BillReve <noreply@billreve.app>',
                 to: profile.email,
                 subject: 'Welcome to BillReve Pro! 🚀',
                 html: `

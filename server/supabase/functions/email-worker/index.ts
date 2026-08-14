@@ -22,7 +22,7 @@ async function sendEmailWithRetry(to: string, subject: string, html: string, ret
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'BillReve <hello@billreve.app>',
+          from: 'BillReve <noreply@billreve.app>',
           to,
           subject,
           html
