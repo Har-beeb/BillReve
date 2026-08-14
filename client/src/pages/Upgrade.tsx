@@ -1,13 +1,46 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Star, Check, Zap, Palette, FileSpreadsheet, Bot, Send } from 'lucide-react';
+// import { PaystackButton } from 'react-paystack'; // UNCOMMENT FOR PAYSTACK
 import { useAppStore } from '../store/useAppStore';
 
 const Upgrade: React.FC = () => {
-  const { isProUser } = useAppStore();
+  const { isProUser } = useAppStore(); // Re-add 'user' for Paystack
   const [isPending, setIsPending] = useState(false);
+  
+  // const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'transfer'>('transfer'); // UNCOMMENT FOR PAYSTACK
   
   const PRO_PRICE = 3500;
   const ORIGINAL_PRICE = 5000;
+
+  /* === PAYSTACK CONFIGURATION (UNCOMMENT LATER) ===
+  const SAAS_PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_YOUR_SAAS_MASTER_KEY';
+  const paystackPlan = import.meta.env.VITE_PAYSTACK_PRO_PLAN_ID;
+
+  const componentProps: any = {
+    email: user?.email || 'user@example.com',
+    amount: PRO_PRICE * 100, // Amount in kobo
+    metadata: {
+      custom_fields: [
+         { display_name: "User ID", variable_name: "userId", value: user?.id || '' },
+         { display_name: "Payment Type", variable_name: "type", value: "saas_subscription" }
+      ]
+    },
+    bearer: 'account' as 'account' | 'subaccount',
+    publicKey: SAAS_PAYSTACK_PUBLIC_KEY,
+    text: "Upgrade to Pro Now",
+    onSuccess: (reference: any) => {
+      console.log('Subscription Payment Success:', reference);
+      // setIsSuccess(true);
+    },
+    onClose: () => {
+      console.log('Payment closed');
+    },
+  };
+
+  if (paystackPlan) {
+    componentProps.plan = paystackPlan;
+  }
+  ================================================ */
 
   const features = [
     { icon: <Bot className="text-purple-400 w-6 h-6" />, title: "AI Document Drafting", desc: "Generate professional quotes and invoices instantly with AI." },
@@ -122,6 +155,25 @@ const Upgrade: React.FC = () => {
                 </div>
                 
                 {/* Payment Method - Temporarily locked to transfer for Hackathon */}
+                {/* === UNCOMMENT LATER TO RESTORE PAYSTACK TOGGLE ===
+                {!isProUser && (
+                  <div className="w-full flex items-center justify-between p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
+                    <button 
+                      onClick={() => setPaymentMethod('paystack')}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${paymentMethod === 'paystack' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-700 dark:text-purple-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                    >
+                      Card (Paystack)
+                    </button>
+                    <button 
+                      onClick={() => setPaymentMethod('transfer')}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${paymentMethod === 'transfer' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-700 dark:text-purple-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                    >
+                      Bank Transfer
+                    </button>
+                  </div>
+                )}
+                =================================================== */}
+                
                 {!isProUser && (
                   <div className="w-full p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl mb-6">
                     <p className="text-sm font-medium text-purple-800 dark:text-purple-300 text-center">
@@ -139,6 +191,14 @@ const Upgrade: React.FC = () => {
                   </button>
                 ) : (
                   <div className="w-full">
+                    {/* === UNCOMMENT LATER TO RESTORE PAYSTACK BUTTON ===
+                    {paymentMethod === 'paystack' ? (
+                      <PaystackButton 
+                        {...componentProps} 
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-[0_8px_30px_rgb(147,51,234,0.3)] transition-all active:scale-[0.98] text-lg"
+                      />
+                    ) : (
+                    =================================================== */}
                     <div className="w-full text-left">
                       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
                         <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold mb-3">Transfer Details</p>
@@ -164,8 +224,17 @@ const Upgrade: React.FC = () => {
                         I have made the transfer
                       </button>
                     </div>
+                    {/* )}  <-- UNCOMMENT FOR PAYSTACK CONDITIONAL CLOSING */}
                   </div>
                 )}
+                
+                {/* === UNCOMMENT FOR PAYSTACK ===
+                {paymentMethod === 'paystack' && !isProUser && (
+                  <p className="text-xs text-slate-400 mt-6 font-medium">
+                    Secure payment processing by Paystack
+                  </p>
+                )}
+                ================================ */}
               </div>
             </div>
           </div>
