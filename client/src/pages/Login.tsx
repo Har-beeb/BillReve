@@ -52,6 +52,8 @@ const Login: React.FC = () => {
       let errorMsg = err.message || '';
       if (errorMsg.toLowerCase().includes('failed to fetch') || errorMsg.toLowerCase().includes('networkerror')) {
         errorMsg = 'Network error: Please check your internet connection and try again.';
+      } else if (errorMsg.toLowerCase().includes('signups not allowed for otp')) {
+        errorMsg = 'No account found with this email. Please check your spelling or register a new account first.';
       }
       setError(errorMsg || 'Failed to connect to server. Please try again.');
     } finally {

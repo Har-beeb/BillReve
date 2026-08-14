@@ -156,6 +156,14 @@ const PublicQuote: React.FC = () => {
     setIsSubmittingCounter(true);
     try {
       const amount = Number(counterAmount);
+      
+      const minAmount = quote.minimum_counter_amount ?? quote.minimumCounterAmount;
+      if (minAmount !== undefined && minAmount !== null && amount < minAmount) {
+        setStatusMessage({ type: 'error', text: `The business has set a minimum acceptable limit of ${minAmount} for counter offers on this quote. Please enter a valid amount.` });
+        setIsSubmittingCounter(false);
+        return;
+      }
+
       const { error } = await supabase.rpc('update_quote_status_public', {
         p_local_id: id,
         p_status: 'COUNTERED',

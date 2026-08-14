@@ -423,14 +423,14 @@ const Invoices: React.FC = () => {
               onChange={(e) => { setFilter(e.target.value); setCurrentPage(1); }}
               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm py-2 px-3 rounded-lg appearance-none"
             >
-              {['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Overdue', 'Countered'].map((f) => (
+              {['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Overdue'].map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
           </div>
 
           <div className="hidden md:flex gap-1">
-            {['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Overdue', 'Countered'].map((f) => (
+            {['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Overdue'].map((f) => (
               <button
                 key={f}
                 onClick={() => { setFilter(f); setCurrentPage(1); }}
@@ -677,20 +677,6 @@ const Invoices: React.FC = () => {
               <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
                 Due {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : 'Upon Receipt'}
               </div>
-
-              {selectedInvoice.status === 'COUNTERED' && selectedInvoice.counterAmount && (
-                <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl text-left">
-                  <div className="text-orange-800 dark:text-orange-300 font-semibold mb-1 flex justify-between">
-                    <span>Client's Counter Offer:</span>
-                    <span>{formatMoney(selectedInvoice.counterAmount, selectedInvoice.currency)}</span>
-                  </div>
-                  {selectedInvoice.clientMessage && (
-                    <div className="text-orange-700 dark:text-orange-400 text-sm italic">
-                      "{selectedInvoice.clientMessage}"
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="grid grid-cols-2 gap-6">

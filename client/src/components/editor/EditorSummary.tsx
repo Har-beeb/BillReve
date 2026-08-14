@@ -18,6 +18,8 @@ interface EditorSummaryProps {
   total: number;
   allowCounterOffer: boolean;
   setAllowCounterOffer: (allow: boolean) => void;
+  minimumCounterAmount: number | undefined;
+  setMinimumCounterAmount: (amount: number | undefined) => void;
 }
 
 export const EditorSummary: React.FC<EditorSummaryProps> = ({
@@ -37,6 +39,8 @@ export const EditorSummary: React.FC<EditorSummaryProps> = ({
   total,
   allowCounterOffer,
   setAllowCounterOffer,
+  minimumCounterAmount,
+  setMinimumCounterAmount,
 }) => {
   return (
     <div className="space-y-6">
@@ -134,6 +138,28 @@ export const EditorSummary: React.FC<EditorSummaryProps> = ({
               Allow client to make a counter offer
             </span>
           </label>
+          
+          {allowCounterOffer && (
+            <div className="mt-2 pl-[3.25rem]">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Minimum acceptable offer (Optional)
+              </label>
+              <div className="relative w-full sm:w-1/2">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">
+                  {currency}
+                </span>
+                <input
+                  type="number"
+                  value={minimumCounterAmount || ''}
+                  onChange={(e) => setMinimumCounterAmount(e.target.value ? Number(e.target.value) : undefined)}
+                  className="w-full pl-12 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-shadow"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

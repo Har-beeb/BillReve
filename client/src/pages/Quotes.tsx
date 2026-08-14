@@ -607,7 +607,8 @@ const Quotes: React.FC = () => {
                          ] : []),
                          ...(quote.status === 'COUNTERED' ? [
                            { label: 'Accept Counter', onClick: () => handleRespondToCounter(quote, true) },
-                           { label: 'Decline Counter', onClick: () => handleRespondToCounter(quote, false) }
+                           { label: 'Decline Offer', onClick: () => handleRespondToCounter(quote, false) },
+                           { label: 'Redraft Quote', onClick: () => navigate('/quotes/new', { state: { quote: { ...quote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }) }
                          ] : []),
                          { label: 'Copy Link', onClick: () => {
                            navigator.clipboard.writeText(`${window.location.origin}/quote/${quote.localId}`);
@@ -678,7 +679,8 @@ const Quotes: React.FC = () => {
                 ] : []),
                 ...(selectedQuote.status === 'COUNTERED' ? [
                   { label: 'Accept Counter', onClick: () => handleRespondToCounter(selectedQuote, true) },
-                  { label: 'Decline Counter', onClick: () => handleRespondToCounter(selectedQuote, false) }
+                  { label: 'Decline Offer', onClick: () => handleRespondToCounter(selectedQuote, false) },
+                  { label: 'Redraft Quote', onClick: () => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: { ...selectedQuote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }); } }
                 ] : []),
                 { label: 'Copy Link', onClick: () => {
                   navigator.clipboard.writeText(`${window.location.origin}/quote/${selectedQuote.localId}`);
@@ -722,9 +724,15 @@ const Quotes: React.FC = () => {
                     </button>
                     <button 
                       onClick={() => { handleRespondToCounter(selectedQuote, false); setSelectedQuote(null); }}
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium transition-colors text-sm"
+                      className="flex-1 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white py-2 rounded-lg font-medium transition-colors text-sm"
                     >
-                      Decline
+                      Decline Offer
+                    </button>
+                    <button 
+                      onClick={() => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: { ...selectedQuote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }); }}
+                      className="flex-1 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-800/50 text-purple-700 dark:text-purple-300 py-2 rounded-lg font-medium transition-colors text-sm"
+                    >
+                      Redraft Quote
                     </button>
                   </div>
                 </div>

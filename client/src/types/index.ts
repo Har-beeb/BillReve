@@ -1,6 +1,6 @@
 export type SubscriptionPlan = 'FREE' | 'PRO' | 'ENTERPRISE';
 export type QuoteStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'DECLINED' | 'COUNTERED';
-export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'COUNTERED';
+export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PARTIAL' | 'PAID' | 'OVERDUE';
 export type SyncStatus = 'synced' | 'pending' | 'failed' | 'syncing';
 
 export interface BankAccount {
@@ -75,6 +75,7 @@ export interface Quote {
   counterAmount?: number;
   clientMessage?: string;
   allowCounterOffer?: boolean;
+  minimumCounterAmount?: number;
 }
 
 export interface QuoteItem {

@@ -106,6 +106,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   });
   
   const [allowCounterOffer, setAllowCounterOffer] = useState<boolean>(initialDoc?.allowCounterOffer ?? false);
+  const [minimumCounterAmount, setMinimumCounterAmount] = useState<number | undefined>(initialDoc?.minimumCounterAmount);
 
   // Derived Totals
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
@@ -191,6 +192,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       taxes: computedTaxes,
       total,
       allowCounterOffer,
+      minimumCounterAmount,
       items: items.filter(i => i.description.trim() !== ''),
       createdAt: initialDoc?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -270,6 +272,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       taxes: computedTaxes,
       total,
       allowCounterOffer,
+      minimumCounterAmount,
       items: items.filter(i => i.description.trim() !== ''),
       createdAt: initialDoc?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -453,6 +456,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             total={total}
             allowCounterOffer={allowCounterOffer}
             setAllowCounterOffer={setAllowCounterOffer}
+            minimumCounterAmount={minimumCounterAmount}
+            setMinimumCounterAmount={setMinimumCounterAmount}
           />
           
           {/* Bottom spacing for mobile to ensure scrollability past FAB */}
