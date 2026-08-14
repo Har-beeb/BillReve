@@ -22,6 +22,9 @@ const PublicQuote: React.FC = () => {
   const [counterAmount, setCounterAmount] = useState<number | ''>('');
   const [counterMessage, setCounterMessage] = useState('');
   const [isSubmittingCounter, setIsSubmittingCounter] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [isSubmittingDecline, setIsSubmittingDecline] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
@@ -133,7 +136,7 @@ const PublicQuote: React.FC = () => {
   const isDeclined = quote.status === 'DECLINED';
   const isCountered = quote.status === 'COUNTERED';
 
-  const handleStatusUpdate = async (status: 'ACCEPTED' | 'DECLINED') => {
+  const handleStatusUpdate = async (status: 'ACCEPTED') => {
      try {
         const { error } = await supabase.rpc('update_quote_status_public', {
           p_local_id: id,
@@ -142,10 +145,34 @@ const PublicQuote: React.FC = () => {
           
         if (error) throw error;
         setQuote({...quote, status});
-        setStatusMessage({ type: 'success', text: `Quote successfully ${status.toLowerCase()}!` });
+        setStatusMessage({ type: 'success', text: `Quote successfully accepted!` });
      } catch (err) {
         console.error("Failed to update status", err);
         setStatusMessage({ type: 'error', text: 'Failed to update quote status. Please try again.' });
+     }
+  };
+
+  const handleDeclineSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmittingDecline) return;
+    setIsSubmittingDecline(true);
+    try {
+        const { error } = await supabase.rpc('update_quote_status_public', {
+          p_local_id: id,
+          p_status: 'DECLINED',
+          p_counter_amount: null,
+          p_client_message: declineReason || null
+        });
+          
+        if (error) throw error;
+        setQuote({...quote, status: 'DECLINED', clientMessage: declineReason});
+        setStatusMessage({ type: 'success', text: 'Quote successfully declined!' });
+        setShowDeclineModal(false);
+     } catch (err) {
+        console.error("Failed to update status", err);
+        setStatusMessage({ type: 'error', text: 'Failed to decline quote. Please try again.' });
+     } finally {
+        setIsSubmittingDecline(false);
      }
   };
 
@@ -340,7 +367,7 @@ const PublicQuote: React.FC = () => {
             </div>
           )}
 
-          {!isAccepted && !isDeclined && !isCountered && (
+          {!isAccepted && !isDeclined && !isCountered && !showCounterModal && !showDeclineModal && (
             <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-end items-center border-t border-slate-100 pt-8">
                {(quote.allow_counter_offer || quote.allowCounterOffer) && (
                  <button 
@@ -352,7 +379,7 @@ const PublicQuote: React.FC = () => {
                  </button>
                )}
                <button 
-                 onClick={() => handleStatusUpdate('DECLINED')}
+                 onClick={() => setShowDeclineModal(true)}
                  className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
                >
                  Decline Quote
@@ -412,6 +439,41 @@ const PublicQuote: React.FC = () => {
                     className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm disabled:opacity-50"
                   >
                     {isSubmittingCounter ? 'Submitting...' : 'Submit Offer'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {showDeclineModal && (
+            <div className="mt-8 p-6 bg-red-50 rounded-xl border border-red-100">
+              <h3 className="text-lg font-bold text-red-900 mb-2">Decline Quote</h3>
+              <p className="text-sm text-red-700 mb-4">Please let the business know why you are declining this quote.</p>
+              <form onSubmit={handleDeclineSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-red-800 mb-1">Reason for declining (Optional)</label>
+                  <textarea
+                    rows={3}
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    className="w-full px-4 py-2 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white text-black dark:text-black"
+                    placeholder="E.g. Price is too high, went with another vendor, etc."
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeclineModal(false)}
+                    className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors font-medium text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingDecline}
+                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm disabled:opacity-50"
+                  >
+                    {isSubmittingDecline ? 'Submitting...' : 'Confirm Decline'}
                   </button>
                 </div>
               </form>
