@@ -35,6 +35,9 @@ const Login: React.FC = () => {
     try {
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
+        options: {
+          shouldCreateUser: false
+        }
       });
       
       // For signInWithOtp, the error could be something else, but if it succeeds, it sends an email.

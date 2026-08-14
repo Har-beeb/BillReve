@@ -3,6 +3,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 
 interface EditorSummaryProps {
   type: 'QUOTE' | 'INVOICE';
+  currency: string;
   notes: string;
   setNotes: (notes: string) => void;
   aiEnabled: boolean;
@@ -21,6 +22,7 @@ interface EditorSummaryProps {
 
 export const EditorSummary: React.FC<EditorSummaryProps> = ({
   type,
+  currency,
   notes,
   setNotes,
   aiEnabled,
@@ -97,18 +99,18 @@ export const EditorSummary: React.FC<EditorSummaryProps> = ({
           <div className="bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 p-5 rounded-xl space-y-3">
              <div className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
                <span>Subtotal</span>
-               <span className="font-medium text-slate-700 dark:text-slate-300">NGN {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+               <span className="font-medium text-slate-700 dark:text-slate-300">{currency} {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
              </div>
              {computedTaxes.map((t, idx) => (
                <div key={idx} className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
                  <span>{t.name}</span>
-                 <span className="font-medium text-slate-700 dark:text-slate-300">{t.isDeduction ? '- ' : '+ '}NGN {t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                 <span className="font-medium text-slate-700 dark:text-slate-300">{t.isDeduction ? '- ' : '+ '}{currency} {t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                </div>
              ))}
              {computedTaxes.length > 0 && <hr className="border-slate-200 dark:border-slate-700" />}
              <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-between font-bold text-lg">
                <span className="text-slate-900 dark:text-white">Total</span>
-               <span className="text-purple-600 dark:text-purple-400">NGN {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+               <span className="text-purple-600 dark:text-purple-400">{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
              </div>
           </div>
         </div>

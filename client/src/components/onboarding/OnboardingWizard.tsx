@@ -154,8 +154,8 @@ export const OnboardingWizard: React.FC = () => {
         </div>
 
         {/* Content Container */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
-          <div className="relative min-h-[500px] overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden flex flex-col h-[85vh] max-h-[650px]">
+          <div className="relative flex-1 overflow-hidden">
             <AnimatePresence initial={false} custom={direction}>
               
               {/* STEP 0: Basics */}
@@ -281,12 +281,13 @@ export const OnboardingWizard: React.FC = () => {
                         onChange={e => setProfile({...profile, country: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       >
-                        <option value="Nigeria">Nigeria</option>
-                        <option value="United States">United States</option>
-                        <option value="United Kingdom">United Kingdom</option>
-                        <option value="Canada">Canada</option>
-                        <option value="Australia">Australia</option>
-                        <option value="Other">Other</option>
+                        <option value="NG">Nigeria</option>
+                        <option value="US">United States</option>
+                        <option value="GB">United Kingdom</option>
+                        <option value="CA">Canada</option>
+                        <option value="ZA">South Africa</option>
+                        <option value="KE">Kenya</option>
+                        <option value="GH">Ghana</option>
                       </select>
                     </div>
 
@@ -297,10 +298,14 @@ export const OnboardingWizard: React.FC = () => {
                         onChange={e => setProfile({...profile, currency: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       >
-                        <option value="NGN">NGN (₦) - Nigerian Naira</option>
-                        <option value="USD">USD ($) - US Dollar</option>
-                        <option value="GBP">GBP (£) - British Pound</option>
-                        <option value="EUR">EUR (€) - Euro</option>
+                        <option value="NGN">NGN - Nigerian Naira</option>
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="CAD">CAD - Canadian Dollar</option>
+                        <option value="ZAR">ZAR - South African Rand</option>
+                        <option value="KES">KES - Kenyan Shilling</option>
+                        <option value="GHS">GHS - Ghanaian Cedi</option>
+                        <option value="EUR">EUR - Euro</option>
                       </select>
                       <p className="mt-2 text-xs text-slate-500">This will be the default currency for all your invoices.</p>
                     </div>

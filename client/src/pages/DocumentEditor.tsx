@@ -438,6 +438,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
 
           <EditorSummary
             type={type}
+            currency={businessProfile?.currency || 'NGN'}
             notes={notes}
             setNotes={setNotes}
             aiEnabled={aiEnabled}
