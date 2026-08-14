@@ -190,7 +190,7 @@ export const OnboardingWizard: React.FC = () => {
                         value={profile.name}
                         onChange={e => setProfile({...profile, name: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        placeholder="e.g. Acme Corp"
+                        placeholder="e.g. Dangote Group"
                         autoFocus
                       />
                     </div>
@@ -203,7 +203,7 @@ export const OnboardingWizard: React.FC = () => {
                           value={profile.email}
                           onChange={e => setProfile({...profile, email: e.target.value})}
                           className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="hello@acme.com"
+                          placeholder="hello@paystack.com"
                         />
                       </div>
                       <div>

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Clock, AlertCircle, FileText, Plus, ArrowRight, Zap, BarChart2, PieChart, ChevronDown } from 'lucide-react';
+import { TrendingUp, Clock, AlertCircle, FileText, Plus, ArrowRight, Zap, BarChart2, PieChart } from 'lucide-react';
 import { Card, Badge } from '../components/ui';
 import { SplitButton } from '../components/ui/SplitButton';
 import { AiDraftModal } from '../components/AiDraftModal';
@@ -8,9 +8,10 @@ import { GettingStartedChecklist } from '../components/onboarding/GettingStarted
 import { useQuota } from '../hooks/useQuota';
 import { RevenueChat } from '../components/RevenueChat';
 import { formatMoney } from '../utils/formatters';
+import { useAppStore } from '../store/useAppStore';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
 /**
  * Dashboard Component
@@ -20,6 +21,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
  */
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { businessProfile } = useAppStore();
   const { checkQuota } = useQuota();
   const allClients = useLiveQuery(() => db.clients.toArray()) || [];
   const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
@@ -31,8 +33,6 @@ const Dashboard: React.FC = () => {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiModalDefaultTab, setAiModalDefaultTab] = useState<'text' | 'document'>('text');
   const [aiDocumentType, setAiDocumentType] = useState<'QUOTE' | 'INVOICE'>('QUOTE');
-  const [timeframe, setTimeframe] = useState('Last 6 months');
-  const [timeframeMenuOpen, setTimeframeMenuOpen] = useState(false);
 
   const handleScroll = () => {
     if (carouselRef.current) {
@@ -53,82 +53,58 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Calculations
-  const paidInvoices = invoices.filter(i => i.status === 'PAID');
-  const outstandingInvoices = invoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status));
-  const overdueInvoices = invoices.filter(i => i.status === 'OVERDUE');
-  const acceptedQuotes = quotes.filter(q => q.status === 'ACCEPTED');
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const isCurrentMonth = (dateString: string) => {
+    const d = new Date(dateString);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  };
+
+  // Current Month Calculations
+  const currentMonthInvoices = invoices.filter(i => isCurrentMonth(i.updatedAt || i.createdAt));
+  const currentMonthQuotes = quotes.filter(q => isCurrentMonth(q.updatedAt || q.createdAt));
+
+  const paidInvoices = currentMonthInvoices.filter(i => i.status === 'PAID');
+  const outstandingInvoices = currentMonthInvoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status));
+  const overdueInvoices = currentMonthInvoices.filter(i => i.status === 'OVERDUE');
+  const acceptedQuotes = currentMonthQuotes.filter(q => q.status === 'ACCEPTED');
 
   const totalRevenue = paidInvoices.reduce((sum, i) => sum + i.total, 0) + 
-                       invoices.filter(i => i.status === 'PARTIAL').reduce((sum, i) => sum + i.amountPaid, 0);
+                       currentMonthInvoices.filter(i => i.status === 'PARTIAL').reduce((sum, i) => sum + i.amountPaid, 0);
   
   const outstandingAmount = outstandingInvoices.reduce((sum, i) => sum + (i.total - i.amountPaid), 0);
   const overdueAmount = overdueInvoices.reduce((sum, i) => sum + (i.total - i.amountPaid), 0);
   const acceptedQuotesAmount = acceptedQuotes.reduce((sum, q) => sum + q.total, 0);
 
-
-  // MRR / Monthly Revenue Calculation (Standard: Sum of paid invoices in the current month)
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  
-  const currentMonthRevenue = paidInvoices
+  // MRR Growth
+  const lastMonthRevenue = invoices
     .filter(i => {
       const d = new Date(i.updatedAt || i.createdAt);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((sum, i) => sum + i.total, 0);
-
-  const lastMonthRevenue = paidInvoices
-    .filter(i => {
-      const d = new Date(i.updatedAt || i.createdAt);
-      return d.getMonth() === (currentMonth === 0 ? 11 : currentMonth - 1) && 
+      return i.status === 'PAID' && d.getMonth() === (currentMonth === 0 ? 11 : currentMonth - 1) && 
              d.getFullYear() === (currentMonth === 0 ? currentYear - 1 : currentYear);
     })
     .reduce((sum, i) => sum + i.total, 0);
 
   const mrrGrowth = lastMonthRevenue > 0 
-    ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
-    : 100;
+    ? ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+    : (totalRevenue > 0 ? 100 : 0);
 
-  // Chart Data Preparation
-  const generateMonths = () => {
-    if (timeframe === 'This Year') {
-      return Array.from({ length: 12 }).map((_, i) => {
-        const d = new Date(currentYear, i, 1);
-        return {
-          month: d.toLocaleString('default', { month: 'short' }),
-          year: currentYear,
-          monthNum: i
-        };
-      });
-    } else {
-      // Last 6 months
-      return Array.from({ length: 6 }).map((_, i) => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - (5 - i));
-        return {
-          month: d.toLocaleString('default', { month: 'short' }),
-          year: d.getFullYear(),
-          monthNum: d.getMonth()
-        };
-      });
-    }
-  };
-
-  const chartMonths = generateMonths();
-
-  const barChartData = chartMonths.map(m => {
-    const revenue = paidInvoices
+  // Line Chart Data (Days of Current Month)
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const lineChartData = Array.from({ length: daysInMonth }).map((_, i) => {
+    const day = i + 1;
+    const dailyRevenue = paidInvoices
       .filter(inv => {
         const d = new Date(inv.updatedAt || inv.createdAt);
-        return d.getMonth() === m.monthNum && d.getFullYear() === m.year;
+        return d.getDate() === day;
       })
       .reduce((sum, inv) => sum + inv.total, 0);
-    return { name: m.month, revenue };
+    return { name: day.toString(), revenue: dailyRevenue };
   });
 
   const pieChartData = [
-    { name: 'Paid', value: paidInvoices.reduce((sum, i) => sum + i.total, 0), color: '#0d9488' }, // Teal-600
+    { name: 'Paid', value: totalRevenue, color: '#0d9488' }, // Teal-600
     { name: 'Unpaid/Partial', value: outstandingAmount, color: '#f59e0b' }, // Amber-500
     { name: 'Overdue', value: overdueAmount, color: '#e11d48' } // Rose-600
   ].filter(d => d.value > 0);
@@ -278,7 +254,7 @@ const Dashboard: React.FC = () => {
                 <button 
                   onClick={() => setChartType('bar')}
                   className={`p-1.5 rounded-md transition-colors ${chartType === 'bar' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                  title="Bar Chart"
+                  title="Line Chart"
                 >
                   <BarChart2 size={16} />
                 </button>
@@ -291,26 +267,9 @@ const Dashboard: React.FC = () => {
                 </button>
               </div>
               <div className="relative shrink-0">
-                <button 
-                  onClick={() => setTimeframeMenuOpen(!timeframeMenuOpen)}
-                  className="flex items-center gap-1 sm:gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm py-1.5 px-2 sm:px-3 rounded-md outline-none focus:ring-2 focus:ring-purple-500/50 cursor-pointer"
-                >
-                  <span>{timeframe}</span>
-                  <ChevronDown size={14} className="text-slate-400" />
-                </button>
-                {timeframeMenuOpen && (
-                  <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-800 rounded-md shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden py-1">
-                    {['Last 6 months', 'This Year'].map(option => (
-                      <button 
-                        key={option}
-                        onClick={() => { setTimeframe(option); setTimeframeMenuOpen(false); }} 
-                        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm py-1.5 px-3 rounded-md">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">This Month</span>
+                </div>
               </div>
             </div>
           </div>
@@ -318,7 +277,7 @@ const Dashboard: React.FC = () => {
           {chartType === 'bar' ? (
             <div className="flex-1 mt-4 h-64 min-h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                <LineChart data={lineChartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
                   <YAxis 
@@ -329,10 +288,11 @@ const Dashboard: React.FC = () => {
                   />
                   <RechartsTooltip 
                     formatter={(value: any) => formatMoney(value as number)}
+                    labelFormatter={(label) => `Day ${label}`}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
                   />
-                  <Bar dataKey="revenue" fill="var(--color-purple-600)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
+                  <Line type="monotone" dataKey="revenue" stroke="var(--color-purple-600)" strokeWidth={3} dot={{ r: 3, fill: "var(--color-purple-600)" }} activeDot={{ r: 6 }} />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           ) : (
@@ -412,7 +372,7 @@ const Dashboard: React.FC = () => {
                       <div className="text-right">
                         <p className="text-sm font-semibold text-slate-900 dark:text-white">
                           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                          {formatMoney(doc.total, 'currency' in doc ? (doc as any).currency : 'NGN')}
+                          {formatMoney(doc.total, 'currency' in doc ? (doc as any).currency : (businessProfile?.currency || 'NGN'))}
                         </p>
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <Badge variant={doc.status.toLowerCase() as any} className="mt-1 scale-90 origin-right">

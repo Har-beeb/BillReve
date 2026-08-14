@@ -227,9 +227,9 @@ const LandingPage: React.FC = () => {
                      <h3 className="font-bold mb-4">Recent Invoices</h3>
                      <div className="space-y-3">
                        {[
-                         { id: '#INV-042', client: 'Acme Corp', amount: '₦450,000', status: 'PAID', color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
-                         { id: '#INV-043', client: 'Stark Industries', amount: '₦120,000', status: 'SENT', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
-                         { id: '#INV-044', client: 'Wayne Ent.', amount: '₦220,000', status: 'OVERDUE', color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
+                         { id: '#INV-042', client: 'Dangote Group', amount: '₦450,000', status: 'PAID', color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
+                         { id: '#INV-043', client: 'MTN Nigeria', amount: '₦120,000', status: 'SENT', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
+                         { id: '#INV-044', client: 'Jumia', amount: '₦220,000', status: 'OVERDUE', color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
                        ].map((inv, i) => (
                          <div key={i} className="flex justify-between items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
                            <div className="flex gap-4 items-center">

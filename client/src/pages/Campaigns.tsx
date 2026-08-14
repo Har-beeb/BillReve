@@ -76,6 +76,9 @@ const Campaigns: React.FC = () => {
           ${title ? `<h1 style="color: #4F46E5; margin-bottom: 20px;">${title}</h1>` : ''}
           <div style="color: #374151; font-size: 16px; line-height: 1.6;">${formattedContent}</div>
           ${ctaText && ctaLink ? `<div style="margin-top: 30px; text-align: center;"><a href="${ctaLink}" style="background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">${ctaText}</a></div>` : ''}
+          <div style="margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; font-size: 12px; color: #6b7280;">
+            Powered by <a href="https://billreve.app" style="color: #8b5cf6; text-decoration: none; font-weight: 500;">BillReve</a>
+          </div>
         </div>
       `;
 
@@ -84,7 +87,8 @@ const Campaigns: React.FC = () => {
         body: {
           to: selectedClientEmails,
           subject,
-          html: htmlContent
+          html: htmlContent,
+          fromName: businessProfile.name || undefined
         }
       });
 

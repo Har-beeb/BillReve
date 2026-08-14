@@ -9,7 +9,6 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
@@ -34,37 +33,24 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
-        password,
       });
       
-      if (signInError) throw signInError;
-      
-      navigate('/dashboard'); // Redirect to dashboard on success
+      // For signInWithOtp, the error could be something else, but if it succeeds, it sends an email.
+      if (!signInError) {
+        setShowVerification(true);
+        setResendCountdown(60);
+        setError('');
+      } else {
+        throw signInError;
+      }
     } catch (err: any) {
       let errorMsg = err.message || '';
       if (errorMsg.toLowerCase().includes('failed to fetch') || errorMsg.toLowerCase().includes('networkerror')) {
         errorMsg = 'Network error: Please check your internet connection and try again.';
       }
-      
-      if (errorMsg.toLowerCase().includes('email not confirmed')) {
-        // Auto trigger a resend and show the screen
-        const { error: resendError } = await supabase.auth.resend({
-          type: 'signup',
-          email,
-        });
-        
-        if (!resendError) {
-          setShowVerification(true);
-          setResendCountdown(60);
-          setError('');
-        } else {
-          setError('Email not confirmed. Failed to send verification code.');
-        }
-      } else {
-        setError(errorMsg || 'Failed to connect to server. Please try again.');
-      }
+      setError(errorMsg || 'Failed to connect to server. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -79,7 +65,7 @@ const Login: React.FC = () => {
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: 'signup'
+        type: 'email'
       });
       
       if (verifyError) throw verifyError;
@@ -181,22 +167,11 @@ const Login: React.FC = () => {
             placeholder="Enter your email"
           />
 
-          <AuthInput
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-            placeholder="•••••••••"
-          />
-
           <div className="flex items-center justify-between pt-1 pb-2">
             <label className="flex items-center gap-2 cursor-pointer group">
               <input type="checkbox" className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 bg-white dark:bg-slate-800" />
               <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Remember me</span>
             </label>
-            <Link to="/forgot-password" className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors">Forgot password?</Link>
           </div>
 
           <button

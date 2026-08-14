@@ -484,9 +484,13 @@ const Clients: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium mb-1">Phone</label>
                 <input 
-                  type="text" 
+                  type="tel" 
                   value={editingClient.phone || ''}
-                  onChange={e => setEditingClient({...editingClient, phone: e.target.value})}
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^0-9+\-\s()]/g, '');
+                    setEditingClient({...editingClient, phone: val});
+                  }}
+                  pattern="[0-9+\-\s()]*"
                   className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-purple-600" 
                 />
               </div>

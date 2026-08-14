@@ -79,7 +79,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
                   value={newClientName}
                   onChange={(e) => setNewClientName(e.target.value)}
                   className="w-full p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition-all"
-                  placeholder="Acme Corp"
+                  placeholder="Dangote Group"
                 />
               </div>
               <div>
@@ -89,7 +89,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
                   value={newClientEmail}
                   onChange={(e) => setNewClientEmail(e.target.value)}
                   className="w-full p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition-all"
-                  placeholder="billing@acme.com"
+                  placeholder="billing@paystack.com"
                 />
               </div>
             </div>

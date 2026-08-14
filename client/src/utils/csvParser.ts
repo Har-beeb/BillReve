@@ -5,7 +5,7 @@ export type ImportType = 'clients' | 'invoices' | 'quotes';
 export const CSV_TEMPLATES = {
   clients: [
     ['Name', 'Email', 'Phone', 'Address', 'Company'],
-    ['John Doe', 'john@example.com', '+1234567890', '123 Main St', 'Acme Corp'],
+    ['John Doe', 'john@example.com', '+1234567890', '123 Main St', 'Dangote Group'],
     ['Jane Smith', 'jane@example.com', '+0987654321', '456 Market St', 'Globex']
   ],
   invoices: [

@@ -59,6 +59,8 @@ export const ProfileSettings: React.FC = () => {
             account_number: localProfile.bankAccounts?.[0]?.accountNumber || null,
             industry: localProfile.industry || null,
             business_description: localProfile.businessDescription || null,
+            country: localProfile.country || null,
+            currency: localProfile.currency || null,
           })
           .eq('id', user.id);
           

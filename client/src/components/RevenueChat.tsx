@@ -125,7 +125,7 @@ export const RevenueChat: React.FC = () => {
         { 
           id: (Date.now() + 1).toString(), 
           role: 'ai', 
-          content: `### 💼 Available Commands\n\n**Slash Commands**\n* \`/create\` - Start the document creation wizard (Invoice, Quote, or Client)\n* \`/edit\` - Edit an existing record\n* \`/send email\` - Draft an email to a client\n* \`/help\` - Show this help menu\n\n**Mentions**\n* Use **\`@\`** to tag clients directly from your database and get a financial summary (e.g. \`@Acme Corp\`).\n\n**Conversational Actions**\nJust ask me to delete an invoice, edit a client's details, or draft an email, and I'll do it for you!`, 
+          content: `### 💼 Available Commands\n\n**Slash Commands**\n* \`/create\` - Start the document creation wizard (Invoice, Quote, or Client)\n* \`/edit\` - Edit an existing record\n* \`/send email\` - Draft an email to a client\n* \`/help\` - Show this help menu\n\n**Mentions**\n* Use **\`@\`** to tag clients directly from your database and get a financial summary (e.g. \`@Dangote Group\`).\n\n**Conversational Actions**\nJust ask me to delete an invoice, edit a client's details, or draft an email, and I'll do it for you!`, 
           timestamp: new Date() 
         }
       ]);

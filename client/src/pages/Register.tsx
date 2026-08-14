@@ -4,14 +4,13 @@ import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/auth/AuthLayout';
 import AuthInput from '../components/auth/AuthInput';
 import OAuthButton from '../components/auth/OAuthButton';
-import PasswordStrengthMeter, { isPasswordValid } from '../components/auth/PasswordStrengthMeter';
+
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [showVerification, setShowVerification] = useState(false);
   const [error, setError] = useState('');
@@ -34,11 +33,6 @@ const Register: React.FC = () => {
     e.preventDefault();
     setError('');
     
-    if (!isPasswordValid(password)) {
-      setError('Please ensure your password meets all requirements.');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -70,9 +64,8 @@ const Register: React.FC = () => {
         throw new Error("An account with this email already exists.");
       }
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signInWithOtp({
         email,
-        password,
         options: {
           data: {
             full_name: name,
@@ -106,7 +99,7 @@ const Register: React.FC = () => {
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: 'signup'
+        type: 'email'
       });
       
       if (verifyError) throw verifyError;
@@ -219,18 +212,7 @@ const Register: React.FC = () => {
           placeholder="Enter your email"
         />
 
-        <div>
-          <AuthInput
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            placeholder="••••••••"
-          />
-          <PasswordStrengthMeter password={password} />
-        </div>
+
 
         <button
           type="submit"
