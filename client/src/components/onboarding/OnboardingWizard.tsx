@@ -123,10 +123,10 @@ export const OnboardingWizard: React.FC = () => {
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-2xl relative z-10 flex flex-col h-full max-h-[100dvh] pb-4 md:pb-0 md:h-auto md:max-h-[90vh]">
+      <div className="w-full max-w-2xl relative z-10 flex flex-col h-full max-h-[100dvh] pb-4 md:pb-0 md:max-h-[750px]">
         
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 shrink-0">
           <Logo className="w-32" />
           <button 
             onClick={handleSkip}
@@ -154,7 +154,7 @@ export const OnboardingWizard: React.FC = () => {
         </div>
 
         {/* Content Container */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden flex flex-col flex-1 min-h-0 md:h-[600px]">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden flex flex-col flex-1 min-h-0">
           <div className="relative flex-1 overflow-hidden">
             <AnimatePresence initial={false} custom={direction}>
               
