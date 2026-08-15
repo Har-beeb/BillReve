@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Globe2, Palette, Upload, CheckCircle2, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
+import { Building2, Globe2, Upload, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Logo } from '../ui/Logo';
 import { supabase } from '../../lib/supabase';
@@ -24,7 +24,7 @@ const slideVariants = {
 };
 
 export const OnboardingWizard: React.FC = () => {
-  const { businessProfile, updateBusinessProfile, setHasSkippedOnboarding, colorTheme, setColorTheme, customColor, setCustomColor } = useAppStore();
+  const { businessProfile, updateBusinessProfile, setHasSkippedOnboarding } = useAppStore();
   
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1); // 1 for forward, -1 for backward
@@ -104,16 +104,7 @@ export const OnboardingWizard: React.FC = () => {
     }
   };
 
-  const THEMES = [
-    { id: 'default', name: 'Purple', class: 'bg-[#9333ea]' },
-    { id: 'wine', name: 'Wine', class: 'bg-[#881337]' },
-    { id: 'ocean', name: 'Ocean', class: 'bg-[#2563eb]' },
-    { id: 'emerald', name: 'Emerald', class: 'bg-[#059669]' },
-    { id: 'slate', name: 'Slate', class: 'bg-[#1e293b]' },
-    { id: 'sunset', name: 'Sunset', class: 'bg-[#f97316]' },
-    { id: 'mustard', name: 'Mustard', class: 'bg-[#eab308]' },
-    { id: 'cherry', name: 'Cherry', class: 'bg-[#dc2626]' },
-  ] as const;
+
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-start md:justify-center p-4 sm:p-8 overflow-hidden pt-6">
@@ -367,51 +358,7 @@ export const OnboardingWizard: React.FC = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">App Theme Color</label>
-                      <div className="flex flex-wrap gap-3">
-                        {THEMES.map((t) => (
-                          <button
-                            key={t.id}
-                            onClick={() => setColorTheme(t.id as any)}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${t.class} ${
-                              colorTheme === t.id ? 'ring-4 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-current' : ''
-                            }`}
-                            title={t.name}
-                          >
-                            {colorTheme === t.id && <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />}
-                          </button>
-                        ))}
-                        
-                        <div className="relative group flex shrink-0">
-                          <button
-                            onClick={() => setColorTheme('custom')}
-                            style={{ backgroundColor: colorTheme === 'custom' ? customColor : '#ffffff' }}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-110 overflow-hidden ${
-                              colorTheme === 'custom' ? 'ring-4 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-purple-600 dark:ring-purple-400' : 'border border-slate-300 dark:border-slate-600 border-dashed'
-                            }`}
-                            title="Custom Color"
-                          >
-                            {colorTheme === 'custom' ? (
-                               <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
-                            ) : (
-                               <div className="w-full h-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 opacity-80 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                 <Palette className="w-4 h-4 text-white drop-shadow-md" />
-                               </div>
-                            )}
-                          </button>
-                          {colorTheme === 'custom' && (
-                            <input
-                              type="color"
-                              value={customColor}
-                              onChange={(e) => setCustomColor(e.target.value)}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-full"
-                              title="Pick a custom color"
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </div>
+
                   </div>
                 </motion.div>
               )}

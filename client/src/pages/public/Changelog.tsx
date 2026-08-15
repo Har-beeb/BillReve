@@ -22,7 +22,7 @@ const updates = [
   },
   {
     version: 'v1.2.0',
-    date: 'June 15, 2026',
+    date: 'August 3, 2026',
     title: 'Offline-First Architecture',
     description: 'Never lose your work again. BillReve now runs completely offline-first using IndexedDB, syncing your invoices to the cloud the moment you reconnect.',
     features: ['Instant Load Times', 'Background Cloud Sync Engine', 'Conflict Resolution System'],
@@ -30,7 +30,7 @@ const updates = [
   },
   {
     version: 'v1.0.0',
-    date: 'January 10, 2026',
+    date: 'July 28, 2026',
     title: 'The Foundation',
     description: 'BillReve officially launches to help freelancers and SMEs reclaim their time with seamless, modern invoicing tools.',
     features: ['Beautiful PDF Generation', 'Customizable Tax Settings', 'Client Management Dashboard'],
