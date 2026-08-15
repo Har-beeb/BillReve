@@ -5,7 +5,7 @@ import { Zap, ShieldCheck, Sparkles } from 'lucide-react';
 
 const updates = [
   {
-    version: 'v1.6.0',
+    version: `v${import.meta.env.VITE_APP_VERSION || '1.6.0'}`,
     date: 'August 14, 2026',
     title: 'Smart Quote Looping & Minimum Counter Pricing',
     description: 'We have massively upgraded the way quotes are handled! Engage in continuous negotiations with your clients without ever needing to generate a new quote link. Plus, your Revenue AI just got smarter about your rules.',

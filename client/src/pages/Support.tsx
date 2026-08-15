@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from '../components/ui';
+import { Logo } from '../components/ui/Logo';
 import { Mail, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -33,11 +34,9 @@ const Support: React.FC = () => {
       </div>
 
       <Card className="p-6 text-center mt-8">
-        <div className="w-16 h-16 rounded-2xl bg-purple-600 flex items-center justify-center mx-auto mb-4">
-           <div className="w-6 h-6 bg-white rounded-md transform rotate-45" />
-        </div>
+        <Logo size="lg" className="mb-4" />
         <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">BillReve</h2>
-        <p className="text-slate-500 text-sm mb-4">Version 1.0.0-beta</p>
+        <p className="text-slate-500 text-sm mb-4">Version {import.meta.env.VITE_APP_VERSION || '1.6.0'}</p>
         <p className="text-slate-400 text-xs">
           © {new Date().getFullYear()} BillReve Inc. All rights reserved.
         </p>

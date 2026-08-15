@@ -31,6 +31,7 @@ const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 const PublicAbout = React.lazy(() => import('./pages/public/About'));
 const Changelog = React.lazy(() => import('./pages/public/Changelog'));
 const HelpCenter = React.lazy(() => import('./pages/public/HelpCenter'));
+const Documentation = React.lazy(() => import('./pages/public/Documentation'));
 const Guides = React.lazy(() => import('./pages/public/Guides'));
 const Templates = React.lazy(() => import('./pages/public/Templates'));
 const Contact = React.lazy(() => import('./pages/public/Contact'));
@@ -205,6 +206,7 @@ function App() {
               <Route path="/about" element={<PublicAbout />} />
               <Route path="/changelog" element={<Changelog />} />
               <Route path="/help" element={<HelpCenter />} />
+              <Route path="/documentation" element={<Documentation />} />
               <Route path="/guides" element={<Guides />} />
               <Route path="/templates" element={<Templates />} />
               <Route path="/contact" element={<Contact />} />

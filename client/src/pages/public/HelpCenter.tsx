@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SEO } from '../../components/SEO';
 import { Search, ChevronDown, MessageCircle, FileText, Settings, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const FAQS = [
   {
@@ -72,6 +73,15 @@ const HelpCenter: React.FC = () => {
             className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all outline-none"
           />
         </div>
+      </div>
+
+      <div className="mb-16 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-3xl p-8 text-center">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Read the Full Documentation</h2>
+        <p className="text-slate-600 dark:text-slate-400 mb-6">Dive deep into the technical architecture, offline-first syncing, and Revenue AI features.</p>
+        <Link to="/documentation" className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-full font-semibold transition-colors">
+          <FileText size={20} />
+          View Complete User Manual
+        </Link>
       </div>
 
       <div className="space-y-12">
