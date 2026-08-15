@@ -36,7 +36,7 @@ const Support: React.FC = () => {
       <Card className="p-6 text-center mt-8">
         <Logo size="lg" className="mb-4" />
         <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">BillReve</h2>
-        <p className="text-slate-500 text-sm mb-4">Version {import.meta.env.VITE_APP_VERSION || '1.6.0'}</p>
+        <p className="text-slate-500 text-sm mb-4">Version {import.meta.env.VITE_APP_VERSION || '1.3.0'}</p>
         <p className="text-slate-400 text-xs">
           © {new Date().getFullYear()} BillReve Inc. All rights reserved.
         </p>

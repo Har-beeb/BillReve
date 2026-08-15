@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig({
   define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify('1.6.0')
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(JSON.parse(require('fs').readFileSync('./package.json', 'utf-8')).version)
   },
   plugins: [
     react(),

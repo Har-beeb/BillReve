@@ -5,7 +5,7 @@ import { Zap, ShieldCheck, Sparkles } from 'lucide-react';
 
 const updates = [
   {
-    version: `v${import.meta.env.VITE_APP_VERSION || '1.6.0'}`,
+    version: `v${import.meta.env.VITE_APP_VERSION || '1.3.0'}`,
     date: 'August 14, 2026',
     title: 'Smart Quote Looping & Minimum Counter Pricing',
     description: 'We have massively upgraded the way quotes are handled! Engage in continuous negotiations with your clients without ever needing to generate a new quote link. Plus, your Revenue AI just got smarter about your rules.',
@@ -13,7 +13,7 @@ const updates = [
     icon: <Sparkles className="text-purple-500" size={24} />
   },
   {
-    version: 'v1.5.0',
+    version: 'v1.2.0',
     date: 'August 8, 2026',
     title: 'Revenue AI Integration',
     description: 'We are thrilled to introduce Revenue AI, your personal financial assistant. BillReve now lets you create invoices, quotes, and answer client queries purely through conversation.',
@@ -21,7 +21,7 @@ const updates = [
     icon: <Sparkles className="text-purple-500" size={24} />
   },
   {
-    version: 'v1.2.0',
+    version: 'v1.1.0',
     date: 'August 3, 2026',
     title: 'Offline-First Architecture',
     description: 'Never lose your work again. BillReve now runs completely offline-first using IndexedDB, syncing your invoices to the cloud the moment you reconnect.',
