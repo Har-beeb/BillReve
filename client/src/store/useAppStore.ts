@@ -1,3 +1,4 @@
+import { toast } from 'react-hot-toast';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Client, Quote, Invoice, BusinessProfile, TaxSetting } from '../types';
@@ -31,6 +32,7 @@ interface AppState {
   invoices: Invoice[];
   businessProfile: BusinessProfile;
   taxSettings: TaxSetting[];
+  userPreferences: Record<string, any>;
   setInitialized: (initialized: boolean) => void;
   setHasSkippedOnboarding: (skipped: boolean) => void;
   setSyncStatus: (status: SyncStatus) => void;
@@ -80,6 +82,7 @@ export const useAppStore = create<AppState>()(
       clients: [],
       quotes: [],
       invoices: [],
+      userPreferences: {},
       businessProfile: {
         name: 'BillReve',
         email: 'hello@billreve.app',
@@ -105,54 +108,142 @@ export const useAppStore = create<AppState>()(
         } else {
           document.documentElement.classList.remove('dark');
         }
-        return { theme: newTheme };
-      }),
-      setColorTheme: (colorTheme) => {
-        const root = document.documentElement;
-        // Clean up previous themes
-        root.classList.remove('theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
         
-        if (colorTheme !== 'default') {
-          root.classList.add(`theme-${colorTheme}`);
-        }
-
-        // Handle inline custom color logic
+        const userId = state.user?.id || 'default';
+        const prefs = state.userPreferences[userId] || {};
+        return { 
+          theme: newTheme,
+          userPreferences: {
+            ...state.userPreferences,
+            [userId]: { ...prefs, theme: newTheme }
+          }
+        };
+      }),
+      setColorTheme: (colorTheme) => set((state) => {
+        const root = document.documentElement;
+        root.classList.remove('theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
+        if (colorTheme !== 'default') root.classList.add(`theme-${colorTheme}`);
         if (colorTheme === 'custom') {
-          root.style.setProperty('--color-purple-600', useAppStore.getState().customColor);
+          root.style.setProperty('--color-purple-600', state.customColor);
         } else {
           root.style.removeProperty('--color-purple-600');
         }
-
-        set({ colorTheme });
-      },
-      setCustomColor: (customColor) => {
-        set({ customColor });
-        if (useAppStore.getState().colorTheme === 'custom') {
+        
+        const userId = state.user?.id || 'default';
+        const prefs = state.userPreferences[userId] || {};
+        return { 
+          colorTheme,
+          userPreferences: {
+            ...state.userPreferences,
+            [userId]: { ...prefs, colorTheme }
+          }
+        };
+      }),
+      setCustomColor: (customColor) => set((state) => {
+        if (state.colorTheme === 'custom') {
           document.documentElement.style.setProperty('--color-purple-600', customColor);
         }
-      },
-      setFontFamily: (fontFamily) => set({ fontFamily }),
-      setFontSize: (fontSize) => set({ fontSize }),
-      setMobileNavStyle: (style) => set({ mobileNavStyle: style }),
+        const userId = state.user?.id || 'default';
+        const prefs = state.userPreferences[userId] || {};
+        return { 
+          customColor,
+          userPreferences: {
+            ...state.userPreferences,
+            [userId]: { ...prefs, customColor }
+          }
+        };
+      }),
+      setFontFamily: (fontFamily) => set((state) => {
+        const userId = state.user?.id || 'default';
+        const prefs = state.userPreferences[userId] || {};
+        return { fontFamily, userPreferences: { ...state.userPreferences, [userId]: { ...prefs, fontFamily } } };
+      }),
+      setFontSize: (fontSize) => set((state) => {
+        const userId = state.user?.id || 'default';
+        const prefs = state.userPreferences[userId] || {};
+        return { fontSize, userPreferences: { ...state.userPreferences, [userId]: { ...prefs, fontSize } } };
+      }),
+      setMobileNavStyle: (style) => set((state) => {
+        const userId = state.user?.id || 'default';
+        const prefs = state.userPreferences[userId] || {};
+        return { mobileNavStyle: style, userPreferences: { ...state.userPreferences, [userId]: { ...prefs, mobileNavStyle: style } } };
+      }),
       addClient: (client) => set((state) => ({ clients: [...state.clients, client] })),
       addQuote: (quote) => set((state) => ({ quotes: [...state.quotes, quote] })),
       addInvoice: (invoice) => set((state) => ({ invoices: [...state.invoices, invoice] })),
       updateBusinessProfile: (profile) => set({ businessProfile: profile }),
       updateTaxSettings: (settings) => set({ taxSettings: settings }),
-      setSession: (session) => {
-        set({ 
-          session, 
-          user: session?.user || null, 
-          isAuthenticated: !!session 
-        });
-      },
+      setSession: (session) => set((state) => {
+        const userId = session?.user?.id;
+        const newUpdates: any = {
+          session,
+          user: session?.user || null,
+          isAuthenticated: !!session
+        };
+        
+        if (userId) {
+          const prefs = state.userPreferences[userId];
+          if (prefs) {
+            if (prefs.theme) newUpdates.theme = prefs.theme;
+            if (prefs.colorTheme) newUpdates.colorTheme = prefs.colorTheme;
+            if (prefs.customColor) newUpdates.customColor = prefs.customColor;
+            if (prefs.fontFamily) newUpdates.fontFamily = prefs.fontFamily;
+            if (prefs.fontSize) newUpdates.fontSize = prefs.fontSize;
+            if (prefs.mobileNavStyle) newUpdates.mobileNavStyle = prefs.mobileNavStyle;
+            
+            if (prefs.theme === 'dark') document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+            
+            const root = document.documentElement;
+            root.classList.remove('theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
+            if (prefs.colorTheme && prefs.colorTheme !== 'default') {
+              root.classList.add(`theme-${prefs.colorTheme}`);
+            }
+            if (prefs.colorTheme === 'custom' && prefs.customColor) {
+              root.style.setProperty('--color-purple-600', prefs.customColor);
+            } else {
+              root.style.removeProperty('--color-purple-600');
+            }
+          }
+        }
+        
+        return newUpdates;
+      }),
       logout: async () => {
+        try {
+          const { syncEngine } = await import('../services/syncEngine');
+          const { db } = await import('../db/db');
+          
+          toast.loading("Syncing data before logout...", { id: "logout-sync" });
+          await syncEngine.sync();
+          
+          const pendingSyncs = await db.syncQueue.count();
+          if (pendingSyncs > 0) {
+            toast.error("Cannot logout: You have unsynced data and appear to be offline. Please connect to the internet first.", { id: "logout-sync", duration: 5000 });
+            return;
+          }
+          toast.success("Sync complete.", { id: "logout-sync" });
+        } catch (e) {
+          console.error("Sync before logout failed", e);
+          toast.error("Failed to sync data before logout. Please check your connection.", { id: "logout-sync", duration: 5000 });
+          return;
+        }
+        
         await supabase.auth.signOut();
-        // Reset state but KEEP user preferences (theme, font, etc)
+        
+        document.documentElement.classList.remove('dark', 'theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
+        document.documentElement.style.removeProperty('--color-purple-600');
+        
         set({ 
           user: null, 
           session: null, 
           isAuthenticated: false,
+          theme: 'light',
+          colorTheme: 'default',
+          customColor: '#8b5cf6',
+          fontFamily: 'Inter',
+          fontSize: 'medium',
+          mobileNavStyle: 'drawer',
           businessProfile: {
             name: 'BillReve',
             email: 'hello@billreve.app',
@@ -168,9 +259,7 @@ export const useAppStore = create<AppState>()(
           ]
         });
         
-        // Clear offline data to prevent data leakage between users
         try {
-          // Dynamic import of db to avoid circular dependency issues if any
           const { db } = await import('../db/db');
           await Promise.all([
             db.clients.clear(),
@@ -179,10 +268,8 @@ export const useAppStore = create<AppState>()(
             db.syncQueue.clear()
           ]);
           
-          // Only clear sync time so another user logging in gets a fresh sync
           localStorage.removeItem('last_sync_time');
           
-          // Delay reload slightly to ensure Zustand finishes writing/clearing
           setTimeout(() => {
              window.location.reload(); 
           }, 100);
@@ -224,7 +311,8 @@ export const useAppStore = create<AppState>()(
           businessProfile: profile as BusinessProfile,
           taxSettings: state.taxSettings,
           isProUser: state.isProUser,
-          hasSkippedOnboarding: state.hasSkippedOnboarding
+          hasSkippedOnboarding: state.hasSkippedOnboarding,
+          userPreferences: state.userPreferences
         };
       }, // Supabase handles auth session persistence automatically, we don't need to persist it here.
     }

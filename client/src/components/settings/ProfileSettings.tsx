@@ -65,6 +65,16 @@ export const ProfileSettings: React.FC = () => {
           .eq('id', user.id);
           
         if (error) throw error;
+        
+        // Also update Auth metadata so the UI main layout syncs instantly
+        await supabase.auth.updateUser({
+          data: {
+            full_name: localProfile.name,
+            name: localProfile.name,
+            phone: localProfile.phone,
+          }
+        });
+        
         toast.success('Profile saved successfully!');
       } catch (err: any) {
         console.error('Failed to save profile to DB:', err);
@@ -155,8 +165,8 @@ export const ProfileSettings: React.FC = () => {
           <input 
             type="email" 
             value={localProfile.email}
-            onChange={(e) => setLocalProfile({...localProfile, email: e.target.value})}
-            className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+            disabled
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 cursor-not-allowed focus:outline-none"
           />
         </div>
         <div>

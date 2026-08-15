@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Globe2, Upload, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
+import { Building2, Globe2, Palette, Upload, ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Logo } from '../ui/Logo';
 import { supabase } from '../../lib/supabase';
@@ -81,6 +81,14 @@ export const OnboardingWizard: React.FC = () => {
           currency: profile.currency,
           logo_url: profile.logoUrl || null,
         }).eq('id', session.user.id);
+        
+        await supabase.auth.updateUser({
+          data: {
+            full_name: profile.name,
+            name: profile.name,
+            phone: profile.phone,
+          }
+        });
       }
     } catch (e) {
       console.error('Error saving profile to database during onboarding:', e);
@@ -192,8 +200,8 @@ export const OnboardingWizard: React.FC = () => {
                         <input
                           type="email"
                           value={profile.email}
-                          onChange={e => setProfile({...profile, email: e.target.value})}
-                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          disabled
+                          className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400 cursor-not-allowed focus:outline-none"
                           placeholder="hello@paystack.com"
                         />
                       </div>
