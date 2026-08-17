@@ -24,14 +24,14 @@ const slideVariants = {
 };
 
 export const OnboardingWizard: React.FC = () => {
-  const { businessProfile, updateBusinessProfile, setHasSkippedOnboarding } = useAppStore();
+  const { user, businessProfile, updateBusinessProfile, setHasSkippedOnboarding } = useAppStore();
   
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1); // 1 for forward, -1 for backward
   
   // Local state for the wizard
   const [profile, setProfile] = useState({
-    name: businessProfile.name || '',
+    name: user?.user_metadata?.full_name || (businessProfile.name === 'BillReve' ? '' : businessProfile.name) || '',
     email: businessProfile.email || '',
     phone: businessProfile.phone || '',
     industry: businessProfile.industry || 'Software & Tech',
