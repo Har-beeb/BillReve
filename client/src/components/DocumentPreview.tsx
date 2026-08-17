@@ -2,6 +2,7 @@ import React from 'react';
 import { Eye } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { useAppStore } from '../store/useAppStore';
+import { Logo } from './ui/Logo';
 
 interface DocumentPreviewProps {
   businessProfile: any;
@@ -70,8 +71,8 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
                  <img src={businessProfile.logoUrl} alt="Logo" className="w-full h-full object-contain object-left" />
               </div>
             ) : (
-              <div className="w-16 h-16 rounded-xl bg-purple-600 flex items-center justify-center mb-6">
-                 <div className="w-8 h-8 bg-white rounded-md transform rotate-45" />
+              <div className="mb-6 flex justify-start">
+                 <Logo size="lg" />
               </div>
             )}
             <h1 className="text-4xl font-bold text-slate-900 tracking-tight uppercase">{type === 'QUOTE' ? 'QUOTE' : 'INVOICE'}</h1>
