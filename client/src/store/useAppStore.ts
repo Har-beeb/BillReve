@@ -316,7 +316,8 @@ export const useAppStore = create<AppState>()(
           taxSettings: state.taxSettings,
           isProUser: state.isProUser,
           hasSkippedOnboarding: state.hasSkippedOnboarding,
-          userPreferences: state.userPreferences
+          userPreferences: state.userPreferences,
+          aiPromptsUsed: state.aiPromptsUsed
         };
       }, // Supabase handles auth session persistence automatically, we don't need to persist it here.
     }

@@ -580,7 +580,6 @@ export const RevenueChat: React.FC = () => {
             </div>
           )}
 
-          <ProFeature isProUser={isProUser}>
             <form 
               onSubmit={(e) => { e.preventDefault(); handleSend(); }}
               className="flex items-center gap-2"
@@ -602,7 +601,6 @@ export const RevenueChat: React.FC = () => {
                 {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               </button>
             </form>
-          </ProFeature>
           <div className="text-center mt-2">
             <p className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
               <Sparkles size={10} /> AI-Powered · Privacy First (No PII sent)
