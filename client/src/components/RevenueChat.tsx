@@ -187,6 +187,16 @@ export const RevenueChat: React.FC = () => {
       const now = new Date().toISOString();
       if (action.type === 'CREATE_INVOICE' || action.type === 'CREATE_QUOTE') {
         const payload = action.payload;
+        
+        if (!payload.clientId) {
+          setMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            role: 'ai',
+            content: `I need a client to assign this ${action.type === 'CREATE_INVOICE' ? 'invoice' : 'quote'} to! Please provide the name of the client you want to use, or ask me to create a new one first.`,
+            timestamp: new Date()
+          }]);
+          return;
+        }
         const formattedItems = (payload.items || []).map((item: any) => {
           const qty = item.quantity || 1;
           const price = item.unitPrice || item.rate || item.amount || 0;
