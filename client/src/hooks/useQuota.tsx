@@ -7,7 +7,8 @@ import toast from 'react-hot-toast';
 const FREE_TIER_LIMITS = {
   invoices: 10,
   quotes: 10,
-  clients: 5
+  clients: 5,
+  ai_prompts: 10
 };
 
 export const useQuota = () => {
@@ -17,8 +18,9 @@ export const useQuota = () => {
   const invoiceCount = useLiveQuery(() => db.invoices.count()) || 0;
   const quoteCount = useLiveQuery(() => db.quotes.count()) || 0;
   const clientCount = useLiveQuery(() => db.clients.count()) || 0;
+  const aiPromptsCount = useAppStore(state => state.aiPromptsUsed) || 0;
 
-  const checkQuota = (type: 'invoice' | 'quote' | 'client'): boolean => {
+  const checkQuota = (type: 'invoice' | 'quote' | 'client' | 'ai_prompt'): boolean => {
     if (isProUser) return true;
 
     let limit = 0;
@@ -36,6 +38,10 @@ export const useQuota = () => {
       case 'client':
         limit = FREE_TIER_LIMITS.clients;
         current = clientCount;
+        break;
+      case 'ai_prompt':
+        limit = FREE_TIER_LIMITS.ai_prompts;
+        current = aiPromptsCount;
         break;
     }
 

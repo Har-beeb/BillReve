@@ -7,6 +7,7 @@ import { MessageSquare, X, Send, Loader2, User, Copy, Check, CheckCircle, Bot, S
 import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
+import { useQuota } from '../hooks/useQuota';
 import { ProFeature } from './ui/ProFeature';
 import { SendDocumentModal } from './SendDocumentModal';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,7 +27,8 @@ interface Message {
 }
 
 export const RevenueChat: React.FC = () => {
-  const { isProUser, mobileNavStyle, businessProfile, clients: storeClients } = useAppStore();
+  const { isProUser, mobileNavStyle, businessProfile, clients: storeClients, incrementAiPrompts } = useAppStore();
+  const { checkQuota } = useQuota();
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -118,6 +120,8 @@ export const RevenueChat: React.FC = () => {
     setInput('');
     
     // Intercept /help command locally
+    if (!checkQuota('ai_prompt')) return;
+
     if (userMsg.toLowerCase() === '/help') {
       setMessages(prev => [
         ...prev, 
@@ -147,6 +151,7 @@ export const RevenueChat: React.FC = () => {
       const clients = stripSensitiveData(rawClients, 'client');
 
       // 3. Send to API
+      incrementAiPrompts();
       const result = await chatWithRevenue({
         prompt: userMsg,
         data: { invoices, quotes, clients },
@@ -364,6 +369,7 @@ export const RevenueChat: React.FC = () => {
       const quotes = stripSensitiveData(rawQuotes, 'quote');
       const clients = stripSensitiveData(rawClients, 'client');
       
+      incrementAiPrompts();
       const result = await chatWithRevenue({
         prompt: "The action was executed successfully! Acknowledge this briefly and ask if there is anything else I need help with. DO NOT include an 'action' object in your JSON response.",
         data: { invoices, quotes, clients },

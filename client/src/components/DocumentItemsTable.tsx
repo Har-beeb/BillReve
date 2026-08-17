@@ -88,7 +88,8 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
                 <input 
                   type="number" 
                   min="1"
-                  value={item.quantity}
+                  value={item.quantity || ''}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => onItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)}
                   className="w-full p-3.5 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all text-right font-medium text-sm shadow-sm md:shadow-none"
                 />
@@ -99,7 +100,8 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
                 <input 
                   type="number" 
                   min="0"
-                  value={item.unitPrice}
+                  value={item.unitPrice === 0 ? '' : item.unitPrice}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => onItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                   className="w-full p-3.5 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all text-right font-medium text-sm shadow-sm md:shadow-none"
                 />

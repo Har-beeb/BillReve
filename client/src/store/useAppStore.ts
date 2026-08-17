@@ -51,6 +51,8 @@ interface AppState {
   updateTaxSettings: (settings: TaxSetting[]) => void;
   setSession: (session: Session | null) => void;
   logout: () => Promise<void>;
+  aiPromptsUsed: number;
+  incrementAiPrompts: () => void;
 }
 
 /**
@@ -83,6 +85,7 @@ export const useAppStore = create<AppState>()(
       quotes: [],
       invoices: [],
       userPreferences: {},
+      aiPromptsUsed: 0,
       businessProfile: {
         name: 'BillReve',
         email: 'hello@billreve.app',
@@ -276,7 +279,8 @@ export const useAppStore = create<AppState>()(
         } catch (e) {
           console.error("Failed to clear local DB on logout:", e);
         }
-      }
+      },
+      incrementAiPrompts: () => set((state) => ({ aiPromptsUsed: (state.aiPromptsUsed || 0) + 1 })),
     }),
     {
       name: 'billreve-storage',
