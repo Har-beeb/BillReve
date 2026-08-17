@@ -732,12 +732,7 @@ const Quotes: React.FC = () => {
                     >
                       Decline Offer
                     </button>
-                    <button 
-                      onClick={() => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: { ...selectedQuote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }); }}
-                      className="flex-1 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-800/50 text-purple-700 dark:text-purple-300 py-2 rounded-lg font-medium transition-colors text-sm"
-                    >
-                      Redraft Quote
-                    </button>
+
                   </div>
                 </div>
               )}
