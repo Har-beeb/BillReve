@@ -45,12 +45,19 @@ export const useQuota = () => {
         break;
     }
 
+    const displayNames = {
+      invoice: 'invoices',
+      quote: 'quotes',
+      client: 'clients',
+      ai_prompt: 'AI assistant requests'
+    };
+
     if (current >= limit) {
       toast((t) => (
         <div className="flex flex-col gap-2">
           <span className="font-semibold text-slate-900 dark:text-white">Limit Reached</span>
           <span className="text-sm text-slate-600 dark:text-slate-400">
-            You've reached the free limit of {limit} {type}s.
+            You've reached the free limit of {limit} {displayNames[type]}.
           </span>
           <button 
             onClick={() => {
