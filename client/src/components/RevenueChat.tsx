@@ -8,7 +8,6 @@ import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
 import { useQuota } from '../hooks/useQuota';
-import { ProFeature } from './ui/ProFeature';
 import { SendDocumentModal } from './SendDocumentModal';
 import { v4 as uuidv4 } from 'uuid';
 import { syncEngine } from '../services/syncEngine';
@@ -27,7 +26,7 @@ interface Message {
 }
 
 export const RevenueChat: React.FC = () => {
-  const { isProUser, mobileNavStyle, businessProfile, clients: storeClients, incrementAiPrompts } = useAppStore();
+  const { mobileNavStyle, businessProfile, clients: storeClients, incrementAiPrompts } = useAppStore();
   const { checkQuota } = useQuota();
   const location = useLocation();
   const navigate = useNavigate();
