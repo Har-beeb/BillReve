@@ -64,10 +64,24 @@ class SyncEngine {
     
     if (!this.channel) {
       this.channel = supabase
-        .channel('schema-db-changes')
+        .channel(`user-changes-${session.user.id}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public' },
+          { event: '*', schema: 'public', table: 'clients', filter: `user_id=eq.${session.user.id}` },
+          () => {
+            this.sync();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'invoices', filter: `user_id=eq.${session.user.id}` },
+          () => {
+            this.sync();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'quotes', filter: `user_id=eq.${session.user.id}` },
           () => {
             this.sync();
           }
