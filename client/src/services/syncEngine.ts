@@ -132,9 +132,14 @@ class SyncEngine {
     try {
       await this.pushLocalChanges();
       
-      const syncStartTime = new Date().toISOString();
-      await this.pullRemoteChanges();
-      localStorage.setItem('last_sync_time', syncStartTime);
+      const maxUpdatedAt = await this.pullRemoteChanges();
+      
+      if (maxUpdatedAt && maxUpdatedAt > 0) {
+        localStorage.setItem('last_sync_time', new Date(maxUpdatedAt).toISOString());
+      } else if (!localStorage.getItem('last_sync_time')) {
+        // Fallback for first ever sync if no data exists
+        localStorage.setItem('last_sync_time', new Date().toISOString());
+      }
       
       useAppStore.getState().setSyncStatus('synced');
       this.retryCount = 0;
@@ -285,13 +290,19 @@ class SyncEngine {
     ]);
 
     const processRemoteData = async (table: any, remoteData: any[]) => {
-      if (!remoteData || remoteData.length === 0) return;
+      let maxUpdatedAt = 0;
+      if (!remoteData || remoteData.length === 0) return maxUpdatedAt;
       
       const remoteItems = remoteData.map(toCamelCase);
       const toDeleteLocally: string[] = [];
       const toPutLocally: any[] = [];
 
       for (const remote of remoteItems) {
+        const remoteTime = new Date(remote.updatedAt).getTime();
+        if (remoteTime > maxUpdatedAt) {
+          maxUpdatedAt = remoteTime;
+        }
+
         if (remote.isPurged) {
           toDeleteLocally.push(remote.localId);
           continue;
@@ -317,7 +328,6 @@ class SyncEngine {
         if (local && local.syncStatus === 'pending') {
 
           // LWW: Last-Write-Wins logic
-          const remoteTime = new Date(remote.updatedAt).getTime();
           const localTime = new Date(local.updatedAt).getTime();
           
           // Priority statuses from client interactions override local stale edits
@@ -334,13 +344,17 @@ class SyncEngine {
 
       if (toDeleteLocally.length > 0) await table.bulkDelete(toDeleteLocally);
       if (toPutLocally.length > 0) await table.bulkPut(toPutLocally);
+      
+      return maxUpdatedAt;
     };
 
-    await Promise.all([
+    const maxTimes = await Promise.all([
       processRemoteData(db.clients, clientsRes.data || []),
       processRemoteData(db.invoices, invoicesRes.data || []),
       processRemoteData(db.quotes, quotesRes.data || [])
     ]);
+    
+    return Math.max(...maxTimes);
   }
 }
 
