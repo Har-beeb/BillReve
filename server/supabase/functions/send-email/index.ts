@@ -73,20 +73,24 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY is not set");
     }
 
-    const res = await fetch("https://api.resend.com/emails", {
+    const recipients = Array.isArray(to) ? to : [to];
+    
+    // Use the batch endpoint to send individual emails to each recipient.
+    // This protects data privacy by preventing recipients from seeing each other.
+    const res = await fetch("https://api.resend.com/emails/batch", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
-      body: JSON.stringify({
+      body: JSON.stringify(recipients.map(recipient => ({
         from: fromName ? `${fromName} <noreply@billreve.app>` : "BillReve <noreply@billreve.app>",
-        to: Array.isArray(to) ? to : [to],
+        to: [recipient],
         reply_to: replyTo || "support@billreve.app",
         subject: subject || "Update from BillReve",
         html: html || "<p>Please see the attached document.</p>",
         attachments: attachments || [],
-      }),
+      }))),
     });
 
     const data = await res.json();

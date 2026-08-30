@@ -15,6 +15,10 @@ const Contact: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!navigator.onLine) {
+      toast.error('You need an active internet connection to send a message.');
+      return;
+    }
     setIsSubmitting(true);
     
     try {

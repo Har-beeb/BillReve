@@ -75,6 +75,11 @@ const LandingPage: React.FC = () => {
       return;
     }
     
+    if (!navigator.onLine) {
+      toast.error('You need an active internet connection to send feedback.');
+      return;
+    }
+    
     setIsSubmittingFeedback(true);
     try {
       const htmlContent = `

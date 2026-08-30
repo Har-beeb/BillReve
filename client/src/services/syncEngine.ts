@@ -48,12 +48,14 @@ class SyncEngine {
   private channel: ReturnType<typeof supabase.channel> | null = null;
   private retryCount = 0;
   private maxRetries = 5;
+  private syncDebounceTimer: any = null;
 
   /**
    * Initializes the synchronization process and starts listening for changes.
-   * 1. Performs an initial sync.
-   * 2. Subscribes to remote Postgres changes via Supabase Realtime.
-   * 3. Hooks into the local IndexedDB queue to trigger syncs on new local writes.
+   * Steps:
+   * 1. Performs initial sync of local queue and remote db.
+   * 2. Opens real-time channel to listen for row-level Postgres changes.
+   * 3. Hooks into Dexie IndexedDB to auto-queue user's local edits for sync.
    * 4. Listens for browser 'online' events to resume syncing.
    */
   async start() {
@@ -92,8 +94,11 @@ class SyncEngine {
     // Auto-trigger sync when local changes are queued
     db.syncQueue.hook('creating', (_primKey, _obj, trans) => {
       trans.on('complete', () => {
-        // Debounce slightly to prevent thrashing on rapid additions
-        setTimeout(() => this.sync(), 500);
+        // Proper debounce to prevent thrashing on rapid additions
+        if (this.syncDebounceTimer) {
+          clearTimeout(this.syncDebounceTimer);
+        }
+        this.syncDebounceTimer = setTimeout(() => this.sync(), 500);
       });
     });
 

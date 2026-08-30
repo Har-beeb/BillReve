@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 
 export const generateAiQuote = async (payload: { text?: string; documents?: { mimeType: string; data: string }[]; businessProfile?: any }) => {
+  if (!navigator.onLine) throw new Error('You need an active internet connection to use AI features.');
   const { data, error } = await supabase.functions.invoke('ai/generate-quote', {
     body: payload,
   });
@@ -17,6 +18,7 @@ export const generateAiQuote = async (payload: { text?: string; documents?: { mi
 };
 
 export const enhanceAiText = async (payload: { text: string; mode: 'line_item' | 'note'; businessProfile?: any }) => {
+  if (!navigator.onLine) throw new Error('You need an active internet connection to use AI features.');
   const { data, error } = await supabase.functions.invoke('ai/enhance-text', {
     body: payload,
   });
@@ -42,6 +44,7 @@ export const draftAiEmail = async (payload: {
   isOverdue?: boolean,
   businessProfile?: any
 }) => {
+  if (!navigator.onLine) throw new Error('You need an active internet connection to use AI features.');
   const { data, error } = await supabase.functions.invoke('ai/draft-email', {
     body: payload,
   });
@@ -58,6 +61,7 @@ export const draftAiEmail = async (payload: {
 };
 
 export const chatWithRevenue = async (payload: { prompt: string; data: any; businessProfile?: any; currentView?: string; history?: any[] }) => {
+  if (!navigator.onLine) throw new Error('You need an active internet connection to use AI features.');
   const { data, error } = await supabase.functions.invoke('ai/insights', {
     body: payload,
   });
@@ -74,6 +78,7 @@ export const chatWithRevenue = async (payload: { prompt: string; data: any; busi
 };
 
 export const generateCfoReport = async (payload: { data: any; businessProfile?: any; metrics: any }) => {
+  if (!navigator.onLine) throw new Error('You need an active internet connection to use AI features.');
   const { data, error } = await supabase.functions.invoke('ai/cfo-report', {
     body: payload,
   });

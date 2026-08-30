@@ -51,6 +51,11 @@ const Campaigns: React.FC = () => {
       toast.error('Subject and content are required.');
       return;
     }
+    
+    if (!navigator.onLine) {
+      toast.error('You need an active internet connection to send emails.');
+      return;
+    }
 
     setIsSending(true);
     try {
