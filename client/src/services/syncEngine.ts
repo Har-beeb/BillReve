@@ -257,7 +257,9 @@ class SyncEngine {
         let query = supabase
           .from(table)
           .select('*')
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: true })
+          .order('local_id', { ascending: true });
           
         if (lastSyncTime) {
           query = query.gte('updated_at', lastSyncTime);
