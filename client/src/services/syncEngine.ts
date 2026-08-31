@@ -45,6 +45,7 @@ const toCamelCase = (obj: any): any => {
 class SyncEngine {
   private isSyncing = false;
   private hasPendingSync = false;
+  private isStarted = false; // Guard: prevents duplicate listeners from registering
   private channel: ReturnType<typeof supabase.channel> | null = null;
   private retryCount = 0;
   private maxRetries = 5;
@@ -52,6 +53,8 @@ class SyncEngine {
 
   /**
    * Initializes the synchronization process and starts listening for changes.
+   * This method is IDEMPOTENT — it is safe to call multiple times. All listener
+   * registration is guarded by isStarted so they only register once per session.
    * Steps:
    * 1. Performs initial sync of local queue and remote db.
    * 2. Opens real-time channel to listen for row-level Postgres changes.
@@ -59,7 +62,13 @@ class SyncEngine {
    * 4. Listens for browser 'online' events to resume syncing.
    */
   async start() {
+    // Run an initial sync on every call (App mount, auth state change, etc.)
+    // This is intentional and safe because sync() has its own isSyncing guard.
     await this.sync();
+
+    // BUT only register listeners once per session lifetime.
+    if (this.isStarted) return;
+    this.isStarted = true;
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -111,12 +120,14 @@ class SyncEngine {
   /**
    * Stops all active subscriptions and listeners. Should be called upon logout 
    * or when the application unmounts to prevent memory leaks.
+   * Resets isStarted so start() can be called again on next login.
    */
   stop() {
     if (this.channel) {
       supabase.removeChannel(this.channel);
       this.channel = null;
     }
+    this.isStarted = false; // Allow re-registration on next login
   }
 
   /**
