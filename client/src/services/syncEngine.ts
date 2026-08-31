@@ -267,7 +267,7 @@ class SyncEngine {
           .order('local_id', { ascending: true });
           
         if (lastSyncTime) {
-          query = query.gte('updated_at', lastSyncTime);
+          query = query.gt('updated_at', lastSyncTime);
         }
         
         const { data, error } = await query.range(from, from + limit - 1);
