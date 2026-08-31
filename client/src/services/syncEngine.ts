@@ -50,6 +50,10 @@ class SyncEngine {
   private retryCount = 0;
   private maxRetries = 5;
   private syncDebounceTimer: any = null;
+  
+  // References for cleanup
+  private onlineListener: (() => void) | null = null;
+  private dexieHookListener: any = null;
 
   /**
    * Initializes the synchronization process and starts listening for changes.
@@ -101,7 +105,7 @@ class SyncEngine {
     }
 
     // Auto-trigger sync when local changes are queued
-    db.syncQueue.hook('creating', (_primKey, _obj, trans) => {
+    this.dexieHookListener = (_primKey: any, _obj: any, trans: any) => {
       trans.on('complete', () => {
         // Proper debounce to prevent thrashing on rapid additions
         if (this.syncDebounceTimer) {
@@ -109,12 +113,14 @@ class SyncEngine {
         }
         this.syncDebounceTimer = setTimeout(() => this.sync(), 500);
       });
-    });
+    };
+    db.syncQueue.hook('creating', this.dexieHookListener);
 
-    window.addEventListener('online', () => {
+    this.onlineListener = () => {
       this.retryCount = 0;
       this.sync();
-    });
+    };
+    window.addEventListener('online', this.onlineListener);
   }
 
   /**
@@ -126,6 +132,14 @@ class SyncEngine {
     if (this.channel) {
       supabase.removeChannel(this.channel);
       this.channel = null;
+    }
+    if (this.onlineListener) {
+      window.removeEventListener('online', this.onlineListener);
+      this.onlineListener = null;
+    }
+    if (this.dexieHookListener) {
+      db.syncQueue.hook('creating').unsubscribe(this.dexieHookListener);
+      this.dexieHookListener = null;
     }
     this.isStarted = false; // Allow re-registration on next login
   }
