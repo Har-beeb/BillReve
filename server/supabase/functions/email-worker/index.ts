@@ -55,10 +55,11 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get all profiles to process
+    // Get all profiles to process, BUT ONLY SELECT NECESSARY COLUMNS!
+    // Selecting '*' fetches massive base64 logo_urls, causing 500MB+ egress and timeouts.
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('*');
+      .select('id, name, email, email_flags, created_at, is_pro');
 
     if (error) throw error;
     
@@ -72,10 +73,16 @@ serve(async (req) => {
       
       const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
 
-      // Fetch user confirmation status
+      // Only check Auth API if they actually qualify for an email to save Auth Egress & Timeouts
+      const needsWelcome = !emailFlags.welcome_sent && profile.email;
+      const needsDay3 = hoursSinceCreation >= 72 && !emailFlags.day3_sent && !profile.is_pro && profile.email;
+
+      if (!needsWelcome && !needsDay3) continue;
+
+      // Fetch user confirmation status only if needed
       const { data: userData, error: userError } = await supabase.auth.admin.getUserById(profile.id);
       
-      if (userError || !userData.user) {
+      if (userError || !userData?.user) {
         console.error(`Could not fetch auth user for profile ${profile.id}:`, userError?.message);
         continue;
       }
@@ -83,7 +90,7 @@ serve(async (req) => {
       const isConfirmed = !!userData.user.email_confirmed_at;
 
       // Welcome Email: Send if not sent yet, and email IS confirmed
-      if (!emailFlags.welcome_sent && profile.email && isConfirmed) {
+      if (needsWelcome && isConfirmed) {
         const success = await sendEmailWithRetry(
           profile.email,
           'Welcome to BillReve! 🎉',
@@ -105,7 +112,7 @@ serve(async (req) => {
       }
 
       // Day 3 Email: Send if older than 72 hours, not sent, NOT pro, and email IS confirmed
-      if (hoursSinceCreation >= 72 && !emailFlags.day3_sent && !profile.is_pro && profile.email && isConfirmed) {
+      if (needsDay3 && isConfirmed) {
         const success = await sendEmailWithRetry(
           profile.email,
           'Unlock Your Business Potential with BillReve Pro! 🚀',

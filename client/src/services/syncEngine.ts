@@ -164,8 +164,8 @@ class SyncEngine {
       
       const maxUpdatedAt = await this.pullRemoteChanges();
       
-      if (maxUpdatedAt && maxUpdatedAt > 0) {
-        localStorage.setItem('last_sync_time', new Date(maxUpdatedAt).toISOString());
+      if (maxUpdatedAt && maxUpdatedAt !== '') {
+        localStorage.setItem('last_sync_time', maxUpdatedAt);
       } else if (!localStorage.getItem('last_sync_time')) {
         // Fallback for first ever sync if no data exists
         localStorage.setItem('last_sync_time', new Date().toISOString());
@@ -322,7 +322,7 @@ class SyncEngine {
     ]);
 
     const processRemoteData = async (table: any, remoteData: any[]) => {
-      let maxUpdatedAt = 0;
+      let maxUpdatedAt = '';
       if (!remoteData || remoteData.length === 0) return maxUpdatedAt;
       
       const remoteItems = remoteData.map(toCamelCase);
@@ -330,7 +330,7 @@ class SyncEngine {
       const toPutLocally: any[] = [];
 
       for (const remote of remoteItems) {
-        const remoteTime = new Date(remote.updatedAt).getTime();
+        const remoteTime = remote.updatedAt; // Use raw ISO string to preserve microsecond precision
         if (remoteTime > maxUpdatedAt) {
           maxUpdatedAt = remoteTime;
         }
@@ -386,7 +386,10 @@ class SyncEngine {
       processRemoteData(db.quotes, quotesRes.data || [])
     ]);
     
-    return Math.max(...maxTimes);
+    // Sort strings chronologically to find the true maximum timestamp
+    const validTimes = maxTimes.filter(t => t !== '');
+    if (validTimes.length === 0) return '';
+    return validTimes.sort().pop() || '';
   }
 }
 
