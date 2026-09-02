@@ -133,6 +133,15 @@ const Invoices: React.FC = () => {
       }
     }
   }, [searchParams, invoices, setSearchParams, setSelectedIds, setCurrentPage, filteredInvoices]);
+
+  React.useEffect(() => {
+    if (selectedInvoice) {
+      const updated = invoices.find(i => i.localId === selectedInvoice.localId);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedInvoice)) {
+        setSelectedInvoice(updated);
+      }
+    }
+  }, [invoices, selectedInvoice]);
   const handleDownloadPdf = async (invoice: Invoice) => {
     try {
       const client = allClients.find(c => c.localId === invoice.clientId);

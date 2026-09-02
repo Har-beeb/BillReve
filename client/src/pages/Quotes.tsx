@@ -108,6 +108,15 @@ const Quotes: React.FC = () => {
     }
   }, [searchParams, quotes, setSearchParams, setSelectedIds, setCurrentPage, filteredQuotes]);
 
+  React.useEffect(() => {
+    if (selectedQuote) {
+      const updated = quotes.find(q => q.localId === selectedQuote.localId);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedQuote)) {
+        setSelectedQuote(updated);
+      }
+    }
+  }, [quotes, selectedQuote]);
+
   const handleDownloadPdf = async (quote: Quote) => {
     try {
       const client = allClients.find(c => c.localId === quote.clientId);

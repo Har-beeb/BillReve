@@ -186,12 +186,12 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
           to: finalEmail,
           subject,
           html: htmlContent,
-          attachments: [
+          attachments: documentType === 'Invoice' ? [
             {
-              filename: `${documentType.toLowerCase()}-${(document as any).invoiceNumber || (document as any).quoteNumber || documentId.slice(0,8)}.pdf`,
+              filename: `invoice-${(document as any).invoiceNumber || documentId.slice(0,8)}.pdf`,
               content: pdfBase64.split('base64,')[1] || pdfBase64 // Ensure only raw base64 data without URI prefix
             }
-          ]
+          ] : []
         }
       });
       if (error) throw new Error(error.message);
