@@ -360,11 +360,11 @@ const PublicInvoice: React.FC = () => {
           )}
 
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
-             {invoice?.bankAccountId && profile?.bankAccounts?.find((b: any) => b.id === invoice.bankAccountId) && (
+             {invoice?.bank_account_id && profile?.bank_accounts?.find((b: any) => b.id === invoice.bank_account_id) && (
                    <div className="text-sm">
                      <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
                      {(() => {
-                        const bank = profile.bankAccounts.find((b: any) => b.id === invoice.bankAccountId);
+                        const bank = profile.bank_accounts.find((b: any) => b.id === invoice.bank_account_id);
                         return (
                           <>
                             <p className="text-slate-600"><span className="font-medium">Bank:</span> {bank.bankName}</p>

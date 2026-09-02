@@ -384,22 +384,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           </button>
           <h1 className="text-xl md:text-2xl font-bold">New {type === 'QUOTE' ? 'Quote' : 'Invoice'}</h1>
         </div>
-        <div className="flex items-center gap-2 md:gap-3">
-          <button 
-            onClick={() => handleSave('DRAFT')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-          >
-            <Save size={18} />
-            <span className="hidden md:inline">Save Draft</span>
-          </button>
-          <button 
-            onClick={handleSaveAndSendClick}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors"
-          >
-            <Send size={18} />
-            <span className="hidden md:inline">Save & Send</span>
-          </button>
-        </div>
       </div>
 
       {/* Main Content Area */}
@@ -462,6 +446,25 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           
           {/* Bottom spacing for mobile to ensure scrollability past FAB */}
           <div className="h-20 md:hidden"></div>
+          <hr className="border-slate-100 dark:border-slate-800/50" />
+
+          {/* Action Buttons at the bottom of the form */}
+          <div className="flex items-center gap-3 pt-4 pb-12">
+            <button 
+              onClick={() => handleSave('DRAFT')}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-transparent dark:border-slate-700"
+            >
+              <Save size={18} />
+              <span>Save Draft</span>
+            </button>
+            <button 
+              onClick={handleSaveAndSendClick}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors shadow-sm"
+            >
+              <Send size={18} />
+              <span>Save & Send</span>
+            </button>
+          </div>
         </div>
 
         {/* Live Preview Pane (Desktop Only) */}

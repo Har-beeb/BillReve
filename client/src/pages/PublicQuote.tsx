@@ -243,12 +243,7 @@ const PublicQuote: React.FC = () => {
           </button>
         </div>
         
-        {statusMessage && (
-          <div className={`${statusMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'} border rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm`}>
-            {statusMessage.type === 'success' ? <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" /> : <AlertCircle className="w-12 h-12 text-red-500 mb-3" />}
-            <h2 className="text-2xl font-bold mb-1">{statusMessage.text}</h2>
-          </div>
-        )}
+        {/* Status Message Modal is rendered at the bottom */}
 
         <div className="bg-white p-8 md:p-12 shadow-lg w-full flex flex-col relative overflow-hidden">
           {isAccepted && (
@@ -486,6 +481,27 @@ const PublicQuote: React.FC = () => {
 
         </div>
       </div>
+
+      {statusMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-slide-up">
+            <div className={`p-6 flex flex-col items-center justify-center text-center ${statusMessage.type === 'success' ? 'bg-green-50' : 'bg-red-50'}`}>
+              {statusMessage.type === 'success' ? <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" /> : <AlertCircle className="w-16 h-16 text-red-500 mb-4" />}
+              <h2 className={`text-xl font-bold mb-2 ${statusMessage.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+                {statusMessage.type === 'success' ? 'Success' : 'Error'}
+              </h2>
+              <p className="text-slate-600 mb-6">{statusMessage.text}</p>
+              <button 
+                onClick={() => setStatusMessage(null)}
+                className={`w-full py-3 px-4 rounded-xl font-semibold text-white transition-transform active:scale-95 ${statusMessage.type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+              >
+                Okay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
