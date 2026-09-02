@@ -7,6 +7,8 @@ import { EmptyState, LongPressable } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
 import { useSelection } from '../hooks/useSelection';
 import { useAppStore } from '../store/useAppStore';
+import { PreviewPanel } from '../components/PreviewPanel';
+import { formatMoney } from '../utils/formatters';
 
 const Trash: React.FC = () => {
   const { isProUser } = useAppStore();
@@ -47,6 +49,8 @@ const Trash: React.FC = () => {
 
   const [processingId, setProcessingId] = React.useState<string | null>(null);
   const [modalConfig, setModalConfig] = React.useState<{ isOpen: boolean, type: 'restore' | 'delete', entity: 'CLIENT' | 'INVOICE' | 'QUOTE' | 'BULK', localId: string, itemName: string } | null>(null);
+  const [previewItem, setPreviewItem] = React.useState<any>(null);
+  const [previewType, setPreviewType] = React.useState<'CLIENT' | 'INVOICE' | 'QUOTE' | null>(null);
   // Suppress click event that fires right after a long-press
   const longPressJustFired = useRef(false);
 
@@ -120,7 +124,12 @@ const Trash: React.FC = () => {
         }}
         onClick={() => {
           if (longPressJustFired.current) return;
-          if (selectedIds.size > 0) toggleSelect(item.localId);
+          if (selectedIds.size > 0) {
+            toggleSelect(item.localId);
+          } else {
+            setPreviewItem(item);
+            setPreviewType(type);
+          }
         }}
         className={`group flex flex-col md:grid md:grid-cols-12 md:items-center px-4 md:px-6 py-4 transition-colors gap-2 md:gap-0 ${selectedIds.has(item.localId) ? 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-l-purple-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 border-transparent'}`}
       >
@@ -325,6 +334,117 @@ const Trash: React.FC = () => {
           </div>
         </div>
       )}
+
+      <PreviewPanel
+        isOpen={!!previewItem}
+        onClose={() => setPreviewItem(null)}
+        title={previewType === 'CLIENT' ? 'Client Details' : previewType === 'QUOTE' ? 'Quote Details' : 'Invoice Details'}
+      >
+        {previewItem && previewType && (
+          <div className="space-y-6">
+            <div className="bg-amber-50 text-amber-800 p-4 rounded-xl text-sm border border-amber-100 mb-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <p>This item is in the trash. Restore it to edit or perform actions.</p>
+            </div>
+            
+            {/* Common Details */}
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">ID</h3>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">
+                    {previewType === 'CLIENT' ? previewItem.localId.slice(0,8) : (previewItem.invoiceNumber || previewItem.quoteNumber || previewItem.localId.slice(0,8))}
+                  </p>
+                </div>
+                {previewType === 'CLIENT' ? (
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Name</h3>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{previewItem.name}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Status</h3>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{previewItem.status}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Document Specific Details */}
+            {(previewType === 'QUOTE' || previewType === 'INVOICE') && previewItem.items && (
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Line Items</h3>
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Description</th>
+                        <th className="px-4 py-3 font-semibold text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {previewItem.items.map((item: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900 dark:text-slate-100">{item.description}</div>
+                            <div className="text-slate-500 text-xs mt-0.5">{item.quantity} × {formatMoney(item.unitPrice, previewItem.currency)}</div>
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">
+                            {formatMoney(item.amount, previewItem.currency)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                    <div className="w-full md:w-2/3 space-y-2">
+                      <div className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
+                        <span>Subtotal</span>
+                        <span>{formatMoney(previewItem.subtotal, previewItem.currency)}</span>
+                      </div>
+                      {previewItem.taxes?.map((t: any, idx: number) => (
+                        <div key={idx} className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
+                          <span>{t.name}</span>
+                          <span>{t.isDeduction ? '-' : ''}{formatMoney(t.amount, previewItem.currency)}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between font-bold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700 mt-2">
+                        <span>Total</span>
+                        <span>{formatMoney(previewItem.total, previewItem.currency)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
+              <button 
+                onClick={() => {
+                  setModalConfig({ isOpen: true, type: 'restore', entity: previewType, localId: previewItem.localId, itemName: previewItem.name || previewItem.invoiceNumber || previewItem.quoteNumber || previewItem.localId.slice(0,8) });
+                  setPreviewItem(null);
+                }} 
+                className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                <RefreshCw size={18} />
+                Restore
+              </button>
+              <button 
+                onClick={() => {
+                  setModalConfig({ isOpen: true, type: 'delete', entity: previewType, localId: previewItem.localId, itemName: previewItem.name || previewItem.invoiceNumber || previewItem.quoteNumber || previewItem.localId.slice(0,8) });
+                  setPreviewItem(null);
+                }}
+                className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                <Trash2 size={18} />
+                Delete Forever
+              </button>
+            </div>
+          </div>
+        )}
+      </PreviewPanel>
     </div>
   );
 };

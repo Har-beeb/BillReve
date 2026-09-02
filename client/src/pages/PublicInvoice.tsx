@@ -290,33 +290,35 @@ const PublicInvoice: React.FC = () => {
 
           <div className="flex-1">
             <div className="bg-slate-50  rounded-xl overflow-hidden border border-slate-200 ">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-100  text-slate-600  border-b border-slate-200 ">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">Description</th>
-                    <th className="px-6 py-4 font-semibold text-right">Qty</th>
-                    <th className="px-6 py-4 font-semibold text-right">Rate</th>
-                    <th className="px-6 py-4 font-semibold text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 ">
-                  {invoice.items && invoice.items.length > 0 ? (
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    invoice.items.map((i: any, idx: number) => (
-                      <tr key={idx} className="bg-white  hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 text-slate-900  font-medium">{i.description}</td>
-                        <td className="px-6 py-4 text-right text-slate-600 ">{i.quantity}</td>
-                        <td className="px-6 py-4 text-right text-slate-600 ">{i.unitPrice?.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right text-slate-900  font-bold">{i.amount?.toLocaleString()}</td>
-                      </tr>
-                    ))
-                  ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left whitespace-nowrap md:whitespace-normal">
+                  <thead className="bg-slate-100  text-slate-600  border-b border-slate-200 ">
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-slate-400 italic">No items found</td>
+                      <th className="px-6 py-4 font-semibold">Description</th>
+                      <th className="px-6 py-4 font-semibold text-right">Qty</th>
+                      <th className="px-6 py-4 font-semibold text-right">Rate</th>
+                      <th className="px-6 py-4 font-semibold text-right">Amount</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 ">
+                    {invoice.items && invoice.items.length > 0 ? (
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      invoice.items.map((i: any, idx: number) => (
+                        <tr key={idx} className="bg-white  hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4 text-slate-900  font-medium whitespace-normal min-w-[200px]">{i.description}</td>
+                          <td className="px-6 py-4 text-right text-slate-600 ">{i.quantity}</td>
+                          <td className="px-6 py-4 text-right text-slate-600 ">{i.unitPrice?.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right text-slate-900  font-bold">{i.amount?.toLocaleString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-400 italic">No items found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
               <div className="bg-white  p-6 flex justify-end border-t border-slate-200 ">
                 <div className="w-full md:w-1/2 lg:w-1/3 space-y-3">
@@ -360,21 +362,23 @@ const PublicInvoice: React.FC = () => {
           )}
 
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
-             {invoice?.bank_account_id && profile?.bank_accounts?.find((b: any) => b.id === invoice.bank_account_id) && (
-                   <div className="text-sm">
-                     <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
-                     {(() => {
-                        const bank = profile.bank_accounts.find((b: any) => b.id === invoice.bank_account_id);
-                        return (
-                          <>
-                            <p className="text-slate-600"><span className="font-medium">Bank:</span> {bank.bankName}</p>
-                            <p className="text-slate-600"><span className="font-medium">Account Name:</span> {bank.accountName}</p>
-                            <p className="text-slate-600"><span className="font-medium">Account Number:</span> {bank.accountNumber}</p>
-                          </>
-                        );
-                     })()}
-                   </div>
-                 )}
+             {(() => {
+                const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
+                const actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
+                const bank = actualBankAccounts.find((b: any) => b.id === actualBankId);
+                
+                if (actualBankId && bank) {
+                  return (
+                    <div className="text-sm">
+                      <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
+                      <p className="text-slate-600"><span className="font-medium">Bank:</span> {bank.bankName}</p>
+                      <p className="text-slate-600"><span className="font-medium">Account Name:</span> {bank.accountName}</p>
+                      <p className="text-slate-600"><span className="font-medium">Account Number:</span> {bank.accountNumber}</p>
+                    </div>
+                  );
+                }
+                return null;
+             })()}
              
              <div className="w-full md:w-auto mt-4 md:mt-0 flex flex-col items-center md:items-end gap-3">
 

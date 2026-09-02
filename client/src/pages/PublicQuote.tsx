@@ -305,33 +305,35 @@ const PublicQuote: React.FC = () => {
 
           <div className="flex-1">
             <div className="bg-slate-50  rounded-xl overflow-hidden border border-slate-200 ">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-100  text-slate-600  border-b border-slate-200 ">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">Description</th>
-                    <th className="px-6 py-4 font-semibold text-right">Qty</th>
-                    <th className="px-6 py-4 font-semibold text-right">Rate</th>
-                    <th className="px-6 py-4 font-semibold text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 ">
-                  {quote.items && quote.items.length > 0 ? (
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    quote.items.map((i: any, idx: number) => (
-                      <tr key={idx} className="bg-white  hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 text-slate-900  font-medium">{i.description}</td>
-                        <td className="px-6 py-4 text-right text-slate-600 ">{i.quantity}</td>
-                        <td className="px-6 py-4 text-right text-slate-600 ">{i.unitPrice?.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right text-slate-900  font-bold">{i.amount?.toLocaleString()}</td>
-                      </tr>
-                    ))
-                  ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left whitespace-nowrap md:whitespace-normal">
+                  <thead className="bg-slate-100  text-slate-600  border-b border-slate-200 ">
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-slate-400 italic">No items found</td>
+                      <th className="px-6 py-4 font-semibold">Description</th>
+                      <th className="px-6 py-4 font-semibold text-right">Qty</th>
+                      <th className="px-6 py-4 font-semibold text-right">Rate</th>
+                      <th className="px-6 py-4 font-semibold text-right">Amount</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 ">
+                    {quote.items && quote.items.length > 0 ? (
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      quote.items.map((i: any, idx: number) => (
+                        <tr key={idx} className="bg-white  hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4 text-slate-900  font-medium whitespace-normal min-w-[200px]">{i.description}</td>
+                          <td className="px-6 py-4 text-right text-slate-600 ">{i.quantity}</td>
+                          <td className="px-6 py-4 text-right text-slate-600 ">{i.unitPrice?.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right text-slate-900  font-bold">{i.amount?.toLocaleString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-400 italic">No items found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
               <div className="bg-white  p-6 flex justify-end border-t border-slate-200 ">
                 <div className="w-full md:w-1/2 lg:w-1/3 space-y-3">

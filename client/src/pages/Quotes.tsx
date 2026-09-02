@@ -254,12 +254,15 @@ const Quotes: React.FC = () => {
     const client = allClients.find(c => c.localId === quote.clientId);
     if (client?.email) {
        const statusStr = accept ? 'Accepted' : 'Declined';
+       const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
+       const publicLink = isLocal ? `https://billreve.com/q/${quote.localId}` : `${window.location.origin}/q/${quote.localId}`;
+
        const htmlContent = `
          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
             <h2 style="color: ${accept ? '#10b981' : '#ef4444'};">Quote Response</h2>
             <p>Hi ${client.name},</p>
             <p>Your counter offer for Quote <strong>${quote.quoteNumber || quote.localId.slice(0,8)}</strong> has been <strong>${statusStr.toLowerCase()}</strong> by ${businessProfile?.name || 'the business owner'}.</p>
-            <div style="margin-top: 24px;"><a href="${window.location.origin}/q/${quote.localId}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Quote Online</a></div>
+            <div style="margin-top: 24px;"><a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Quote Online</a></div>
          </div>
        `;
        supabase.functions.invoke('send-email', {

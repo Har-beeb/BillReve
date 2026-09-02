@@ -60,6 +60,8 @@ export function useNotifications() {
                 setNotifications(prev => [payload.new as Notification, ...prev]);
                 // Trigger a sync when a client interacts (e.g. quote accepted)
                 import('../services/syncEngine').then(({ syncEngine }) => {
+                  // Clear last_sync_time to ensure we fetch the latest changes despite clock skew
+                  localStorage.removeItem('last_sync_time');
                   syncEngine.sync();
                 });
               } else if (payload.eventType === 'UPDATE') {
