@@ -215,6 +215,12 @@ class SyncEngine {
         const tableName = item.entity.toLowerCase() + 's'; // e.g. CLIENT -> clients
         const payloadSnakeCase = toSnakeCase(item.payload);
         
+        // Strip out invalid columns if they accidentally got into the queue
+        if (tableName === 'invoices') {
+          delete payloadSnakeCase.minimum_counter_amount;
+          delete payloadSnakeCase.allow_counter_offer;
+        }
+
         // We always use local_id to match rows in Supabase
         if (item.action === 'CREATE') {
           const { error } = await supabase

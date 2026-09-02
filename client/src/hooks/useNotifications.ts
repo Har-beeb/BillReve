@@ -58,6 +58,10 @@ export function useNotifications() {
             (payload: any) => {
               if (payload.eventType === 'INSERT') {
                 setNotifications(prev => [payload.new as Notification, ...prev]);
+                // Trigger a sync when a client interacts (e.g. quote accepted)
+                import('../services/syncEngine').then(({ syncEngine }) => {
+                  syncEngine.sync();
+                });
               } else if (payload.eventType === 'UPDATE') {
                 setNotifications(prev => prev.map(n => n.id === payload.new.id ? (payload.new as Notification) : n));
               } else if (payload.eventType === 'DELETE') {

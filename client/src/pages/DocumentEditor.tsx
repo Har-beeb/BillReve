@@ -191,8 +191,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       subtotal,
       taxes: computedTaxes,
       total,
-      allowCounterOffer,
-      minimumCounterAmount,
       items: items.filter(i => i.description.trim() !== ''),
       createdAt: initialDoc?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -203,6 +201,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     if (type === 'QUOTE') {
       doc = {
         ...docBase,
+        allowCounterOffer,
+        minimumCounterAmount,
         quoteNumber: initialDoc?.quoteNumber || documentNumber,
         expiresAt: dueDate ? new Date(dueDate).toISOString() : undefined,
         status: 'SENT' as any,
@@ -271,8 +271,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       subtotal,
       taxes: computedTaxes,
       total,
-      allowCounterOffer,
-      minimumCounterAmount,
       items: items.filter(i => i.description.trim() !== ''),
       createdAt: initialDoc?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -282,6 +280,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     if (type === 'QUOTE') {
       const newQuote = {
         ...docBase,
+        allowCounterOffer,
+        minimumCounterAmount,
         quoteNumber: initialDoc?.quoteNumber || documentNumber,
         expiresAt: dueDate ? new Date(dueDate).toISOString() : undefined,
         ...(finalStatus === 'SENT' && { issuedAt: new Date().toISOString() }),
