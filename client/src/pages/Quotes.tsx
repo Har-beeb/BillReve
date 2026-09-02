@@ -20,6 +20,7 @@ import { usePagination } from '../hooks/usePagination';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { useQuota } from '../hooks/useQuota';
 import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabase';
 
 /**
  * Quotes Component
@@ -267,10 +268,11 @@ const Quotes: React.FC = () => {
            subject: `Quote ${quote.quoteNumber || quote.localId.slice(0,8)} Counter Offer ${statusStr}`,
            html: htmlContent,
          }
-       }).catch(err => console.error("Failed to send notification email", err));
+       }).catch((err: any) => console.error("Failed to send notification email", err));
        toast.success(`Quote marked as ${statusStr} and email notification sent to client.`);
     } else {
-       toast.success(`Quote marked as ${statusStr}.`);
+       const altStatusStr = accept ? 'Accepted' : 'Declined';
+       toast.success(`Quote marked as ${altStatusStr}.`);
     }
   };
 
