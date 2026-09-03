@@ -364,10 +364,23 @@ const PublicInvoice: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
              {(() => {
                 const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
-                const actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
-                const bank = actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
+                let actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
                 
-                if (actualBankId && bank) {
+                // Fallback to legacy single bank account columns if no array exists
+                if (actualBankAccounts.length === 0 && (profile?.bank_name || profile?.account_number)) {
+                  actualBankAccounts = [{
+                    id: '1',
+                    bankName: profile.bank_name,
+                    accountName: profile.account_name || '',
+                    accountNumber: profile.account_number
+                  }];
+                }
+
+                // Find the bank by ID, or if there is only one bank account, just use it
+                const bank = actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId)) || 
+                             (actualBankAccounts.length === 1 ? actualBankAccounts[0] : null);
+                
+                if (bank) {
                   return (
                     <div className="text-sm">
                       <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
