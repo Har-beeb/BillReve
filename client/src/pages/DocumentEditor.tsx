@@ -486,6 +486,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           description={description}
           notes={notes}
           bankAccountId={bankAccountId}
+          currency={businessProfile?.currency || 'NGN'}
         />
       </div>
 

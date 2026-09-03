@@ -22,6 +22,7 @@ interface DocumentPreviewProps {
   description: string;
   notes?: string;
   bankAccountId: string;
+  currency: string;
 }
 
 export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
@@ -42,6 +43,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   description,
   notes,
   bankAccountId,
+  currency,
 }) => {
   const { fontFamily, fontSize, isProUser } = useAppStore();
   const sanitizedNotes = notes ? DOMPurify.sanitize(notes, { ALLOWED_TAGS: ['br', 'b', 'i', 'strong', 'em', 'p'] }) : '';
@@ -170,7 +172,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
                 ))}
                 <div className="flex justify-between font-bold text-sm text-slate-900 pt-3 border-t border-slate-200 mt-2">
                   <span>Total</span>
-                  <span className="text-purple-600">NGN {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-purple-600">{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>

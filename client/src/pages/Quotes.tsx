@@ -573,7 +573,7 @@ const Quotes: React.FC = () => {
                         <ActionMenu items={[
                           { label: 'Download PDF', onClick: () => handleDownloadPdf(quote) },
                           ...(quote.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/quotes/new', { state: { quote } }) }] : []),
-                          ...((quote.status === 'SENT' || quote.status === 'DRAFT') ? [
+                          ...((quote.status === 'SENT') ? [
                             { label: 'Mark as Accepted', onClick: () => handleUpdateStatus(quote, 'ACCEPTED') },
                             { label: 'Mark as Declined', onClick: () => handleUpdateStatus(quote, 'DECLINED') }
                           ] : []),
@@ -581,10 +581,10 @@ const Quotes: React.FC = () => {
                             { label: 'Accept Counter', onClick: () => handleRespondToCounter(quote, true) },
                             { label: 'Decline Counter', onClick: () => handleRespondToCounter(quote, false) }
                           ] : []),
-                          { label: 'Copy Link', onClick: () => {
+                          ...(quote.status !== 'DRAFT' ? [{ label: 'Copy Link', onClick: () => {
                             navigator.clipboard.writeText(`${window.location.origin}/quote/${quote.localId}`);
                             toast.success('Link copied to clipboard');
-                          } },
+                          } }] : []),
                           ...((quote.status === 'SENT' || quote.status === 'ACCEPTED') ? [{ label: 'Convert to Invoice', onClick: () => {
                             const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = quote;
                             navigate('/invoices/new', { state: { invoice: rest } });
@@ -638,7 +638,8 @@ const Quotes: React.FC = () => {
                        <ActionMenu items={[
                          { label: 'Download PDF', onClick: () => handleDownloadPdf(quote) },
                          ...(quote.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/quotes/new', { state: { quote } }) }] : []),
-                         ...((quote.status === 'SENT' || quote.status === 'DRAFT') ? [
+                         
+                         ...((quote.status === 'SENT') ? [
                            { label: 'Mark as Accepted', onClick: () => handleUpdateStatus(quote, 'ACCEPTED') },
                            { label: 'Mark as Declined', onClick: () => handleUpdateStatus(quote, 'DECLINED') }
                          ] : []),
@@ -649,10 +650,10 @@ const Quotes: React.FC = () => {
                          ...(quote.status === 'COUNTERED' || quote.status === 'DECLINED' ? [
                            { label: 'Redraft Quote', onClick: () => navigate('/quotes/new', { state: { quote: { ...quote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }) }
                          ] : []),
-                         { label: 'Copy Link', onClick: () => {
+                         ...(quote.status !== 'DRAFT' ? [{ label: 'Copy Link', onClick: () => {
                            navigator.clipboard.writeText(`${window.location.origin}/quote/${quote.localId}`);
                            toast.success('Link copied to clipboard');
-                         } },
+                         } }] : []),
                          ...((quote.status === 'SENT' || quote.status === 'ACCEPTED') ? [{ label: 'Convert to Invoice', onClick: () => {
                             const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = quote;
                             navigate('/invoices/new', { state: { invoice: rest } });
@@ -712,7 +713,7 @@ const Quotes: React.FC = () => {
                    navigate('/invoices/new', { state: { invoice: rest } }); 
                    setSelectedQuote(null); 
                 } }] : []),
-                ...((selectedQuote.status === 'SENT' || selectedQuote.status === 'DRAFT') ? [
+                ...((selectedQuote.status === 'SENT') ? [
                   { label: 'Mark as Accepted', onClick: () => handleUpdateStatus(selectedQuote, 'ACCEPTED') },
                   { label: 'Mark as Declined', onClick: () => handleUpdateStatus(selectedQuote, 'DECLINED') }
                 ] : []),
@@ -723,10 +724,10 @@ const Quotes: React.FC = () => {
                 ...(selectedQuote.status === 'COUNTERED' || selectedQuote.status === 'DECLINED' ? [
                   { label: 'Redraft Quote', onClick: () => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: { ...selectedQuote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }); } }
                 ] : []),
-                { label: 'Copy Link', onClick: () => {
+                ...(selectedQuote.status !== 'DRAFT' ? [{ label: 'Copy Link', onClick: () => {
                   navigator.clipboard.writeText(`${window.location.origin}/quote/${selectedQuote.localId}`);
                   toast.success('Link copied to clipboard');
-                } },
+                } }] : []),
                 { label: 'Send / Share', onClick: () => { setQuoteToSend(selectedQuote); setSendModalOpen(true); setSelectedQuote(null); } }
               ]} 
             />
