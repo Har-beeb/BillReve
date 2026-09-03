@@ -157,7 +157,10 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
 
       // 2. Generate PDF as base64
       const pdfBase64 = await generateDocumentPdf(document, client, businessProfile, documentType.toUpperCase() as any, false);
-      if (!pdfBase64) throw new Error('Failed to generate PDF document');
+      if (!pdfBase64 || (typeof pdfBase64 === 'string' && pdfBase64.length < 1000)) {
+        console.error('PDF Generation failed or returned empty payload:', pdfBase64);
+        throw new Error('Failed to generate a valid PDF document. Please try again.');
+      }
       
       // 3. Construct HTML
       const subject = isOverdue 
@@ -177,6 +180,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
             ${customMessage.split('\n').map(line => line.trim() ? `<p style="margin: 0 0 8px 0; font-size: 14px;">${line}</p>` : '<br/>').join('')}
           </div>` : ''}
           ${publicLink ? `<div style="margin-top: 24px;"><a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">${documentType === 'Invoice' ? (isProUser ? 'View & Pay Online' : 'View Invoice Online') : 'View Quote Online'}</a></div>` : ''}
+          <div style="display: none;">Debug PDF Length: ${pdfBase64 ? pdfBase64.length : 0}, HasBase64: ${typeof pdfBase64 === 'string' && pdfBase64.includes('base64,') ? 'yes' : 'no'}</div>
         </div>
       `;
 
@@ -189,7 +193,8 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
           attachments: [
             {
               filename: `${documentType.toLowerCase()}-${(document as any).invoiceNumber || (document as any).quoteNumber || documentId.slice(0,8)}.pdf`,
-              content: typeof pdfBase64 === 'string' && pdfBase64.includes('base64,') ? pdfBase64.split('base64,')[1] : pdfBase64
+              content: typeof pdfBase64 === 'string' && pdfBase64.includes('base64,') ? pdfBase64.split('base64,')[1] : pdfBase64,
+              content_type: 'application/pdf'
             }
           ]
         }

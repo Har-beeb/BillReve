@@ -255,7 +255,7 @@ const Quotes: React.FC = () => {
     if (client?.email) {
        const statusStr = accept ? 'Accepted' : 'Declined';
        const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
-       const publicLink = isLocal ? `https://billreve.com/q/${quote.localId}` : `${window.location.origin}/q/${quote.localId}`;
+       const publicLink = isLocal ? `https://billreve.com/quote/${quote.localId}` : `${window.location.origin}/quote/${quote.localId}`;
 
        const htmlContent = `
          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
