@@ -209,7 +209,7 @@ export const generateDocumentPdf = async (document: any, client: any, profile: a
           resolve();
         } else {
           // generate base64
-          const pdfBase64 = await html2pdf().set(opt).from(element).outputPdf('datauristring');
+          const pdfBase64 = await html2pdf().set(opt).from(element).output('datauristring');
           resolve(pdfBase64);
         }
       } catch (err) {

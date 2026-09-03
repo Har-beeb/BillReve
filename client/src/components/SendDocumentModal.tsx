@@ -189,7 +189,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
           attachments: [
             {
               filename: `${documentType.toLowerCase()}-${(document as any).invoiceNumber || (document as any).quoteNumber || documentId.slice(0,8)}.pdf`,
-              content: pdfBase64.split('base64,')[1] || pdfBase64
+              content: typeof pdfBase64 === 'string' && pdfBase64.includes('base64,') ? pdfBase64.split('base64,')[1] : pdfBase64
             }
           ]
         }

@@ -365,7 +365,7 @@ const PublicInvoice: React.FC = () => {
              {(() => {
                 const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
                 const actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
-                const bank = actualBankAccounts.find((b: any) => b.id === actualBankId);
+                const bank = actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
                 
                 if (actualBankId && bank) {
                   return (
