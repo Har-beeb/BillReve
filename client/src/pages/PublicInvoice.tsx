@@ -364,10 +364,22 @@ const PublicInvoice: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
              {(() => {
                 const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
-                const actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
+                let actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
+                
+                // Construct legacy bank account if JSON array doesn't exist
+                if (actualBankAccounts.length === 0 && (profile?.bank_name || profile?.account_number)) {
+                  actualBankAccounts = [{
+                    id: actualBankId || 'default', // Force it to match whatever ID the invoice asked for
+                    bankName: profile.bank_name,
+                    accountName: profile.account_name || '',
+                    accountNumber: profile.account_number
+                  }];
+                }
+
+                // Match against the saved ID
                 const bank = actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
                 
-                if (actualBankId && bank) {
+                if (bank) {
                   return (
                     <div className="text-sm">
                       <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>

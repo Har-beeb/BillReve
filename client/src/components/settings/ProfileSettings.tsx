@@ -57,6 +57,7 @@ export const ProfileSettings: React.FC = () => {
             bank_name: localProfile.bankAccounts?.[0]?.bankName || null,
             account_name: localProfile.bankAccounts?.[0]?.accountName || null,
             account_number: localProfile.bankAccounts?.[0]?.accountNumber || null,
+            bank_accounts: localProfile.bankAccounts || null,
             industry: localProfile.industry || null,
             business_description: localProfile.businessDescription || null,
             country: localProfile.country || null,
