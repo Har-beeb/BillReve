@@ -75,23 +75,42 @@ serve(async (req) => {
 
     const recipients = Array.isArray(to) ? to : [to];
     
-    // Use the batch endpoint to send individual emails to each recipient.
-    // This protects data privacy by preventing recipients from seeing each other.
-    const res = await fetch("https://api.resend.com/emails/batch", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify(recipients.map(recipient => ({
-        from: fromName ? `${fromName} <noreply@billreve.app>` : "BillReve <noreply@billreve.app>",
-        to: [recipient],
-        reply_to: replyTo || "support@billreve.app",
-        subject: subject || "Update from BillReve",
-        html: html || "<p>Please see the attached document.</p>",
-        attachments: attachments || [],
-      }))),
-    });
+    let res;
+    if (recipients.length === 1) {
+      // Use the standard endpoint for single emails, which safely supports all attachments
+      res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: fromName ? `${fromName} <noreply@billreve.app>` : "BillReve <noreply@billreve.app>",
+          to: recipients,
+          reply_to: replyTo || "support@billreve.app",
+          subject: subject || "Update from BillReve",
+          html: html || "<p>Please see the attached document.</p>",
+          attachments: attachments || [],
+        }),
+      });
+    } else {
+      // Use the batch endpoint for multiple recipients
+      res = await fetch("https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify(recipients.map(recipient => ({
+          from: fromName ? `${fromName} <noreply@billreve.app>` : "BillReve <noreply@billreve.app>",
+          to: [recipient],
+          reply_to: replyTo || "support@billreve.app",
+          subject: subject || "Update from BillReve",
+          html: html || "<p>Please see the attached document.</p>",
+          attachments: attachments || [],
+        }))),
+      });
+    }
 
     const data = await res.json();
 

@@ -364,26 +364,6 @@ const PublicQuote: React.FC = () => {
             </div>
           )}
 
-          <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
-             {(() => {
-                const actualBankId = quote?.bank_account_id || quote?.bankAccountId;
-                const actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
-                const bank = actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
-                
-                if (actualBankId && bank) {
-                  return (
-                    <div className="text-sm">
-                      <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
-                      <p className="text-slate-600"><span className="font-medium">Bank:</span> {bank.bankName}</p>
-                      <p className="text-slate-600"><span className="font-medium">Account Name:</span> {bank.accountName}</p>
-                      <p className="text-slate-600"><span className="font-medium">Account Number:</span> {bank.accountNumber}</p>
-                    </div>
-                  );
-                }
-                return null;
-             })()}
-          </div>
-
           {!isAccepted && !isDeclined && !isCountered && !showCounterModal && !showDeclineModal && (
             <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-end items-center border-t border-slate-100 pt-8">
                {(quote.allow_counter_offer || quote.allowCounterOffer) && (
