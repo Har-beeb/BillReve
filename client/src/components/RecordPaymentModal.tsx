@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, DollarSign } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { Invoice } from '../types';
 import toast from 'react-hot-toast';
 
@@ -66,14 +66,14 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Payment Amount</label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{invoice.currency}</span>
             <input 
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder={balanceDue.toString()}
               max={balanceDue}
-              className="w-full pl-9 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-transparent focus:ring-2 focus:ring-purple-500 outline-none dark:text-white"
+              className="w-full pl-12 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-transparent focus:ring-2 focus:ring-purple-500 outline-none dark:text-white"
             />
           </div>
         </div>
