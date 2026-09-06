@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { MessageSquare, X, Send, Loader2, User, Copy, Check, CheckCircle, Bot, Sparkles } from 'lucide-react';
+import { MessageSquare, X, Send, Loader2, User, Copy, Check, CheckCircle, Bot } from 'lucide-react';
 import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
