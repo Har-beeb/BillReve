@@ -263,13 +263,8 @@ const MainLayout: React.FC = () => {
                 <Menu size={24} />
               </button>
             )}
-            <div className="flex items-center gap-2">
-              {mobileNavStyle === 'bottom' && (
-                <Logo size="sm" className="flex-shrink-0" />
-              )}
-              {mobileNavStyle === 'drawer' && (
-                <span className="font-['Outfit'] font-black text-2xl text-black dark:text-white tracking-tight">BillReve</span>
-              )}
+            <div className="flex items-center">
+              <span className="font-['Outfit'] font-black text-2xl text-black dark:text-white tracking-tight">BillReve</span>
             </div>
           </div>
           <div className="flex-1 hidden md:flex">
@@ -460,9 +455,8 @@ const MainLayout: React.FC = () => {
           {/* Drawer */}
           <div className="relative flex w-full max-w-xs flex-col overflow-y-auto bg-white dark:bg-slate-800 pb-12 shadow-xl animate-in slide-in-from-left duration-300 z-10">
             <div className="flex px-4 pt-5 pb-2 justify-between items-center border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2 text-black dark:text-white">
-                <Logo size="sm" className="!mb-0 flex-shrink-0" />
-                <span className="font-['Outfit'] font-black text-2xl mt-0.5">BillReve</span>
+              <div className="flex items-center text-black dark:text-white">
+                <span className="font-['Outfit'] font-black text-2xl tracking-tight">BillReve</span>
               </div>
               <button
                 type="button"

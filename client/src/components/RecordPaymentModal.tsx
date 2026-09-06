@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { Invoice } from '../types';
 import toast from 'react-hot-toast';
+import { useAppStore } from '../store/useAppStore';
+import { formatMoney } from '../utils/formatters';
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -19,9 +21,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 }) => {
   const [amount, setAmount] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const businessProfile = useAppStore((state) => state.businessProfile);
 
   if (!isOpen || !invoice) return null;
 
+  const activeCurrency = businessProfile?.currency || invoice.currency || 'NGN';
   const balanceDue = invoice.total - invoice.amountPaid;
 
   const handleConfirm = async () => {
@@ -59,21 +63,21 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Invoice #{invoice.invoiceNumber || invoice.localId.slice(0, 8)}</p>
           <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Balance Due</span>
-            <span className="font-bold text-slate-900 dark:text-white">{invoice.currency} {balanceDue.toLocaleString()}</span>
+            <span className="font-bold text-slate-900 dark:text-white">{formatMoney(balanceDue, activeCurrency)}</span>
           </div>
         </div>
 
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Payment Amount</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{invoice.currency}</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{activeCurrency}</span>
             <input 
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder={balanceDue.toString()}
               max={balanceDue}
-              className="w-full pl-12 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-transparent focus:ring-2 focus:ring-purple-500 outline-none dark:text-white"
+              className="w-full pl-14 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-transparent focus:ring-2 focus:ring-purple-500 outline-none dark:text-white"
             />
           </div>
         </div>
