@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import type { Invoice } from '../types';
 import toast from 'react-hot-toast';
 import { useAppStore } from '../store/useAppStore';
-import { formatMoney } from '../utils/formatters';
+import { formatMoney, getCurrencySymbol } from '../utils/formatters';
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -70,7 +70,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Payment Amount</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{activeCurrency}</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base font-medium">{getCurrencySymbol(activeCurrency)}</span>
             <input 
               type="number"
               value={amount}

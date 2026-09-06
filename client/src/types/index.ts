@@ -76,6 +76,7 @@ export interface Quote {
   clientMessage?: string;
   allowCounterOffer?: boolean;
   minimumCounterAmount?: number;
+  theme?: 'minimal' | 'corporate' | 'modern-bold';
 }
 
 export interface QuoteItem {
@@ -97,6 +98,7 @@ export interface Invoice {
   bankAccountId?: string | null;
   status: InvoiceStatus;
   currency: string;
+  theme?: 'minimal' | 'corporate' | 'modern-bold';
   subtotal: number;
   taxes: { name: string, amount: number, isDeduction: boolean }[];
   total: number;

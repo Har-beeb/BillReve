@@ -3,7 +3,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, FileSignature, Users, Settings, 
   RefreshCw, CheckCircle2, Clock, XCircle, 
-  Sun, Moon, LogOut, User, CreditCard,
+  LogOut, User, CreditCard,
   BarChart3, WalletCards, Info, Crown, Menu, Bell, Check, MoreHorizontal, Trash2, Mail
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
@@ -57,7 +57,7 @@ const generatePalette = (hex: string) => {
 };
 
 const MainLayout: React.FC = () => {
-  const { syncStatus, theme, colorTheme, customColor, fontFamily, toggleTheme, user, logout, isProUser, mobileNavStyle, businessProfile, hasSkippedOnboarding } = useAppStore();
+  const { syncStatus, theme, colorTheme, customColor, fontFamily, user, logout, isProUser, mobileNavStyle, businessProfile, hasSkippedOnboarding } = useAppStore();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -287,14 +287,6 @@ const MainLayout: React.FC = () => {
                {renderSyncIcon()}
             </div>
             
-            {/* Theme Toggle */}
-            <button 
-              onClick={toggleTheme}
-              className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
 
             {/* Notifications Dropdown */}
             <div className="relative" ref={notificationsRef}>

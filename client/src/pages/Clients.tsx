@@ -193,7 +193,24 @@ const Clients: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Search & FAB handled below */}
+      {/* Mobile Sticky Search Bar */}
+      <div className="md:hidden sticky top-16 z-10 bg-slate-50 dark:bg-slate-900 pt-4 pb-4 -mt-4 border-b border-slate-200 dark:border-slate-800 flex gap-2">
+         <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search clients..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+          />
+        </div>
+        <ActionMenu 
+          items={[
+            { label: 'Export CSV', onClick: handleBulkExportCsv }
+          ]}
+        />
+      </div>
 
       {/* Bulk Actions Bar */}
       <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -429,7 +446,7 @@ const Clients: React.FC = () => {
                    getClientMetrics(selectedClient.localId).invoices.map(inv => {
                      const isInvoice = 'invoiceNumber' in inv;
                      const displayNum = isInvoice ? inv.invoiceNumber : (inv as any).quoteNumber;
-                     const link = isInvoice ? `/invoices?id=${inv.localId}` : `/quotes?id=${inv.localId}`;
+                     const link = isInvoice ? `/invoices?preview=${inv.localId}` : `/quotes?preview=${inv.localId}`;
                      
                      return (
                        <Link key={inv.localId} to={link} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">

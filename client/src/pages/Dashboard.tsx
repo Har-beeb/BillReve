@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Clock, AlertCircle, FileText, Plus, ArrowRight, Zap, BarChart2, PieChart } from 'lucide-react';
+import { TrendingUp, Clock, FileText, Plus, ArrowRight, Zap, BarChart2, PieChart } from 'lucide-react';
 import { Card, Badge } from '../components/ui';
 import { SplitButton } from '../components/ui/SplitButton';
 import { AiDraftModal } from '../components/AiDraftModal';
@@ -63,19 +63,16 @@ const Dashboard: React.FC = () => {
 
   // Current Month Calculations
   const currentMonthInvoices = invoices.filter(i => isCurrentMonth(i.updatedAt || i.createdAt));
-  const currentMonthQuotes = quotes.filter(q => isCurrentMonth(q.updatedAt || q.createdAt));
 
   const paidInvoices = currentMonthInvoices.filter(i => i.status === 'PAID');
   const outstandingInvoices = currentMonthInvoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status));
   const overdueInvoices = currentMonthInvoices.filter(i => i.status === 'OVERDUE');
-  const acceptedQuotes = currentMonthQuotes.filter(q => q.status === 'ACCEPTED');
 
   const totalRevenue = paidInvoices.reduce((sum, i) => sum + i.total, 0) + 
                        currentMonthInvoices.filter(i => i.status === 'PARTIAL').reduce((sum, i) => sum + i.amountPaid, 0);
   
   const outstandingAmount = outstandingInvoices.reduce((sum, i) => sum + (i.total - i.amountPaid), 0);
   const overdueAmount = overdueInvoices.reduce((sum, i) => sum + (i.total - i.amountPaid), 0);
-  const acceptedQuotesAmount = acceptedQuotes.reduce((sum, q) => sum + q.total, 0);
 
   // MRR Growth
   const lastMonthRevenue = invoices
@@ -168,64 +165,80 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Metrics Cards */}
       <div 
         ref={carouselRef}
         onScroll={handleScroll}
         className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 overflow-x-auto pb-4 md:pb-0 snap-x snap-mandatory hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0"
       >
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
-          <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-              <TrendingUp size={20} />
-            </div>
-            <span className={`text-xs font-medium px-2 py-1 rounded-full ${mrrGrowth >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
-              {mrrGrowth > 0 ? '+' : ''}{mrrGrowth.toFixed(1)}% this month
-            </span>
-          </div>
+        {/* Card 1: Outstanding Balance */}
+        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-amber-50/30 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '50ms' }}>
           <div>
-            <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Total Revenue</h3>
-            <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(totalRevenue)}>{formatMoney(totalRevenue)}</div>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <Clock size={20} />
+              </div>
+              <span className="text-xs font-medium px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors" onClick={() => navigate('/invoices')}>View Unpaid</span>
+            </div>
+            <div>
+              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Outstanding Balance</h3>
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(outstandingAmount)}>{formatMoney(outstandingAmount)}</div>
+              <p className="text-xs text-slate-500 mt-2 truncate">{outstandingInvoices.length} invoices outstanding</p>
+            </div>
           </div>
         </Card>
 
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-amber-50/30 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-          <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
-              <Clock size={20} />
-            </div>
-          </div>
+        {/* Card 2: Total Revenue */}
+        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '150ms' }}>
           <div>
-            <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Outstanding Balance</h3>
-            <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(outstandingAmount)}>{formatMoney(outstandingAmount)}</div>
-            <p className="text-xs text-slate-500 mt-2 truncate">{outstandingInvoices.length} invoices outstanding</p>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <TrendingUp size={20} />
+              </div>
+              <span className={`text-xs font-medium px-2 py-1 rounded-full ${mrrGrowth >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                {mrrGrowth > 0 ? '+' : ''}{mrrGrowth.toFixed(1)}% this month
+              </span>
+            </div>
+            <div>
+              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Total Revenue</h3>
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(totalRevenue)}>{formatMoney(totalRevenue)}</div>
+            </div>
           </div>
         </Card>
 
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-rose-50/30 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30 animate-fade-in-up" style={{ animationDelay: '250ms' }}>
-          <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-600 dark:text-rose-400">
-              <AlertCircle size={20} />
-            </div>
-          </div>
+        {/* Card 3: Drafts */}
+        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '250ms' }}>
           <div>
-            <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Overdue Amount</h3>
-            <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(overdueAmount)}>{formatMoney(overdueAmount)}</div>
-            <p className="text-xs text-slate-500 mt-2 truncate">{overdueInvoices.length} invoices overdue</p>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400">
+                <FileText size={20} />
+              </div>
+              <span className="text-xs font-medium px-2 py-1 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 rounded-full cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" onClick={() => navigate('/invoices')}>View Drafts</span>
+            </div>
+            <div>
+              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Pending Drafts</h3>
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">
+                {invoices.filter(i => i.status === 'DRAFT').length + quotes.filter(q => q.status === 'DRAFT').length}
+              </div>
+              <p className="text-xs text-slate-500 mt-2 truncate">Unfinished documents</p>
+            </div>
           </div>
         </Card>
 
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 animate-fade-in-up" style={{ animationDelay: '350ms' }}>
-          <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400">
-              <FileText size={20} />
-            </div>
-            <span className="text-xs font-medium px-2 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full cursor-pointer hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors" onClick={() => navigate('/quotes')}>Convert</span>
-          </div>
+        {/* Card 4: Paid */}
+        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '350ms' }}>
           <div>
-            <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Accepted Quotes</h3>
-            <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(acceptedQuotesAmount)}>{formatMoney(acceptedQuotesAmount)}</div>
-            <p className="text-xs text-slate-500 mt-2 truncate">{acceptedQuotes.length} quotes pending invoice</p>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <FileText size={20} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Fully Paid</h3>
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(paidInvoices.reduce((sum, i) => sum + i.total, 0))}>
+                {formatMoney(paidInvoices.reduce((sum, i) => sum + i.total, 0))}
+              </div>
+              <p className="text-xs text-slate-500 mt-2 truncate">{paidInvoices.length} paid this month</p>
+            </div>
           </div>
         </Card>
       </div>
@@ -362,10 +375,10 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors truncate max-w-[150px] sm:max-w-[200px]">
-                            {displayId}
+                            {getClientName(doc.clientId)}
                           </p>
                           <p className="text-xs text-slate-500 truncate max-w-[150px] sm:max-w-[200px]">
-                            {getClientName(doc.clientId)}
+                            {isInvoice ? 'Invoice' : 'Quote'} {displayId}
                           </p>
                         </div>
                       </div>

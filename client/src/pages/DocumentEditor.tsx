@@ -62,6 +62,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   };
   const [dueDate, setDueDate] = useState<string>(getInitialDate());
   
+  const [theme, setTheme] = useState<'minimal' | 'corporate' | 'modern-bold'>(initialDoc?.theme || 'minimal');
   // Bank Account Selection
   const defaultBankId = businessProfile.bankAccounts?.find(b => b.isDefault)?.id || businessProfile.bankAccounts?.[0]?.id || '';
   const [bankAccountId, setBankAccountId] = useState<string>(initialDoc?.bankAccountId || defaultBankId);
@@ -192,6 +193,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       taxes: computedTaxes,
       total,
       items: items.filter(i => i.description.trim() !== ''),
+      theme,
       createdAt: initialDoc?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       syncStatus: 'pending' as const
@@ -444,9 +446,34 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             setMinimumCounterAmount={setMinimumCounterAmount}
           />
           
+          {/* Theme Selector */}
+          <div className="pt-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Document Theme</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: 'minimal', label: 'Minimal', desc: 'Clean & Simple' },
+                { id: 'corporate', label: 'Corporate', desc: 'Professional' },
+                { id: 'modern-bold', label: 'Modern Bold', desc: 'High Impact' }
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id as any)}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
+                    theme === t.id 
+                      ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400' 
+                      : 'border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-700/50 text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800'
+                  }`}
+                >
+                  <span className="font-semibold text-sm mb-1">{t.label}</span>
+                  <span className="text-[10px] opacity-70">{t.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Bottom spacing for mobile to ensure scrollability past FAB */}
           <div className="h-20 md:hidden"></div>
-          <hr className="border-slate-100 dark:border-slate-800/50" />
+          <hr className="border-slate-100 dark:border-slate-800/50 my-6" />
 
           {/* Action Buttons at the bottom of the form */}
           <div className="flex items-center gap-3 pt-4 pb-12">
@@ -487,6 +514,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           notes={notes}
           bankAccountId={bankAccountId}
           currency={businessProfile?.currency || 'NGN'}
+          theme={theme}
         />
       </div>
 

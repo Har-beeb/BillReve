@@ -21,6 +21,16 @@ export const formatMoney = (amount: number, currency?: string): string => {
   }).format(amount);
 };
 
+export const getCurrencySymbol = (currencyCode?: string): string => {
+  const defaultCurrency = useAppStore.getState().businessProfile?.currency || 'NGN';
+  const finalCurrency = currencyCode || defaultCurrency;
+  const parts = new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: finalCurrency,
+  }).formatToParts(0);
+  return parts.find(part => part.type === 'currency')?.value || finalCurrency;
+};
+
 /**
  * Calculates a percentage from a partial amount and a total.
  * @param part - The partial amount (e.g., amount paid).

@@ -434,7 +434,7 @@ export const RevenueChat: React.FC = () => {
           onClick={() => setIsOpen(!isOpen)}
           className={`relative p-4 text-white rounded-full transition-all duration-300 flex items-center justify-center group ${isOpen ? 'bg-slate-700 hover:bg-slate-800 shadow-lg rotate-90' : 'bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/50 hover:shadow-purple-500/80 opacity-90 hover:opacity-100'}`}
         >
-          {isOpen ? <X size={24} className="transition-transform duration-300" /> : <Sparkles size={24} className="group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />}
+          {isOpen ? <X size={24} className="transition-transform duration-300" /> : <img src="/revenuechat-icon.png" alt="RevenueChat AI" className="w-6 h-6 object-contain group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300 dark:invert" />}
         </button>
       </div>
 
@@ -612,7 +612,7 @@ export const RevenueChat: React.FC = () => {
             </form>
           <div className="text-center mt-2">
             <p className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
-              <Sparkles size={10} /> AI-Powered · Privacy First (No PII sent)
+              <img src="/revenuechat-icon.png" alt="RevenueChat AI" className="w-3 h-3 object-contain dark:invert opacity-70" /> AI-Powered · Privacy First (No PII sent)
             </p>
           </div>
         </div>

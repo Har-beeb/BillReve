@@ -1,13 +1,58 @@
 import React from 'react';
+import { Sun, Moon } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { ProFeature } from '../ui/ProFeature';
+import { ColorPicker } from '../ui/ColorPicker';
 
 export const PreferencesSettings: React.FC = () => {
-  const { mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
+  const { theme, toggleTheme, mobileNavStyle, setMobileNavStyle, colorTheme, setColorTheme, customColor, setCustomColor, fontFamily, setFontFamily, fontSize, setFontSize, isProUser } = useAppStore();
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto py-2">
       <div>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">App Theme</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className={`cursor-pointer border rounded-xl p-4 flex flex-col gap-3 transition-colors ${theme === 'light' ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+            <div className="flex items-center gap-3">
+              <input 
+                type="radio" 
+                name="theme" 
+                value="light" 
+                checked={theme === 'light'}
+                onChange={toggleTheme}
+                className="text-purple-600 focus:ring-purple-500 w-4 h-4"
+              />
+              <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                <Sun size={18} /> Light Mode
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 ml-7">
+              Clean and bright interface.
+            </p>
+          </label>
+          
+          <label className={`cursor-pointer border rounded-xl p-4 flex flex-col gap-3 transition-colors ${theme === 'dark' ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+            <div className="flex items-center gap-3">
+              <input 
+                type="radio" 
+                name="theme" 
+                value="dark" 
+                checked={theme === 'dark'}
+                onChange={toggleTheme}
+                className="text-purple-600 focus:ring-purple-500 w-4 h-4"
+              />
+              <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                <Moon size={18} /> Dark Mode
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 ml-7">
+              Easy on the eyes for night time.
+            </p>
+          </label>
+        </div>
+      </div>
+
+      <div className="pt-6 mt-6 border-t border-slate-200 dark:border-slate-700">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Mobile Navigation Style</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className={`cursor-pointer border rounded-xl p-4 flex flex-col gap-3 transition-colors ${mobileNavStyle === 'drawer' ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
@@ -230,14 +275,11 @@ export const PreferencesSettings: React.FC = () => {
                 Pick your own brand color.
               </p>
               {colorTheme === 'custom' && (
-                <div className="flex items-center gap-3 mt-2">
-                  <input 
-                    type="color" 
-                    value={customColor || '#8b5cf6'}
-                    onChange={(e) => setCustomColor(e.target.value)}
-                    className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                <div className="mt-2 relative z-10" onClick={(e) => e.stopPropagation()}>
+                  <ColorPicker 
+                    color={customColor || '#8b5cf6'}
+                    onChange={(color) => setCustomColor(color)}
                   />
-                  <span className="text-sm font-mono text-slate-500 uppercase">{customColor || '#8b5cf6'}</span>
                 </div>
               )}
             </div>

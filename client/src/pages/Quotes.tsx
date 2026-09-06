@@ -11,9 +11,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { v4 as uuidv4 } from 'uuid';
 import type { Quote } from '../types';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { DocumentPreview } from '../components/DocumentPreview';
+import { ScaledPreview } from '../components/ScaledPreview';
 import { AiDraftModal } from '../components/AiDraftModal';
 import { SendDocumentModal } from '../components/SendDocumentModal';
-import { SplitButton, ActionMenu, LongPressable, EmptyState } from '../components/ui';
+import { SplitButton, ActionMenu, LongPressable, EmptyState, BottomSheet } from '../components/ui';
 import { useAppStore } from '../store/useAppStore';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
@@ -49,6 +51,7 @@ const Quotes: React.FC = () => {
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [aiModalDefaultTab, setAiModalDefaultTab] = useState<'text' | 'document'>('text');
   
   const [sendModalOpen, setSendModalOpen] = useState(false);
@@ -316,6 +319,7 @@ const Quotes: React.FC = () => {
         
         <div className="flex flex-wrap items-center gap-2 pb-2 md:pb-0">
           <SplitButton
+            variant="secondary"
             mainLabel={<><Plus size={18} /><span>New Quote</span></>}
             onMainClick={handleNewQuote}
             options={[
@@ -368,19 +372,6 @@ const Quotes: React.FC = () => {
         </div>
         
         <div className="flex-shrink-0 flex items-center">
-          <SplitButton
-            mainLabel={<Plus size={18} />}
-            onMainClick={handleNewQuote}
-            options={[
-              { label: 'Create Manually', onClick: handleNewQuote },
-              { label: 'Draft with AI', onClick: () => { 
-                  if (checkQuota('quote')) {
-                    setAiModalDefaultTab('text'); 
-                    setIsAiModalOpen(true); 
-                  }
-              } }
-            ]}
-          />
         </div>
 
         <button 
@@ -550,8 +541,8 @@ const Quotes: React.FC = () => {
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <div className="font-bold text-base text-slate-900 dark:text-slate-100">
-                          {quote.quoteNumber || quote.localId.slice(0, 8)}
+                        <div className="font-bold text-base text-slate-900 dark:text-slate-100 truncate max-w-[150px] sm:max-w-[200px]">
+                          {allClients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
                         </div>
                         <div className="text-slate-400 text-xs mt-0.5">
                           {quote.issuedAt ? formatDate(quote.issuedAt) : 'Not issued yet'}
@@ -563,8 +554,8 @@ const Quotes: React.FC = () => {
                     </div>
                     <div className="flex justify-between items-center mt-1">
                       <div className="flex items-center gap-3">
-                        <div className="text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px] sm:max-w-[200px]">
-                          {allClients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
+                        <div className="text-slate-600 dark:text-slate-400 font-medium truncate">
+                          {quote.quoteNumber || quote.localId.slice(0, 8)}
                         </div>
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <Badge variant={quote.status.toLowerCase() as any}>{quote.status}</Badge>
@@ -684,13 +675,54 @@ const Quotes: React.FC = () => {
       {/* Mobile Floating Action Button */}
       {createPortal(
         <button 
-          onClick={handleNewQuote}
+          onClick={() => setIsMobileMenuOpen(true)}
           className={`md:hidden fixed ${mobileNavStyle === 'bottom' ? 'bottom-24' : 'bottom-6'} right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 hover:scale-110 active:scale-95 transition-all duration-300`}
         >
           <Plus size={24} />
         </button>,
         document.body
       )}
+
+      {/* Bottom Sheet Menu */}
+      <BottomSheet 
+        isOpen={isMobileMenuOpen} 
+        onClose={() => setIsMobileMenuOpen(false)}
+        title="Create New Quote"
+      >
+        <div className="flex flex-col gap-3">
+          <button 
+            onClick={() => { setIsMobileMenuOpen(false); handleNewQuote(); }}
+            className="flex items-center gap-3 w-full p-4 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-left"
+          >
+            <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400">
+              <Plus size={20} />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900 dark:text-white">Create Manually</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">Start from a blank template</div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => { 
+              setIsMobileMenuOpen(false); 
+              if (checkQuota('quote')) {
+                setAiModalDefaultTab('text'); 
+                setIsAiModalOpen(true); 
+              }
+            }}
+            className="flex items-center gap-3 w-full p-4 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-left"
+          >
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <MessageSquare size={20} />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900 dark:text-white">Draft with AI</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">Generate from text or scan</div>
+            </div>
+          </button>
+        </div>
+      </BottomSheet>
       
       <Pagination 
         currentPage={currentPage} 
@@ -791,85 +823,39 @@ const Quotes: React.FC = () => {
                       className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
                     >
                       <MessageSquare size={16} />
-                      Redraft Quote
+                         Redraft Quote
                     </button>
                 </div>
               )}
             </div>
 
-            {/* Quote To & Details */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Quote For</h3>
-                <p className="text-base font-medium text-slate-900 dark:text-white">
-                  {allClients.find(c => c.localId === selectedQuote.clientId)?.name || selectedQuote.clientId}
-                </p>
-                {allClients.find(c => c.localId === selectedQuote.clientId)?.email && (
-                  <p className="text-sm text-slate-500 mt-0.5">{allClients.find(c => c.localId === selectedQuote.clientId)?.email}</p>
-                )}
-              </div>
-              <div className="text-right">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Quote Details</h3>
-                <p className="text-sm text-slate-900 dark:text-slate-100"><span className="text-slate-500 mr-2">Issued:</span> {selectedQuote.createdAt ? new Date(selectedQuote.createdAt).toLocaleDateString() : 'N/A'}</p>
-                <p className="text-sm text-slate-900 dark:text-slate-100 mt-1"><span className="text-slate-500 mr-2">Quote #:</span> {selectedQuote.quoteNumber || selectedQuote.localId.slice(0, 8)}</p>
-              </div>
+            {/* Actual Document Preview */}
+            <div className="bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+               <ScaledPreview>
+                  <DocumentPreview 
+                    type="QUOTE"
+                    businessProfile={businessProfile}
+                    documentNumber={selectedQuote.quoteNumber || selectedQuote.localId.slice(0, 8)}
+                    initialDoc={selectedQuote}
+                    clientId={selectedQuote.clientId}
+                    clients={allClients}
+                    isCreatingClient={false}
+                    newClientName=""
+                    newClientEmail=""
+                    dueDate=""
+                    items={selectedQuote.items || []}
+                    subtotal={selectedQuote.subtotal}
+                    computedTaxes={selectedQuote.taxes || []}
+                    total={selectedQuote.total}
+                    description={selectedQuote.description || ''}
+                    notes={selectedQuote.notes}
+                    bankAccountId=""
+                    currency={selectedQuote.currency}
+                    theme={selectedQuote.theme}
+                    className="flex flex-1 flex-col"
+                  />
+               </ScaledPreview>
             </div>
-
-            {/* Project Title / Description */}
-            {selectedQuote.description && (
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Project Description</h3>
-                <p className="text-base text-slate-900 dark:text-slate-100">{selectedQuote.description}</p>
-              </div>
-            )}
-
-            {/* Items Table */}
-            <div>
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Line Items</h3>
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Description</th>
-                      <th className="px-4 py-3 font-semibold text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {selectedQuote.items?.map((item: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-slate-900 dark:text-slate-100">{item.description}</div>
-                          <div className="text-slate-500 text-xs mt-0.5">{item.quantity} × {formatMoney(item.unitPrice, selectedQuote.currency)}</div>
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">
-                          {formatMoney(item.amount, selectedQuote.currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                
-                {/* Summary Totals */}
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 space-y-2 border-t border-slate-200 dark:border-slate-800">
-                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                    <span>Subtotal</span>
-                    <span>{formatMoney(selectedQuote.subtotal, selectedQuote.currency)}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold text-slate-900 dark:text-white pt-3 border-t border-slate-200 dark:border-slate-700/50 mt-3">
-                    <span>Total</span>
-                    <span>{formatMoney(selectedQuote.total, selectedQuote.currency)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
-            {selectedQuote.notes && (
-              <div className="bg-amber-50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-400 p-4 rounded-xl text-sm border border-amber-100 dark:border-amber-900/30">
-                <span className="font-bold block mb-1">Notes / Terms:</span>
-                <span className="whitespace-pre-wrap">{selectedQuote.notes}</span>
-              </div>
-            )}
           </div>
         )}
       </PreviewPanel>

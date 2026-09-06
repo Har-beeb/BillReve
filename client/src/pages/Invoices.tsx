@@ -14,12 +14,14 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import { AiDraftModal } from '../components/AiDraftModal';
 import { SendDocumentModal } from '../components/SendDocumentModal';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
-import { SplitButton, ActionMenu, LongPressable } from '../components/ui';
+import { SplitButton, ActionMenu, LongPressable, BottomSheet } from '../components/ui';
 import { useAppStore } from '../store/useAppStore';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { useQuota } from '../hooks/useQuota';
+import { DocumentPreview } from '../components/DocumentPreview';
+import { ScaledPreview } from '../components/ScaledPreview';
 import toast from 'react-hot-toast';
 
 const Invoices: React.FC = () => {
@@ -43,6 +45,7 @@ const Invoices: React.FC = () => {
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [aiModalDefaultTab, setAiModalDefaultTab] = useState<'text' | 'document'>('text');
 
   const [sendModalOpen, setSendModalOpen] = useState(false);
@@ -346,19 +349,6 @@ const Invoices: React.FC = () => {
         </div>
         
         <div className="flex-shrink-0 flex items-center">
-          <SplitButton
-            mainLabel={<Plus size={18} />}
-            onMainClick={handleNewInvoice}
-            options={[
-              { label: 'Create Manually', onClick: handleNewInvoice },
-              { label: 'Draft with AI', onClick: () => { 
-                  if (checkQuota('invoice')) {
-                    setAiModalDefaultTab('text'); 
-                    setIsAiModalOpen(true); 
-                  }
-              } }
-            ]}
-          />
         </div>
 
         <ActionMenu 
@@ -514,8 +504,8 @@ const Invoices: React.FC = () => {
                   <div className="flex-1 flex flex-col gap-2">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <div className="font-bold text-base text-slate-900 dark:text-slate-100">
-                          {invoice.invoiceNumber || invoice.localId.slice(0, 8)}
+                        <div className="font-bold text-base text-slate-900 dark:text-slate-100 truncate max-w-[150px] sm:max-w-[200px]">
+                          {allClients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
                         </div>
                         <div className="text-slate-400 text-xs mt-0.5">
                           {invoice.issuedAt ? formatDate(invoice.issuedAt) : 'Not issued yet'}
@@ -527,8 +517,8 @@ const Invoices: React.FC = () => {
                     </div>
                     <div className="flex justify-between items-center mt-1">
                       <div className="flex items-center gap-3">
-                        <div className="text-slate-600 dark:text-slate-400 font-medium truncate max-w-[150px] sm:max-w-[200px]">
-                          {allClients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
+                        <div className="text-slate-600 dark:text-slate-400 font-medium truncate">
+                          {invoice.invoiceNumber || invoice.localId.slice(0, 8)}
                         </div>
                         <Badge variant={invoice.status.toLowerCase() as any}>
                           {invoice.status === 'PARTIAL' ? 'Partial' : invoice.status}
@@ -536,17 +526,20 @@ const Invoices: React.FC = () => {
                       </div>
                       <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                         <ActionMenu items={[
-                          { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
-                          ...(invoice.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }] : []),
-                          ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT') ? [
-                            { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
-                            { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
-                          ] : []),
-                          { label: invoice.status === 'OVERDUE' ? 'Send Reminder' : 'Send / Share', onClick: () => { setInvoiceToSend(invoice); setSendModalOpen(true); } },
-                          ...(invoice.status !== 'DRAFT' ? [{ label: 'Copy Payment Link', onClick: () => {
-                            navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.localId}`);
-                            toast.success('Payment link copied!');
-                          }}] : []),
+                          ...(invoice.status === 'DRAFT' ? [
+                            { label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) },
+                            { label: 'Mark as Sent', onClick: () => { const updated = { ...invoice, status: 'SENT' as const, updatedAt: new Date().toISOString() }; db.invoices.put(updated); db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updated, status: 'pending', createdAt: new Date().toISOString() }); } },
+                            { label: 'Preview PDF', onClick: () => handleDownloadPdf(invoice) }
+                          ] : [
+                            { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
+                            ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT') ? [
+                              { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
+                              { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
+                            ] : []),
+                            { label: invoice.status === 'OVERDUE' ? 'Send Reminder' : 'Send / Share', onClick: () => { setInvoiceToSend(invoice); setSendModalOpen(true); } },
+                            { label: 'Copy Payment Link', onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.localId}`); toast.success('Payment link copied!'); } },
+                            { label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }
+                          ]),
                           { label: 'Delete', onClick: () => { setInvoiceToDelete(invoice.localId); setDeleteModalOpen(true); }, variant: 'danger' }
                         ]} />
                       </div>
@@ -593,19 +586,22 @@ const Invoices: React.FC = () => {
                      {formatMoney(invoice.total, invoice.currency)}
                      <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                        <ActionMenu items={[
-                         { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
-                         ...(invoice.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }] : []),
-                         ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT') ? [
-                           { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
-                           { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
-                         ] : []),
-                         { label: invoice.status === 'OVERDUE' ? 'Send Reminder' : 'Send / Share', onClick: () => { setInvoiceToSend(invoice); setSendModalOpen(true); } },
-                         ...(invoice.status !== 'DRAFT' ? [{ label: 'Copy Payment Link', onClick: () => {
-                           navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.localId}`);
-                           toast.success('Payment link copied!');
-                         }}] : []),
-                         { label: 'Delete', onClick: () => { setInvoiceToDelete(invoice.localId); setDeleteModalOpen(true); }, variant: 'danger' }
-                       ]} />
+                          ...(invoice.status === 'DRAFT' ? [
+                            { label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) },
+                            { label: 'Mark as Sent', onClick: () => { const updated = { ...invoice, status: 'SENT' as const, updatedAt: new Date().toISOString() }; db.invoices.put(updated); db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updated, status: 'pending', createdAt: new Date().toISOString() }); } },
+                            { label: 'Preview PDF', onClick: () => handleDownloadPdf(invoice) }
+                          ] : [
+                            { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
+                            ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT') ? [
+                              { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
+                              { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
+                            ] : []),
+                            { label: invoice.status === 'OVERDUE' ? 'Send Reminder' : 'Send / Share', onClick: () => { setInvoiceToSend(invoice); setSendModalOpen(true); } },
+                            { label: 'Copy Payment Link', onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.localId}`); toast.success('Payment link copied!'); } },
+                            { label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }
+                          ]),
+                          { label: 'Delete', onClick: () => { setInvoiceToDelete(invoice.localId); setDeleteModalOpen(true); }, variant: 'danger' }
+                        ]} />
                      </div>
                   </div>
                 </div>
@@ -629,13 +625,54 @@ const Invoices: React.FC = () => {
       {/* Mobile Floating Action Button */}
       {createPortal(
         <button 
-          onClick={handleNewInvoice} 
+          onClick={() => setIsMobileMenuOpen(true)}
           className={`md:hidden fixed ${mobileNavStyle === 'bottom' ? 'bottom-24' : 'bottom-6'} right-4 z-50 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 hover:scale-110 active:scale-95 transition-all duration-300`}
         >
           <Plus size={24} />
         </button>,
         document.body
       )}
+
+      {/* Bottom Sheet Menu */}
+      <BottomSheet 
+        isOpen={isMobileMenuOpen} 
+        onClose={() => setIsMobileMenuOpen(false)}
+        title="Create New Invoice"
+      >
+        <div className="flex flex-col gap-3">
+          <button 
+            onClick={() => { setIsMobileMenuOpen(false); handleNewInvoice(); }}
+            className="flex items-center gap-3 w-full p-4 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-left"
+          >
+            <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400">
+              <Plus size={20} />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900 dark:text-white">Create Manually</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">Start from a blank template</div>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => { 
+              setIsMobileMenuOpen(false); 
+              if (checkQuota('invoice')) {
+                setAiModalDefaultTab('text'); 
+                setIsAiModalOpen(true); 
+              }
+            }}
+            className="flex items-center gap-3 w-full p-4 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-left"
+          >
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <ReceiptText size={20} />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900 dark:text-white">Draft with AI</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">Generate from text or scan</div>
+            </div>
+          </button>
+        </div>
+      </BottomSheet>
       
       <Pagination 
         currentPage={currentPage} 
@@ -687,81 +724,36 @@ const Invoices: React.FC = () => {
                 Due {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : 'Upon Receipt'}
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Billed To</h3>
-                <p className="text-base font-medium text-slate-900 dark:text-white">
-                  {allClients.find(c => c.localId === selectedInvoice.clientId)?.name || selectedInvoice.clientId}
-                </p>
-                {allClients.find(c => c.localId === selectedInvoice.clientId)?.email && (
-                  <p className="text-sm text-slate-500 mt-0.5">{allClients.find(c => c.localId === selectedInvoice.clientId)?.email}</p>
-                )}
-              </div>
-              <div className="text-right">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Invoice Details</h3>
-                <p className="text-sm text-slate-900 dark:text-slate-100"><span className="text-slate-500 mr-2">Issued:</span> {selectedInvoice.createdAt ? new Date(selectedInvoice.createdAt).toLocaleDateString() : 'N/A'}</p>
-                <p className="text-sm text-slate-900 dark:text-slate-100 mt-1"><span className="text-slate-500 mr-2">Invoice #:</span> {selectedInvoice.invoiceNumber || selectedInvoice.localId.slice(0, 8)}</p>
-              </div>
+            
+            {/* Actual Document Preview */}
+            <div className="bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+               <ScaledPreview>
+                  <DocumentPreview 
+                    type="INVOICE"
+                    businessProfile={businessProfile}
+                    documentNumber={selectedInvoice.invoiceNumber || selectedInvoice.localId.slice(0, 8)}
+                    initialDoc={selectedInvoice}
+                    clientId={selectedInvoice.clientId}
+                    clients={allClients}
+                    isCreatingClient={false}
+                    newClientName=""
+                    newClientEmail=""
+                    dueDate={selectedInvoice.dueDate || ''}
+                    items={selectedInvoice.items || []}
+                    subtotal={selectedInvoice.subtotal}
+                    computedTaxes={selectedInvoice.taxes || []}
+                    total={selectedInvoice.total}
+                    description={selectedInvoice.description || ''}
+                    notes={selectedInvoice.notes}
+                    bankAccountId={selectedInvoice.bankAccountId || ''}
+                    currency={selectedInvoice.currency}
+                    theme={selectedInvoice.theme}
+                    className="flex flex-1 flex-col"
+                  />
+               </ScaledPreview>
             </div>
 
-            {selectedInvoice.description && (
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Project Description</h3>
-                <p className="text-base text-slate-900 dark:text-slate-100">{selectedInvoice.description}</p>
-              </div>
-            )}
 
-            <div>
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Line Items</h3>
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Description</th>
-                      <th className="px-4 py-3 font-semibold text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {selectedInvoice.items?.map((item: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-slate-900 dark:text-slate-100">{item.description}</div>
-                          <div className="text-slate-500 text-xs mt-0.5">{item.quantity} × {formatMoney(item.unitPrice, selectedInvoice.currency)}</div>
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">
-                          {formatMoney(item.amount, selectedInvoice.currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 space-y-2 border-t border-slate-200 dark:border-slate-800">
-                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                    <span>Subtotal</span>
-                    <span>{formatMoney(selectedInvoice.subtotal, selectedInvoice.currency)}</span>
-                  </div>
-                  {selectedInvoice.amountPaid > 0 && (
-                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400 font-medium">
-                      <span>Amount Paid</span>
-                      <span>-{formatMoney(selectedInvoice.amountPaid, selectedInvoice.currency)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-lg font-bold text-slate-900 dark:text-white pt-3 border-t border-slate-200 dark:border-slate-700/50 mt-3">
-                    <span>Total Due</span>
-                    <span>{formatMoney(selectedInvoice.total - selectedInvoice.amountPaid, selectedInvoice.currency)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {selectedInvoice.notes && (
-              <div className="bg-amber-50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-400 p-4 rounded-xl text-sm border border-amber-100 dark:border-amber-900/30">
-                <span className="font-bold block mb-1">Notes / Terms:</span>
-                <span className="whitespace-pre-wrap">{selectedInvoice.notes}</span>
-              </div>
-            )}
           </div>
         )}
       </PreviewPanel>
