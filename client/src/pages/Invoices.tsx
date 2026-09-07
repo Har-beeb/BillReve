@@ -729,7 +729,7 @@ const Invoices: React.FC = () => {
                 {formatMoney(selectedInvoice.total - selectedInvoice.amountPaid, selectedInvoice.currency)}
               </div>
               <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-                Due {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : 'Upon Receipt'}
+                Invoice {selectedInvoice.invoiceNumber ? `#${selectedInvoice.invoiceNumber}` : ''}
               </div>
             </div>
             

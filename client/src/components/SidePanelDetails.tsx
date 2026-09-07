@@ -23,15 +23,14 @@ export const SidePanelDetails: React.FC<SidePanelDetailsProps> = ({ document, ty
       {/* Header section */}
       <div className="p-6 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
         <div className="flex justify-between items-start mb-4">
-          <div>
+          <div className="w-full">
             <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
-              {type === 'QUOTE' ? 'Quote' : 'Invoice'} {docNumber ? `#${docNumber}` : ''}
+              Description
             </h3>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white">
-              {formatMoney(document.total, currency)}
+            <div className="text-lg font-medium text-slate-900 dark:text-white">
+              {document.description || 'No description provided'}
             </div>
           </div>
-          <Badge variant={document.status.toLowerCase() as any}>{document.status}</Badge>
         </div>
         
         <div className="grid grid-cols-2 gap-4 text-sm">

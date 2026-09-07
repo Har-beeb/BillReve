@@ -804,85 +804,88 @@ const Quotes: React.FC = () => {
               <div className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
                 {formatMoney(selectedQuote.total, selectedQuote.currency)}
               </div>
-              
-              {selectedQuote.status === 'COUNTERED' && selectedQuote.counterAmount && (
-                <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl text-left">
-                  <div className="text-orange-800 dark:text-orange-300 font-semibold mb-1 flex justify-between">
-                    <span>Client's Counter Offer:</span>
-                    <span>{formatMoney(selectedQuote.counterAmount, selectedQuote.currency)}</span>
-                  </div>
-                  {selectedQuote.clientMessage && (
-                    <div className="text-orange-700 dark:text-orange-400 text-sm italic mb-4">
-                      "{selectedQuote.clientMessage}"
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { handleRespondToCounter(selectedQuote, true); setSelectedQuote(null); }}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors text-sm"
-                    >
-                      Accept Counter
-                    </button>
-                    <button 
-                      onClick={() => { handleRespondToCounter(selectedQuote, false); setSelectedQuote(null); }}
-                      className="flex-1 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white py-2 rounded-lg font-medium transition-colors text-sm"
-                    >
-                      Decline Offer
-                    </button>
-
-                  </div>
+              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
+                Quote {selectedQuote.quoteNumber ? `#${selectedQuote.quoteNumber}` : ''}
+              </div>
+            </div>
+            
+            {selectedQuote.status === 'COUNTERED' && selectedQuote.counterAmount && (
+              <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl text-left">
+                <div className="text-orange-800 dark:text-orange-300 font-semibold mb-1 flex justify-between">
+                  <span>Client's Counter Offer:</span>
+                  <span>{formatMoney(selectedQuote.counterAmount, selectedQuote.currency)}</span>
                 </div>
-              )}
-              {selectedQuote.status === 'DECLINED' && selectedQuote.clientMessage && (
-                <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-left">
-                  <div className="text-red-800 dark:text-red-300 font-semibold mb-1">
-                    Client's Reason for Declining:
-                  </div>
-                  <div className="text-red-700 dark:text-red-400 text-sm italic">
+                {selectedQuote.clientMessage && (
+                  <div className="text-orange-700 dark:text-orange-400 text-sm italic mb-4">
                     "{selectedQuote.clientMessage}"
                   </div>
+                )}
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => { handleRespondToCounter(selectedQuote, true); setSelectedQuote(null); }}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors text-sm"
+                  >
+                    Accept Counter
+                  </button>
+                  <button 
+                    onClick={() => { handleRespondToCounter(selectedQuote, false); setSelectedQuote(null); }}
+                    className="flex-1 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white py-2 rounded-lg font-medium transition-colors text-sm"
+                  >
+                    Decline Offer
+                  </button>
+
                 </div>
-              )}
-              {(selectedQuote.status === 'COUNTERED' || selectedQuote.status === 'DECLINED') && (
+              </div>
+            )}
+            {selectedQuote.status === 'DECLINED' && selectedQuote.clientMessage && (
+              <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-left">
+                <div className="text-red-800 dark:text-red-300 font-semibold mb-1">
+                  Client's Reason for Declining:
+                </div>
+                <div className="text-red-700 dark:text-red-400 text-sm italic">
+                  "{selectedQuote.clientMessage}"
+                </div>
+              </div>
+            )}
+            {(selectedQuote.status === 'COUNTERED' || selectedQuote.status === 'DECLINED') && (
+              <div className="mt-4">
+                  <button 
+                    onClick={() => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: { ...selectedQuote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }); }}
+                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                  >
+                    <MessageSquare size={16} />
+                        Redraft Quote
+                  </button>
+              </div>
+            )}
+
+              {selectedQuote.status === 'DRAFT' && (
                 <div className="mt-4">
-                    <button 
-                      onClick={() => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: { ...selectedQuote, status: 'DRAFT', counterAmount: undefined, clientMessage: undefined } } }); }}
-                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
-                    >
-                      <MessageSquare size={16} />
-                         Redraft Quote
-                    </button>
+                  <button 
+                    onClick={() => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: selectedQuote } }); }}
+                    className="w-full px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                  >
+                    <FileText size={16} />
+                    Edit Quote
+                  </button>
                 </div>
               )}
 
-                {selectedQuote.status === 'DRAFT' && (
-                  <div className="mt-4">
-                    <button 
-                      onClick={() => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: selectedQuote } }); }}
-                      className="w-full px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
-                    >
-                      <FileText size={16} />
-                      Edit Quote
-                    </button>
-                  </div>
-                )}
-
-                {selectedQuote.status === 'ACCEPTED' && (
-                  <div className="mt-4">
-                    <button 
-                      onClick={() => {
-                        const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = selectedQuote;
-                        navigate('/invoices/new', { state: { invoice: rest } }); 
-                        setSelectedQuote(null); 
-                      }}
-                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
-                    >
-                      <FileText size={16} />
-                      Convert to Invoice
-                    </button>
-                  </div>
-                )}
-            </div>
+              {selectedQuote.status === 'ACCEPTED' && (
+                <div className="mt-4">
+                  <button 
+                    onClick={() => {
+                      const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = selectedQuote;
+                      navigate('/invoices/new', { state: { invoice: rest } }); 
+                      setSelectedQuote(null); 
+                    }}
+                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                  >
+                    <FileText size={16} />
+                    Convert to Invoice
+                  </button>
+                </div>
+              )}
 
             {/* Actual Document Details */}
             <div className="bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
