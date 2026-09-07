@@ -11,8 +11,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { v4 as uuidv4 } from 'uuid';
 import type { Quote } from '../types';
 import { ConfirmationModal } from '../components/ConfirmationModal';
-import { DocumentPreview } from '../components/DocumentPreview';
-import { ScaledPreview } from '../components/ScaledPreview';
+import { SidePanelDetails } from '../components/SidePanelDetails';
 import { AiDraftModal } from '../components/AiDraftModal';
 import { SendDocumentModal } from '../components/SendDocumentModal';
 import { SplitButton, ActionMenu, LongPressable, EmptyState, BottomSheet } from '../components/ui';
@@ -829,32 +828,9 @@ const Quotes: React.FC = () => {
               )}
             </div>
 
-            {/* Actual Document Preview */}
+            {/* Actual Document Details */}
             <div className="bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
-               <ScaledPreview>
-                  <DocumentPreview 
-                    type="QUOTE"
-                    businessProfile={businessProfile}
-                    documentNumber={selectedQuote.quoteNumber || selectedQuote.localId.slice(0, 8)}
-                    initialDoc={selectedQuote}
-                    clientId={selectedQuote.clientId}
-                    clients={allClients}
-                    isCreatingClient={false}
-                    newClientName=""
-                    newClientEmail=""
-                    dueDate=""
-                    items={selectedQuote.items || []}
-                    subtotal={selectedQuote.subtotal}
-                    computedTaxes={selectedQuote.taxes || []}
-                    total={selectedQuote.total}
-                    description={selectedQuote.description || ''}
-                    notes={selectedQuote.notes}
-                    bankAccountId=""
-                    currency={selectedQuote.currency}
-                    theme={selectedQuote.theme}
-                    className="flex flex-1 flex-col"
-                  />
-               </ScaledPreview>
+               <SidePanelDetails document={selectedQuote} type="QUOTE" />
             </div>
           </div>
         )}

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Clock, FileText, Plus, ArrowRight, Zap, BarChart2, PieChart } from 'lucide-react';
+import { TrendingUp, Clock, FileText, Plus, Zap, BarChart2, PieChart } from 'lucide-react';
 import { Card, Badge } from '../components/ui';
 import { SplitButton } from '../components/ui/SplitButton';
 import { AiDraftModal } from '../components/AiDraftModal';
@@ -145,6 +145,7 @@ const Dashboard: React.FC = () => {
             onMainClick={() => checkQuota('quote') && navigate('/quotes/new')}
             align="left"
             size="lg"
+            variant="secondary"
             className="w-full sm:w-auto [&>button:first-child]:flex-1"
             options={[
               { label: 'Create Manually', onClick: () => checkQuota('quote') && navigate('/quotes/new') },
@@ -170,25 +171,8 @@ const Dashboard: React.FC = () => {
         onScroll={handleScroll}
         className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 overflow-x-auto pb-4 md:pb-0 snap-x snap-mandatory hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0"
       >
-        {/* Card 1: Outstanding Balance */}
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-amber-50/30 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '50ms' }}>
-          <div>
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <Clock size={20} />
-              </div>
-              <span className="text-xs font-medium px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors" onClick={() => navigate('/invoices')}>View Unpaid</span>
-            </div>
-            <div>
-              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Outstanding Balance</h3>
-              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(outstandingAmount)}>{formatMoney(outstandingAmount)}</div>
-              <p className="text-xs text-slate-500 mt-2 truncate">{outstandingInvoices.length} invoices outstanding</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Card 2: Total Revenue */}
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '150ms' }}>
+        {/* Card 1: Total Revenue */}
+        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '50ms' }}>
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
@@ -205,39 +189,55 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* Card 3: Drafts */}
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '250ms' }}>
+        {/* Card 2: Outstanding Balance */}
+        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-amber-50/30 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '150ms' }}>
           <div>
             <div className="flex justify-between items-start mb-4">
-              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400">
-                <FileText size={20} />
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <Clock size={20} />
               </div>
-              <span className="text-xs font-medium px-2 py-1 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 rounded-full cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" onClick={() => navigate('/invoices')}>View Drafts</span>
+              <span className="text-xs font-medium px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors" onClick={() => navigate('/invoices')}>View Unpaid</span>
             </div>
             <div>
-              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Pending Drafts</h3>
-              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">
-                {invoices.filter(i => i.status === 'DRAFT').length + quotes.filter(q => q.status === 'DRAFT').length}
-              </div>
-              <p className="text-xs text-slate-500 mt-2 truncate">Unfinished documents</p>
+              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Outstanding Balance</h3>
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(outstandingAmount)}>{formatMoney(outstandingAmount)}</div>
+              <p className="text-xs text-slate-500 mt-2 truncate">{outstandingInvoices.length} invoices outstanding</p>
             </div>
           </div>
         </Card>
 
-        {/* Card 4: Paid */}
+        {/* Card 3: Overdue Amount */}
+        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-rose-50/30 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '250ms' }}>
+          <div>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                <FileText size={20} />
+              </div>
+              <span className="text-xs font-medium px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-full cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors" onClick={() => navigate('/invoices')}>View Overdue</span>
+            </div>
+            <div>
+              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Overdue Amount</h3>
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">
+                {formatMoney(overdueAmount)}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Card 4: Accepted Quotes */}
         <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '350ms' }}>
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <FileText size={20} />
               </div>
+              <span className="text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors" onClick={() => navigate('/quotes')}>View Quotes</span>
             </div>
             <div>
-              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Fully Paid</h3>
-              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(paidInvoices.reduce((sum, i) => sum + i.total, 0))}>
-                {formatMoney(paidInvoices.reduce((sum, i) => sum + i.total, 0))}
+              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Accepted Quotes</h3>
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">
+                {quotes.filter(q => q.status === 'ACCEPTED').length}
               </div>
-              <p className="text-xs text-slate-500 mt-2 truncate">{paidInvoices.length} paid this month</p>
             </div>
           </div>
         </Card>
@@ -417,17 +417,6 @@ const Dashboard: React.FC = () => {
               </div>
             )}
           </div>
-          
-          {recentActivity.length > 0 && (
-            <div className="p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-center">
-              <button 
-                onClick={() => navigate('/invoices')}
-                className="text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 transition-colors flex items-center justify-center gap-1 w-full"
-              >
-                View all history <ArrowRight size={14} />
-              </button>
-            </div>
-          )}
         </Card>
       </div>
       

@@ -26,7 +26,7 @@ interface Message {
 }
 
 export const RevenueChat: React.FC = () => {
-  const { mobileNavStyle, businessProfile, clients: storeClients, incrementAiPrompts } = useAppStore();
+  const { mobileNavStyle, businessProfile, clients: storeClients, incrementAiPrompts, colorTheme, customColor } = useAppStore();
   const { checkQuota } = useQuota();
   const location = useLocation();
   const navigate = useNavigate();
@@ -423,6 +423,29 @@ export const RevenueChat: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const getFabStyle = () => {
+    if (isOpen) return {};
+    if (colorTheme === 'custom') return { backgroundColor: customColor || '#8b5cf6', boxShadow: `0 4px 14px 0 ${customColor || '#8b5cf6'}80` };
+    return {};
+  };
+
+  const getFabColorClass = () => {
+    if (isOpen) return 'bg-slate-700 hover:bg-slate-800 shadow-lg rotate-90';
+    if (colorTheme === 'custom') return 'shadow-lg opacity-90 hover:opacity-100';
+    
+    const themeMap: Record<string, string> = {
+      default: 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/50 hover:shadow-purple-500/80',
+      wine: 'bg-pink-800 hover:bg-pink-700 shadow-pink-800/50 hover:shadow-pink-700/80',
+      ocean: 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/50 hover:shadow-blue-500/80',
+      emerald: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/50 hover:shadow-emerald-500/80',
+      slate: 'bg-slate-700 hover:bg-slate-600 shadow-slate-700/50 hover:shadow-slate-600/80',
+      sunset: 'bg-orange-500 hover:bg-orange-400 shadow-orange-500/50 hover:shadow-orange-400/80',
+      mustard: 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/50 hover:shadow-yellow-400/80',
+      cherry: 'bg-red-600 hover:bg-red-500 shadow-red-600/50 hover:shadow-red-500/80',
+    };
+    return `${themeMap[colorTheme] || themeMap['default']} shadow-lg opacity-90 hover:opacity-100`;
+  };
+
   if (!mounted) return null;
 
   return createPortal(
@@ -432,9 +455,10 @@ export const RevenueChat: React.FC = () => {
         {!isOpen && <div className="absolute inset-0 bg-purple-400 rounded-full animate-ping opacity-20" style={{ animationDuration: '3s' }}></div>}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative p-4 text-white rounded-full transition-all duration-300 flex items-center justify-center group ${isOpen ? 'bg-slate-700 hover:bg-slate-800 shadow-lg rotate-90' : 'bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/50 hover:shadow-purple-500/80 opacity-90 hover:opacity-100'}`}
+          className={`relative p-4 text-white rounded-full transition-all duration-300 flex items-center justify-center group ${getFabColorClass()}`}
+          style={getFabStyle()}
         >
-          {isOpen ? <X size={24} className="transition-transform duration-300" /> : <img src="/revenuechat-icon.png" alt="RevenueChat AI" className="w-6 h-6 object-contain group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300 dark:invert" />}
+          {isOpen ? <X size={24} className="transition-transform duration-300" /> : <img src="/revenuechat-icon.png" alt="RevenueChat AI" className="w-8 h-8 object-contain group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />}
         </button>
       </div>
 
@@ -612,7 +636,7 @@ export const RevenueChat: React.FC = () => {
             </form>
           <div className="text-center mt-2">
             <p className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
-              <img src="/revenuechat-icon.png" alt="RevenueChat AI" className="w-3 h-3 object-contain dark:invert opacity-70" /> AI-Powered · Privacy First (No PII sent)
+              <img src="/revenuechat-icon.png" alt="RevenueChat AI" className="w-3 h-3 object-contain opacity-70" /> AI-Powered · Privacy First (No PII sent)
             </p>
           </div>
         </div>

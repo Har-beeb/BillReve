@@ -24,7 +24,7 @@ interface DocumentPreviewProps {
   bankAccountId: string;
   currency: string;
   className?: string;
-  theme?: 'minimal' | 'corporate' | 'modern-bold';
+  theme?: 'standard' | 'professional' | 'modern' | 'classic' | 'monochrome';
 }
 
 export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
@@ -47,7 +47,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   bankAccountId,
   currency,
   className,
-  theme = 'minimal'
+  theme = 'standard'
 }) => {
   const { fontFamily, fontSize, isProUser } = useAppStore();
   const sanitizedNotes = notes ? DOMPurify.sanitize(notes, { ALLOWED_TAGS: ['br', 'b', 'i', 'strong', 'em', 'p'] }) : '';
@@ -59,7 +59,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
 
   // Theme-specific styles
   const t = {
-    minimal: {
+    standard: {
       docWrapper: "p-8 shadow-2xl rounded-sm",
       header: "mb-12",
       title: "text-4xl font-bold text-slate-900 tracking-tight uppercase",
@@ -69,7 +69,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       totalRow: "text-purple-600",
       accentText: "text-slate-400"
     },
-    corporate: {
+    professional: {
       docWrapper: "p-0 shadow-2xl rounded-sm",
       header: "bg-slate-800 text-white p-8 pb-12 mb-8",
       title: "text-3xl font-medium tracking-widest uppercase text-white",
@@ -79,7 +79,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       totalRow: "text-slate-900 text-lg",
       accentText: "text-slate-500"
     },
-    'modern-bold': {
+    modern: {
       docWrapper: "p-8 shadow-2xl rounded-3xl",
       header: "mb-8",
       title: "text-5xl font-black text-purple-600 tracking-tighter uppercase",
@@ -88,8 +88,37 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       tableHead: "bg-purple-100/50 text-purple-900 rounded-lg",
       totalRow: "text-purple-700 text-xl font-black",
       accentText: "text-purple-400"
+    },
+    classic: {
+      docWrapper: "p-10 shadow-xl rounded-sm font-serif",
+      header: "mb-10 text-center border-b-2 border-slate-800 pb-8",
+      title: "text-4xl font-serif text-slate-900 tracking-widest uppercase",
+      detailsGrid: "py-4 mb-6",
+      tableWrapper: "border-t border-b border-slate-300 py-4",
+      tableHead: "border-b border-slate-300 text-slate-900 font-serif uppercase tracking-widest text-xs",
+      totalRow: "text-slate-900 font-serif text-xl border-t-2 border-slate-800 pt-2",
+      accentText: "text-slate-600 font-serif italic"
+    },
+    monochrome: {
+      docWrapper: "p-8 shadow-none border-4 border-black rounded-none",
+      header: "mb-10 border-b-4 border-black pb-6",
+      title: "text-4xl font-black text-black tracking-tight uppercase",
+      detailsGrid: "border-y-2 border-black py-6 font-mono",
+      tableWrapper: "border-2 border-black",
+      tableHead: "bg-black text-white font-bold tracking-widest uppercase text-xs",
+      totalRow: "text-black font-black text-2xl",
+      accentText: "text-gray-500 font-bold uppercase tracking-widest text-[10px]"
     }
-  }[theme];
+  }[theme] || {
+    docWrapper: "p-8 shadow-2xl rounded-sm",
+    header: "mb-12",
+    title: "text-4xl font-bold text-slate-900 tracking-tight uppercase",
+    detailsGrid: "border-y border-slate-100 py-6",
+    tableWrapper: "bg-slate-50 rounded-xl overflow-hidden border border-slate-200",
+    tableHead: "bg-slate-100 text-slate-600 border-b border-slate-200",
+    totalRow: "text-purple-600",
+    accentText: "text-slate-400"
+  };
 
   return (
     <div className={className || "hidden md:flex flex-1 bg-slate-200/50 dark:bg-slate-900/80 border-l border-slate-200 dark:border-slate-700 p-6 flex-col overflow-y-auto custom-scrollbar"}>
@@ -116,10 +145,10 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
               </div>
             )}
             <h1 className={t.title}>{type === 'QUOTE' ? 'QUOTE' : 'INVOICE'}</h1>
-            <p className={`mt-2 font-medium ${theme === 'corporate' ? 'text-slate-300' : 'text-slate-500'}`}>#{type === 'QUOTE' ? (initialDoc?.quoteNumber || documentNumber) : (initialDoc?.invoiceNumber || documentNumber)}</p>
+            <p className={`mt-2 font-medium ${theme === 'professional' ? 'text-slate-300' : 'text-slate-500'}`}>#{type === 'QUOTE' ? (initialDoc?.quoteNumber || documentNumber) : (initialDoc?.invoiceNumber || documentNumber)}</p>
           </div>
-          <div className={`text-right ${theme === 'corporate' ? 'text-white' : 'text-slate-600'}`}>
-            <p className={`font-bold text-lg mb-1 ${theme === 'corporate' ? 'text-white' : 'text-slate-900'}`}>{businessProfile?.name || 'Business Name'}</p>
+          <div className={`text-right ${theme === 'professional' ? 'text-white' : 'text-slate-600'}`}>
+            <p className={`font-bold text-lg mb-1 ${theme === 'professional' ? 'text-white' : 'text-slate-900'}`}>{businessProfile?.name || 'Business Name'}</p>
             <p className="whitespace-pre-line text-sm">{businessProfile?.address}</p>
           </div>
         </div>
@@ -159,7 +188,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         </div>
 
         {description && (
-          <div className={`mb-8 ${theme === 'corporate' ? 'px-8' : ''}`}>
+          <div className={`mb-8 ${theme === 'professional' ? 'px-8' : ''}`}>
              <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${t.accentText}`}>Project Description</p>
              <p className="text-slate-700 text-sm">{description}</p>
           </div>
@@ -167,7 +196,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
 
         {/* Line Items Table */}
         <div className={`flex-1 ${t.tableWrapper}`}>
-          <div className={theme === 'modern-bold' ? '' : 'bg-slate-50 rounded-xl overflow-hidden border border-slate-200'}>
+          <div className={theme === 'modern' ? '' : 'bg-slate-50 rounded-xl overflow-hidden border border-slate-200'}>
             <table className="w-full text-xs text-left">
               <thead className={t.tableHead}>
                 <tr>
@@ -180,7 +209,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
               <tbody className="divide-y divide-slate-100">
                 {items.filter(i => i.description).length > 0 ? (
                   items.filter(i => i.description).map((i, idx) => (
-                    <tr key={idx} className={theme === 'modern-bold' && idx % 2 === 0 ? 'bg-purple-50/20' : 'bg-white'}>
+                    <tr key={idx} className={theme === 'modern' && idx % 2 === 0 ? 'bg-purple-50/20' : 'bg-white'}>
                       <td className="px-4 py-3 text-slate-900 font-medium">{i.description}</td>
                       <td className="px-4 py-3 text-right text-slate-600">{i.quantity}</td>
                       <td className="px-4 py-3 text-right text-slate-600">{i.unitPrice.toLocaleString()}</td>
@@ -196,7 +225,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
             </table>
 
             {/* Totals */}
-            <div className={`bg-white p-4 flex justify-end ${theme === 'modern-bold' ? 'mt-4' : 'border-t border-slate-200'}`}>
+            <div className={`bg-white p-4 flex justify-end ${theme === 'modern' ? 'mt-4' : 'border-t border-slate-200'}`}>
               <div className="w-full sm:w-2/3 md:w-1/2 space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span>Subtotal</span>
@@ -208,7 +237,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
                     <span>{tx.isDeduction ? '-' : ''}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 ))}
-                <div className={`flex justify-between pt-3 mt-2 ${theme === 'modern-bold' ? 'border-t-2 border-purple-200' : 'border-t border-slate-200'}`}>
+                <div className={`flex justify-between pt-3 mt-2 ${theme === 'modern' ? 'border-t-2 border-purple-200' : 'border-t border-slate-200'}`}>
                   <span className="font-bold text-sm text-slate-900">Total</span>
                   <span className={t.totalRow}>{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
@@ -218,7 +247,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         </div>
 
         {/* Footer info (Notes & Bank) */}
-        <div className={`mt-8 space-y-6 ${theme === 'corporate' ? 'px-8' : ''}`}>
+        <div className={`mt-8 space-y-6 ${theme === 'professional' ? 'px-8' : ''}`}>
           {notes && (
             <div className="pt-6 border-t border-slate-100">
               <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${t.accentText}`}>Terms & Notes</p>
@@ -243,10 +272,11 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
           )}
         </div>
 
-        <div className={`mt-8 pt-8 text-center text-[10px] text-slate-400 w-full border-t border-slate-100 ${theme === 'corporate' ? 'px-8' : ''}`}>
+        <div className={`mt-8 pt-8 text-center text-[10px] text-slate-400 w-full border-t border-slate-100 ${theme === 'professional' ? 'px-8' : ''}`}>
           Powered by <span className="font-semibold text-slate-500">{isProUser ? (businessProfile.name || 'BillReve') : 'BillReve'}</span>
         </div>
       </div>
     </div>
   );
 };
+

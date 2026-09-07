@@ -13,7 +13,7 @@ import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
 import { useQuota } from '../hooks/useQuota';
 import { ConfirmationModal } from '../components/ConfirmationModal';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAppStore } from '../store/useAppStore';
 
@@ -24,6 +24,7 @@ import { useAppStore } from '../store/useAppStore';
  * Allows creating new clients and viewing detailed histories.
  */
 const Clients: React.FC = () => {
+  const navigate = useNavigate();
   const mobileNavStyle = useAppStore(state => state.mobileNavStyle);
   const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
   const clients = useLiveQuery(() => db.clients.filter(c => !c.deletedAt).toArray()) || [];
@@ -449,7 +450,7 @@ const Clients: React.FC = () => {
                      const link = isInvoice ? `/invoices?preview=${inv.localId}` : `/quotes?preview=${inv.localId}`;
                      
                      return (
-                       <Link key={inv.localId} to={link} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                       <div key={inv.localId} onClick={() => navigate(link)} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
                           <div className="flex items-center gap-3">
                             <FileText size={16} className="text-purple-500"/>
                             <span className="font-medium text-sm">{displayNum || 'Draft'}</span>
@@ -459,7 +460,7 @@ const Clients: React.FC = () => {
                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             <Badge variant={inv.status.toLowerCase() as any} className="ml-2 scale-75 origin-right">{inv.status}</Badge>
                           </div>
-                       </Link>
+                       </div>
                      );
                    })
                  ) : (

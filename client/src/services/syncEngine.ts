@@ -230,6 +230,9 @@ class SyncEngine {
           if (error) throw error;
           
         } else if (item.action === 'UPDATE') {
+          // Force updated_at so that remote pulls (which filter by updated_at) will catch this change
+          payloadSnakeCase.updated_at = new Date().toISOString();
+          
           const { error } = await supabase
             .from(tableName)
             .update({ ...payloadSnakeCase, user_id: session.user.id })
@@ -367,11 +370,12 @@ class SyncEngine {
 
           // LWW: Last-Write-Wins logic
           const localTime = new Date(local.updatedAt).getTime();
+          const remoteTimeMs = new Date(remoteTime).getTime();
           
           // Priority statuses from client interactions override local stale edits
           const isPriorityStatus = remote.status === 'ACCEPTED' || remote.status === 'COUNTERED' || remote.status === 'PAID' || remote.status === 'DECLINED';
           
-          if (remoteTime > localTime || isPriorityStatus) {
+          if (remoteTimeMs > localTime || isPriorityStatus) {
             toPutLocally.push({ ...remote, syncStatus: 'synced' });
           }
           // else local wins, do nothing, it will push next cycle
