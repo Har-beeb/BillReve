@@ -1,7 +1,6 @@
 import React from 'react';
 import { formatMoney, formatDate } from '../utils/formatters';
 import type { Quote, Invoice } from '../types';
-import { Badge } from './ui';
 import { useAppStore } from '../store/useAppStore';
 
 interface SidePanelDetailsProps {
@@ -13,7 +12,6 @@ export const SidePanelDetails: React.FC<SidePanelDetailsProps> = ({ document, ty
   const { businessProfile } = useAppStore();
   const currency = document.currency || businessProfile?.currency || 'NGN';
   const isInvoice = type === 'INVOICE';
-  const docNumber = isInvoice ? (document as Invoice).invoiceNumber : (document as Quote).quoteNumber;
   
   // Need to compute taxes sum if taxTotal doesn't exist directly
   const taxTotal = document.taxes?.reduce((sum, t) => sum + (t.isDeduction ? -t.amount : t.amount), 0) || 0;
