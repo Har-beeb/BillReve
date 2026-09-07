@@ -50,6 +50,7 @@ class SyncEngine {
   private retryCount = 0;
   private maxRetries = 5;
   private syncDebounceTimer: any = null;
+  private pollingInterval: any = null;
   
   // References for cleanup
   private onlineListener: (() => void) | null = null;
@@ -121,6 +122,11 @@ class SyncEngine {
       this.sync();
     };
     window.addEventListener('online', this.onlineListener);
+
+    // Heartbeat fallback polling (10 seconds)
+    this.pollingInterval = setInterval(() => {
+      this.sync();
+    }, 10000);
   }
 
   /**
@@ -129,6 +135,10 @@ class SyncEngine {
    * Resets isStarted so start() can be called again on next login.
    */
   stop() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
     if (this.channel) {
       supabase.removeChannel(this.channel);
       this.channel = null;
