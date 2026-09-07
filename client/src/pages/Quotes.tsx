@@ -230,11 +230,30 @@ const Quotes: React.FC = () => {
   };
 
   const handleRespondToCounter = async (quote: Quote, accept: boolean) => {
+    let updatedItems = quote.items;
+    let finalTotal = quote.total;
+    let finalSubtotal = quote.subtotal;
+
+    if (accept && quote.counterAmount !== undefined && quote.counterAmount !== quote.total) {
+        const discountAmount = quote.total - quote.counterAmount;
+        updatedItems = [...quote.items, {
+            id: uuidv4(),
+            description: "Agreed Counter-offer Adjustment",
+            quantity: 1,
+            unitPrice: -discountAmount,
+            amount: -discountAmount
+        }];
+        finalSubtotal = finalSubtotal - discountAmount;
+        finalTotal = quote.counterAmount;
+    }
+
     const updated = accept 
       ? { 
           ...quote, 
           status: 'ACCEPTED' as const, 
-          total: quote.counterAmount || quote.total,
+          items: updatedItems,
+          subtotal: finalSubtotal,
+          total: finalTotal,
           updatedAt: new Date().toISOString() 
         } 
       : { 
@@ -835,6 +854,34 @@ const Quotes: React.FC = () => {
                     </button>
                 </div>
               )}
+
+                {selectedQuote.status === 'DRAFT' && (
+                  <div className="mt-4">
+                    <button 
+                      onClick={() => { setSelectedQuote(null); navigate('/quotes/new', { state: { quote: selectedQuote } }); }}
+                      className="w-full px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                    >
+                      <FileText size={16} />
+                      Edit Quote
+                    </button>
+                  </div>
+                )}
+
+                {selectedQuote.status === 'ACCEPTED' && (
+                  <div className="mt-4">
+                    <button 
+                      onClick={() => {
+                        const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = selectedQuote;
+                        navigate('/invoices/new', { state: { invoice: rest } }); 
+                        setSelectedQuote(null); 
+                      }}
+                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                    >
+                      <FileText size={16} />
+                      Convert to Invoice
+                    </button>
+                  </div>
+                )}
             </div>
 
             {/* Actual Document Details */}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, Download, FileText, ReceiptText } from 'lucide-react';
+import { Search, Plus, Download, FileText, ReceiptText, MessageSquare, Link } from 'lucide-react';
 import { Card, Badge, ProFeature, EmptyState } from '../components/ui';
 import { formatMoney, formatDate } from '../utils/formatters';
 import { Pagination } from '../components/Pagination';
@@ -733,6 +733,57 @@ const Invoices: React.FC = () => {
               </div>
             </div>
             
+            {selectedInvoice.status === 'DRAFT' && (
+                <div className="mt-4">
+                  <button 
+                    onClick={() => { setSelectedInvoice(null); navigate('/invoices/new', { state: { invoice: selectedInvoice } }); }}
+                    className="w-full px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                  >
+                    <FileText size={16} />
+                    Edit Invoice
+                  </button>
+                </div>
+              )}
+
+              {selectedInvoice.status === 'SENT' && (
+                <div className="mt-4">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/invoice/${selectedInvoice.localId}`);
+                      toast.success('Link copied to clipboard');
+                    }}
+                    className="w-full px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                  >
+                    <Link size={16} />
+                    Copy Link
+                  </button>
+                </div>
+              )}
+
+              {(selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'PAID') && (
+                <div className="mt-4">
+                  <button 
+                    onClick={() => { setInvoiceForPayment(selectedInvoice); setRecordPaymentModalOpen(true); setSelectedInvoice(null); }}
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                  >
+                    <ReceiptText size={16} />
+                    Record Payment
+                  </button>
+                </div>
+              )}
+
+              {selectedInvoice.status === 'OVERDUE' && (
+                <div className="mt-4">
+                  <button 
+                    onClick={() => { setInvoiceToSend(selectedInvoice); setSendModalOpen(true); setSelectedInvoice(null); }}
+                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                  >
+                    <MessageSquare size={16} />
+                    Send Reminder
+                  </button>
+                </div>
+              )}
+
             {/* Actual Document Details */}
             <div className="bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
                <SidePanelDetails document={selectedInvoice} type="INVOICE" />
