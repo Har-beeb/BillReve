@@ -394,36 +394,45 @@ const Quotes: React.FC = () => {
           onScroll={handleScroll}
           className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar md:grid md:grid-cols-3 gap-4 pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0"
         >
-          <Card className="p-4 flex-shrink-0 w-[85vw] sm:w-[300px] md:w-auto snap-center">
+          <Card 
+            onClick={() => { setFilter('All'); setCurrentPage(1); }}
+            className="p-4 flex-shrink-0 w-[85vw] sm:w-[300px] md:w-auto snap-center cursor-pointer hover:border-purple-300 transition-colors"
+          >
             <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 mb-2">
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 mb-2 truncate">
                 <FileText size={16} />
-                <span className="font-semibold text-sm">Total Quotes</span>
+                <span className="font-semibold text-sm truncate">Total Quotes</span>
               </div>
-              <span className="text-xl font-bold">{quotes.length} quotes</span>
+              <span className="text-xl font-bold truncate">{quotes.length} quotes</span>
             </div>
           </Card>
           
-          <Card className="p-4 flex-shrink-0 w-[85vw] sm:w-[300px] md:w-auto snap-center">
+          <Card 
+            onClick={() => { setFilter('Accepted'); setCurrentPage(1); }}
+            className="p-4 flex-shrink-0 w-[85vw] sm:w-[300px] md:w-auto snap-center cursor-pointer hover:border-purple-300 transition-colors"
+          >
             <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2 truncate">
                 <FileText size={16} />
-                <span className="font-semibold text-sm">Accepted Quotes</span>
+                <span className="font-semibold text-sm truncate">Accepted Quotes</span>
               </div>
-              <span className="text-xl font-bold">
+              <span className="text-xl font-bold truncate">
                 {quotes.filter(q => q.status === 'ACCEPTED').length} quotes ({formatMoney(quotes.filter(q => q.status === 'ACCEPTED').reduce((sum, q) => sum + q.total, 0), 'NGN')})
               </span>
             </div>
           </Card>
 
           <ProFeature isProUser={isProUser} className="flex-shrink-0 w-[85vw] sm:w-[300px] md:w-auto snap-center">
-            <Card className="p-4 border-red-100 dark:border-red-900/30 w-full h-full">
+            <Card 
+              onClick={() => { setFilter('Declined'); setCurrentPage(1); }}
+              className="p-4 border-red-100 dark:border-red-900/30 w-full h-full cursor-pointer hover:border-purple-300 transition-colors"
+            >
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-2">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-2 truncate">
                   <FileText size={16} />
-                  <span className="font-semibold text-sm">Declined Quotes</span>
+                  <span className="font-semibold text-sm truncate">Declined Quotes</span>
                 </div>
-                <span className="text-xl font-bold">
+                <span className="text-xl font-bold truncate">
                   {quotes.filter(q => q.status === 'DECLINED').length} quotes ({formatMoney(quotes.filter(q => q.status === 'DECLINED').reduce((sum, q) => sum + q.total, 0), 'NGN')})
                 </span>
               </div>
@@ -501,8 +510,8 @@ const Quotes: React.FC = () => {
 
       {/* Quote List (More compact) */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
-        <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl">
-          <div className="col-span-1 flex items-center">
+        <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl group">
+          <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
              <input 
                type="checkbox" 
                checked={paginatedQuotes.length > 0 && selectedIds.size === paginatedQuotes.length}
@@ -510,10 +519,10 @@ const Quotes: React.FC = () => {
                className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
              />
           </div>
-          <div className="col-span-4">Client & Quote</div>
-          <div className="col-span-3">Description & Date</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-2 text-right pr-8">Amount</div>
+          <div className="col-span-4 truncate">Client & Quote</div>
+          <div className="col-span-3 truncate">Description & Date</div>
+          <div className="col-span-2 truncate">Status</div>
+          <div className="col-span-2 text-right pr-8 truncate">Amount</div>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -528,7 +537,7 @@ const Quotes: React.FC = () => {
               >
                 {/* --- MOBILE VIEW --- */}
                 <div className="flex md:hidden gap-3 items-start py-4">
-                  <div className="flex-shrink-0 pt-1">
+                  <div className={`pt-1 transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'w-6 opacity-100 mr-2' : 'w-0 opacity-0 m-0'}`}>
                     <input 
                       type="checkbox"
                       checked={selectedIds.has(quote.localId)}
@@ -588,8 +597,8 @@ const Quotes: React.FC = () => {
                 </div>
 
                 {/* --- DESKTOP VIEW --- */}
-                <div className="hidden md:grid grid-cols-12 items-center w-full py-4">
-                  <div className="col-span-1 flex items-center">
+                <div className="hidden md:grid grid-cols-12 items-center w-full py-4 group">
+                  <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                     <input 
                       type="checkbox"
                       checked={selectedIds.has(quote.localId)}

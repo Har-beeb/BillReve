@@ -243,8 +243,8 @@ const Clients: React.FC = () => {
 
       {/* Client List */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
-        <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl">
-          <div className="col-span-1 flex items-center">
+        <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl group">
+          <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
              <input 
                type="checkbox" 
                checked={paginatedClients.length > 0 && selectedIds.size === paginatedClients.length}
@@ -252,9 +252,9 @@ const Clients: React.FC = () => {
                className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
              />
           </div>
-          <div className="col-span-4">Client Details</div>
-          <div className="col-span-4">Contact Info</div>
-          <div className="col-span-3 text-right pr-8">Total Billed</div>
+          <div className="col-span-4 truncate">Client Details</div>
+          <div className="col-span-4 truncate">Contact Info</div>
+          <div className="col-span-3 text-right pr-8 truncate">Total Billed</div>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -272,13 +272,15 @@ const Clients: React.FC = () => {
                 <div className="flex md:hidden flex-col gap-2 py-3">
                   {/* Row 1: Checkbox, Avatar, Name, Total, Menu */}
                   <div className="flex items-center gap-3 w-full">
-                    <input 
-                      type="checkbox"
-                      checked={selectedIds.has(client.localId)}
-                      onChange={(e) => { e.stopPropagation(); toggleSelect(client.localId); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
-                    />
+                    <div className={`transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'w-6 opacity-100 mr-2' : 'w-0 opacity-0 m-0'}`}>
+                      <input 
+                        type="checkbox"
+                        checked={selectedIds.has(client.localId)}
+                        onChange={(e) => { e.stopPropagation(); toggleSelect(client.localId); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
+                      />
+                    </div>
                     <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex flex-shrink-0 items-center justify-center text-slate-600 dark:text-slate-400 font-bold text-sm">
                        {client.name.charAt(0).toUpperCase()}
                     </div>
@@ -309,8 +311,8 @@ const Clients: React.FC = () => {
                 </div>
 
                 {/* --- DESKTOP VIEW --- */}
-                <div className="hidden md:grid grid-cols-12 items-center w-full py-4">
-                  <div className="col-span-1 flex items-center">
+                <div className="hidden md:grid grid-cols-12 items-center w-full py-4 group">
+                  <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                     <input 
                       type="checkbox"
                       checked={selectedIds.has(client.localId)}

@@ -26,7 +26,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
       {/* Backdrop (Visible on mobile, transparent on desktop) */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/20 md:bg-transparent z-30"
+          className="fixed inset-0 bg-slate-900/20 md:bg-transparent z-[70]"
           onClick={onClose}
         />
       )}
@@ -34,7 +34,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
       {/* Sliding Panel */}
       <div 
         className={cn(
-          "fixed top-16 right-0 bottom-0 md:bottom-auto w-[90%] md:w-[450px] bg-white dark:bg-slate-800 shadow-2xl border-l border-slate-200 dark:border-slate-700 z-40 transform transition-transform duration-300 flex flex-col",
+          "fixed top-16 right-0 bottom-0 md:bottom-auto w-[90%] md:w-[450px] bg-white dark:bg-slate-800 shadow-2xl border-l border-slate-200 dark:border-slate-700 z-[80] transform transition-transform duration-300 flex flex-col",
           isOpen ? "translate-x-0" : "translate-x-full",
           // On desktop, it takes full height minus header.
           "md:h-[calc(100vh-64px)]"
@@ -53,7 +53,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 md:p-5">
+        <div className="flex-1 overflow-y-auto p-4 md:p-5 pb-24 md:pb-5">
           {children}
         </div>
       </div>

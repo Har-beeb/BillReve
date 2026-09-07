@@ -5,6 +5,14 @@ import { Zap, ShieldCheck, Sparkles } from 'lucide-react';
 
 const updates = [
   {
+    version: 'v1.4.0',
+    date: 'September 7, 2026',
+    title: 'The Ultimate UI Polish & Real-time Sync Upgrades',
+    description: 'A massive visual overhaul of the BillReve dashboard, mobile experience, and document themes, alongside a bulletproof 10-second heartbeat engine to guarantee your data is always in sync.',
+    features: ['5 Distinct Document Themes', 'Heartbeat Sync Engine Fallback', 'Dashboard Visual Hierarchy Upgrades', 'Mobile Side Panel Fixes', 'Long-Press Table Selection UX'],
+    icon: <Sparkles className="text-purple-500" size={24} />
+  },
+  {
     version: `v${import.meta.env.VITE_APP_VERSION || '1.3.0'}`,
     date: 'August 14, 2026',
     title: 'Smart Quote Looping & Minimum Counter Pricing',
@@ -96,3 +104,4 @@ const Changelog: React.FC = () => {
 };
 
 export default Changelog;
+

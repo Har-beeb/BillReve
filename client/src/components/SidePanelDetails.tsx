@@ -40,13 +40,13 @@ export const SidePanelDetails: React.FC<SidePanelDetailsProps> = ({ document, ty
             <div className="font-medium text-slate-900 dark:text-white">{formatDate(document.createdAt)}</div>
           </div>
           {isInvoice && (document as Invoice).dueDate && (
-            <div>
+            <div className="text-right">
               <div className="text-slate-500 dark:text-slate-400">Due Date</div>
               <div className="font-medium text-slate-900 dark:text-white">{formatDate((document as Invoice).dueDate!)}</div>
             </div>
           )}
           {type === 'QUOTE' && (document as Quote).expiresAt && (
-            <div>
+            <div className="text-right">
               <div className="text-slate-500 dark:text-slate-400">Valid Until</div>
               <div className="font-medium text-slate-900 dark:text-white">{formatDate((document as Quote).expiresAt!)}</div>
             </div>

@@ -292,7 +292,7 @@ const MainLayout: React.FC = () => {
             <div className="relative" ref={notificationsRef}>
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="relative p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                className={`relative p-2 rounded-full transition-colors ${unreadCount > 0 ? 'animate-shake text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
                 aria-label="Notifications"
               >
                 <Bell size={20} />
@@ -519,8 +519,8 @@ const MainLayout: React.FC = () => {
         <div className="md:hidden">
           {/* Animated "More" Panel */}
           <div 
-            className={`fixed inset-x-0 bottom-[64px] bg-white dark:bg-slate-800 rounded-t-3xl shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.3)] border-t border-slate-200 dark:border-slate-700 transition-transform duration-200 ease-out z-[70] overflow-y-auto max-h-[70vh] ${
-              isMoreMenuOpen ? 'translate-y-0' : 'translate-y-full'
+            className={`fixed inset-x-0 bottom-[64px] bg-white dark:bg-slate-800 rounded-t-3xl shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.3)] border-t border-slate-200 dark:border-slate-700 transition-all duration-200 ease-out z-[70] overflow-y-auto max-h-[70vh] ${
+              isMoreMenuOpen ? 'translate-y-0' : 'translate-y-full opacity-0 pointer-events-none'
             }`}
           >
             <div className="p-4 pb-6 space-y-2">

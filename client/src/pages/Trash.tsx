@@ -172,7 +172,7 @@ const Trash: React.FC = () => {
           </div>
         </div>
         
-        <div className="hidden md:flex items-center md:col-span-1">
+        <div className={`hidden md:flex items-center md:col-span-1 transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
           <input 
             type="checkbox"
             checked={selectedIds.has(item.localId)}
@@ -304,8 +304,8 @@ const Trash: React.FC = () => {
         />
       ) : (
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
-          <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl items-center">
-            <div className="col-span-1">
+          <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl items-center group">
+            <div className={`col-span-1 transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
               <input 
                 type="checkbox"
                 checked={selectedIds.size > 0 && selectedIds.size === allItems.length}
@@ -321,10 +321,10 @@ const Trash: React.FC = () => {
                 className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
               />
             </div>
-            <div className="col-span-2">Type</div>
-            <div className="col-span-4">Name / Identifier</div>
-            <div className="col-span-3">Deleted On</div>
-            <div className="col-span-2 text-right pr-4">Actions</div>
+            <div className="col-span-2 truncate">Type</div>
+            <div className="col-span-4 truncate">Name / Identifier</div>
+            <div className="col-span-3 truncate">Deleted On</div>
+            <div className="col-span-2 text-right pr-4 truncate">Actions</div>
           </div>
           
           <div className="divide-y divide-slate-100 dark:divide-slate-800">

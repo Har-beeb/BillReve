@@ -60,7 +60,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   // Theme-specific styles
   const t = {
     standard: {
-      docWrapper: "p-8 shadow-2xl rounded-sm",
+      docWrapper: "p-8 shadow-2xl rounded-sm border-t-4 border-slate-800",
       header: "mb-12",
       title: "text-4xl font-bold text-slate-900 tracking-tight uppercase",
       detailsGrid: "border-y border-slate-100 py-6",
@@ -80,7 +80,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       accentText: "text-slate-500"
     },
     modern: {
-      docWrapper: "p-8 shadow-2xl rounded-3xl",
+      docWrapper: "p-8 shadow-2xl rounded-3xl bg-purple-50/10 border-2 border-purple-100 bg-[linear-gradient(45deg,transparent_25%,rgba(243,232,255,0.3)_25%,rgba(243,232,255,0.3)_50%,transparent_50%,transparent_75%,rgba(243,232,255,0.3)_75%,rgba(243,232,255,0.3)_100%)] bg-[length:20px_20px]",
       header: "mb-8",
       title: "text-5xl font-black text-purple-600 tracking-tighter uppercase",
       detailsGrid: "bg-purple-50/50 rounded-2xl p-6 mb-8",
@@ -90,7 +90,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       accentText: "text-purple-400"
     },
     classic: {
-      docWrapper: "p-10 shadow-xl rounded-sm font-serif",
+      docWrapper: "p-10 shadow-xl rounded-sm font-serif border-4 border-double border-slate-300",
       header: "mb-10 text-center border-b-2 border-slate-800 pb-8",
       title: "text-4xl font-serif text-slate-900 tracking-widest uppercase",
       detailsGrid: "py-4 mb-6",
@@ -100,7 +100,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       accentText: "text-slate-600 font-serif italic"
     },
     monochrome: {
-      docWrapper: "p-8 shadow-none border-4 border-black rounded-none",
+      docWrapper: "p-8 shadow-none border-8 border-black rounded-none",
       header: "mb-10 border-b-4 border-black pb-6",
       title: "text-4xl font-black text-black tracking-tight uppercase",
       detailsGrid: "border-y-2 border-black py-6 font-mono",

@@ -34,11 +34,12 @@ export const SplitButton: React.FC<SplitButtonProps> = ({ mainLabel, onMainClick
   
   const mainColors = variant === 'primary' 
     ? 'bg-purple-600 hover:bg-purple-700 text-white focus:ring-purple-500' 
-    : 'bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 border-r-0 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700 focus:ring-slate-400';
+    : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 border border-purple-200 border-r-0 dark:border-purple-800 focus:ring-purple-400';
     
   const caretColors = variant === 'primary'
     ? 'bg-purple-600 hover:bg-purple-700 text-white border-l border-purple-500 focus:ring-purple-500'
-    : 'bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200 border-l-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700 dark:border-l-slate-700 focus:ring-slate-400';
+    : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 border border-purple-200 border-l-purple-300 dark:border-purple-800 dark:border-l-purple-700 focus:ring-purple-400';
+
 
   return (
     <div className={`relative inline-flex rounded-lg shadow-sm ${className}`} ref={menuRef}>

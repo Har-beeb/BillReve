@@ -34,6 +34,11 @@
 
 /* Base layer adjustments for background and text to handle dark mode seamlessly on the body */
 @layer base {
+  html, body { overflow-x: hidden; }
+  @media (max-width: 768px) {
+    body { scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; }
+  }
   body {
     @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-200;
   }
@@ -228,3 +233,13 @@
 }
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  50% { transform: rotate(10deg); }
+  75% { transform: rotate(-10deg); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}

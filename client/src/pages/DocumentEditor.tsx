@@ -467,17 +467,17 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           <hr className="border-slate-100 dark:border-slate-800/50 my-6" />
 
           {/* Action Buttons at the bottom of the form */}
-          <div className="flex items-center gap-3 pt-4 pb-12">
+          <div className="flex items-center gap-3 pt-4 pb-12 whitespace-nowrap flex-nowrap">
             <button 
               onClick={() => handleSave('DRAFT')}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-transparent dark:border-slate-700"
+              className="flex-1 flex items-center justify-center gap-2 px-2 py-3 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-transparent dark:border-slate-700"
             >
               <Save size={18} />
               <span>Save Draft</span>
             </button>
             <button 
               onClick={handleSaveAndSendClick}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-2 py-3 rounded-xl text-sm sm:text-base font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors shadow-sm"
             >
               <Send size={18} />
               <span>Save & Send</span>

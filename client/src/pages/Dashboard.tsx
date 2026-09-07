@@ -115,6 +115,13 @@ const Dashboard: React.FC = () => {
     return allClients.find(c => c.localId === id)?.name || 'Unknown Client';
   };
 
+  React.useEffect(() => {
+    const hasData = totalRevenue > 0 || outstandingAmount > 0 || overdueAmount > 0;
+    if (!hasData) {
+      setChartType('pie');
+    }
+  }, [totalRevenue, outstandingAmount, overdueAmount]);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-fade-in-up pb-24">
       <GettingStartedChecklist />
@@ -178,13 +185,14 @@ const Dashboard: React.FC = () => {
               <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <TrendingUp size={20} />
               </div>
-              <span className={`text-xs font-medium px-2 py-1 rounded-full ${mrrGrowth >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+              <span className={`whitespace-nowrap flex-shrink-0 text-xs font-medium px-2 py-1 rounded-full ${mrrGrowth >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
                 {mrrGrowth > 0 ? '+' : ''}{mrrGrowth.toFixed(1)}% this month
               </span>
             </div>
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Total Revenue</h3>
               <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(totalRevenue)}>{formatMoney(totalRevenue)}</div>
+              <div className="mt-1 truncate text-xs text-slate-500">From paid invoices this month</div>
             </div>
           </div>
         </Card>
@@ -201,43 +209,53 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Outstanding Balance</h3>
               <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(outstandingAmount)}>{formatMoney(outstandingAmount)}</div>
-              <p className="text-xs text-slate-500 mt-2 truncate">{outstandingInvoices.length} invoices outstanding</p>
+              <div className="mt-1 truncate text-xs text-slate-500">{outstandingInvoices.length} invoices outstanding</div>
             </div>
           </div>
         </Card>
 
         {/* Card 3: Overdue Amount */}
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-rose-50/30 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '250ms' }}>
+        <Card 
+          className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-rose-50/30 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors" 
+          style={{ animationDelay: '250ms' }}
+          onClick={() => navigate('/invoices?status=OVERDUE')}
+        >
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-600 dark:text-rose-400">
                 <FileText size={20} />
               </div>
-              <span className="text-xs font-medium px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-full cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors" onClick={() => navigate('/invoices')}>View Overdue</span>
+              <span className="text-xs font-medium px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-full cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors" onClick={(e) => { e.stopPropagation(); navigate('/invoices'); }}>View Overdue</span>
             </div>
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Overdue Amount</h3>
-              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(overdueAmount)}>
                 {formatMoney(overdueAmount)}
               </div>
+              <div className="mt-1 truncate text-xs text-slate-500">{overdueInvoices.length} overdue invoices</div>
             </div>
           </div>
         </Card>
 
         {/* Card 4: Accepted Quotes */}
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '350ms' }}>
+        <Card 
+          className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors" 
+          style={{ animationDelay: '350ms' }}
+          onClick={() => navigate('/quotes?status=ACCEPTED')}
+        >
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <FileText size={20} />
               </div>
-              <span className="text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors" onClick={() => navigate('/quotes')}>View Quotes</span>
+              <span className="text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors" onClick={(e) => { e.stopPropagation(); navigate('/quotes'); }}>View Quotes</span>
             </div>
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Accepted Quotes</h3>
               <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">
                 {quotes.filter(q => q.status === 'ACCEPTED').length}
               </div>
+              <div className="mt-1 truncate text-xs text-slate-500">Total quotes accepted</div>
             </div>
           </div>
         </Card>
