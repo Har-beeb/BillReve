@@ -42,7 +42,7 @@ const Quotes: React.FC = () => {
   const isProUser = useAppStore((state) => state.isProUser);
   const businessProfile = useAppStore((state) => state.businessProfile);
   const mobileNavStyle = useAppStore((state) => state.mobileNavStyle);
-  const [filter, setFilter] = useState('All');
+  const statusParam = searchParams.get('status'); const initialFilter = statusParam ? statusParam.charAt(0).toUpperCase() + statusParam.slice(1).toLowerCase() : 'All'; const [filter, setFilter] = useState(initialFilter);
   const [search, setSearch] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);

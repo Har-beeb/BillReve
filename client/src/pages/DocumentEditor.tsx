@@ -463,11 +463,11 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           </div>
 
           {/* Bottom spacing for mobile to ensure scrollability past FAB */}
-          <div className="h-20 md:hidden"></div>
+          
           <hr className="border-slate-100 dark:border-slate-800/50 my-6" />
 
           {/* Action Buttons at the bottom of the form */}
-          <div className="flex items-center gap-3 pt-4 pb-12 whitespace-nowrap flex-nowrap">
+          <div className="flex items-center gap-3 pt-4 pb-24 md:pb-12 whitespace-nowrap flex-nowrap">
             <button 
               onClick={() => handleSave('DRAFT')}
               className="flex-1 flex items-center justify-center gap-2 px-2 py-3 rounded-xl text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-transparent dark:border-slate-700"
@@ -530,3 +530,4 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
 };
 
 export default DocumentEditor;
+

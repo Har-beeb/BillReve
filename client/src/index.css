@@ -243,3 +243,13 @@
 .animate-shake {
   animation: shake 0.5s ease-in-out;
 }
+@layer base {
+  html, body {
+    overflow: hidden;
+    height: 100vh;
+    height: 100dvh;
+    position: fixed;
+    width: 100%;
+    overscroll-behavior: none;
+  }
+}

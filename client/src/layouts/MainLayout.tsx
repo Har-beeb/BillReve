@@ -170,7 +170,7 @@ const MainLayout: React.FC = () => {
   const showOnboarding = (!businessProfile.name || !businessProfile.industry || !businessProfile.businessDescription) && !hasSkippedOnboarding;
 
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200 ${themeClass}`} style={customStyles}>
+    <div className={`h-screen h-[100dvh] overflow-hidden bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-200 ${themeClass}`} style={customStyles}>
       {showOnboarding && <OnboardingWizard />}
       {/* Desktop Sidebar (hidden on mobile) */}
       <aside 
@@ -251,7 +251,7 @@ const MainLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-h-screen pb-16 md:pb-0 min-w-0">
+      <main className="flex-1 flex flex-col h-full overflow-y-auto pb-16 md:pb-0 min-w-0">
         {/* Header */}
         <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-16 md:h-20 flex items-center px-4 md:px-8 justify-between sticky top-0 z-20 transition-colors duration-200 pt-safe">
           <div className="flex items-center gap-4 md:hidden">
@@ -629,4 +629,5 @@ const MainLayout: React.FC = () => {
 };
 
 export default MainLayout;
+
 

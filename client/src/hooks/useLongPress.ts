@@ -8,6 +8,7 @@ export const useLongPress = (
   const timeout = useRef<any>(null);
   const target = useRef<any>(null);
   const isMoved = useRef(false);
+  const isLongPressTriggered = useRef(false);
   const startPos = useRef<{x: number, y: number} | null>(null);
 
   const start = useCallback(
@@ -16,6 +17,7 @@ export const useLongPress = (
       if (event.target?.closest?.('button, input, .no-row-click')) return;
 
       isMoved.current = false;
+      isLongPressTriggered.current = false;
       
       if (isTouchEvent(event)) {
         startPos.current = {
@@ -33,6 +35,7 @@ export const useLongPress = (
         target.current = event.target;
       }
       timeout.current = setTimeout(() => {
+        isLongPressTriggered.current = true;
         onLongPress(event);
       }, delay);
     },
@@ -45,7 +48,7 @@ export const useLongPress = (
       if (event.target?.closest?.('button, input, .no-row-click')) return;
 
       timeout.current && clearTimeout(timeout.current);
-      if (shouldTriggerClick && !isMoved.current) {
+      if (shouldTriggerClick && !isMoved.current && !isLongPressTriggered.current) {
         onClick(event);
       }
       if (shouldPreventDefault && target.current) {
