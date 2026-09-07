@@ -290,7 +290,7 @@ const Invoices: React.FC = () => {
         onConfirm={handleRecordPayment}
       />
 
-      <div className="hidden md:flex sticky top-16 z-10 bg-slate-50 dark:bg-slate-900 pt-4 pb-4 -mt-4 border-b border-slate-200 dark:border-slate-800 flex-col md:flex-row justify-between gap-4">
+      <div className="hidden md:flex sticky -top-4 md:-top-6 z-10 bg-slate-50 dark:bg-slate-900 pt-4 md:pt-6 pb-4 -mx-4 px-4 md:-mx-6 md:px-6 border-b border-slate-200 dark:border-slate-800 flex-col md:flex-row justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
@@ -335,7 +335,7 @@ const Invoices: React.FC = () => {
         </div>
       </div>
 
-      <div className="md:hidden sticky top-16 z-10 bg-slate-50 dark:bg-slate-900 pt-4 pb-4 -mt-4 border-b border-slate-200 dark:border-slate-800 flex gap-2">
+      <div className="md:hidden sticky -top-4 md:-top-6 z-10 bg-slate-50 dark:bg-slate-900 pt-4 md:pt-6 pb-4 -mx-4 px-4 md:-mx-6 md:px-6 border-b border-slate-200 dark:border-slate-800 flex gap-2">
          <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
@@ -763,4 +763,5 @@ const Invoices: React.FC = () => {
 };
 
 export default Invoices;
+
 
