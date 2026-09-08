@@ -255,7 +255,7 @@ const PublicInvoice: React.FC = () => {
                 </div>
               ) : (
                 <div className="w-24 h-24 mb-6">
-                   <img src="/logo.png" alt="BillReve Logo" className="w-full h-full object-contain object-left" />
+                   <img src="/billreve.svg" alt="BillReve Logo" className="w-full h-full object-contain object-left" />
                 </div>
               )}
               <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Invoice</h1>

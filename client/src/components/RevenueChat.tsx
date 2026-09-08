@@ -458,7 +458,7 @@ export const RevenueChat: React.FC = () => {
           className={`relative p-4 text-white rounded-full transition-all duration-300 flex items-center justify-center group ${getFabColorClass()}`}
           style={getFabStyle()}
         >
-          {isOpen ? <X size={24} className="transition-transform duration-300" /> : <img src="/revenuechat-icon.png" alt="RevenueChat AI" className="w-8 h-8 object-contain group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />}
+          {isOpen ? <X size={24} className="transition-transform duration-300" /> : <img src="/revenuechat-icon.svg" alt="RevenueChat AI" className="w-8 h-8 object-contain group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />}
         </button>
       </div>
 
@@ -636,7 +636,7 @@ export const RevenueChat: React.FC = () => {
             </form>
           <div className="text-center mt-2">
             <p className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
-              <img src="/revenuechat-icon.png" alt="RevenueChat AI" className="w-3 h-3 object-contain opacity-70" /> AI-Powered · Privacy First (No PII sent)
+              <img src="/revenuechat-icon.svg" alt="RevenueChat AI" className="w-3 h-3 object-contain opacity-70" /> AI-Powered · Privacy First (No PII sent)
             </p>
           </div>
         </div>

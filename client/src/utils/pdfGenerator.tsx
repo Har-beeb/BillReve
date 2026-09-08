@@ -31,7 +31,7 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
                 <img src={profile.logoUrl || profile.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
             </div>
           ) : (
-            <img src={`${window.location.origin}/logo.png`} alt="BillReve Logo" className="w-12 h-12 mb-2 object-contain" />
+            <img src={`${window.location.origin}/billreve.svg`} alt="BillReve Logo" className="w-12 h-12 mb-2 object-contain" />
           )}
           <p className="font-bold">{profile?.name || 'Business Name'}</p>
           <p className="text-sm whitespace-pre-line" style={{ color: '#64748b' }}>{profile?.address}</p>

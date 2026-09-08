@@ -18,7 +18,7 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 'md' }) => {
   return (
     <div className={`flex justify-center items-center ${className}`}>
       <img 
-        src="/logo.png" 
+        src="/billreve.svg" 
         alt="BillReve Logo" 
         className={`${currentSize} object-contain`} 
       />
