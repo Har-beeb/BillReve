@@ -1,7 +1,7 @@
 {
     "name":  "billreve-client",
     "private":  true,
-    "version": "1.4.0",
+    "version": "1.4.1",
     "description":  "Frontend React application for BillReve, the intelligent invoicing and billing platform.",
     "type":  "module",
     "scripts":  {
