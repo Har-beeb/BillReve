@@ -749,13 +749,13 @@ const Invoices: React.FC = () => {
                 <div className="mt-4">
                   <button 
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/invoice/${selectedInvoice.localId}`);
-                      toast.success('Link copied to clipboard');
+                      navigator.clipboard.writeText(`${window.location.origin}/pay/${selectedInvoice.localId}`);
+                      toast.success('Payment link copied to clipboard');
                     }}
                     className="w-full px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
                   >
                     <Link size={16} />
-                    Copy Link
+                    Copy Payment Link
                   </button>
                 </div>
               )}

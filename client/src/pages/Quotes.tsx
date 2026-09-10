@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Plus, Download, RefreshCw, FileText, MessageSquare } from 'lucide-react';
+import { Search, Plus, Download, RefreshCw, FileText, MessageSquare, Link } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Badge, ProFeature } from '../components/ui';
 import { formatMoney, formatDate } from '../utils/formatters';
@@ -883,6 +883,21 @@ const Quotes: React.FC = () => {
                   >
                     <FileText size={16} />
                     Convert to Invoice
+                  </button>
+                </div>
+              )}
+
+              {selectedQuote.status === 'SENT' && (
+                <div className="mt-4">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/quote/${selectedQuote.localId}`);
+                      toast.success('Quote link copied to clipboard');
+                    }}
+                    className="w-full px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                  >
+                    <Link size={16} />
+                    Copy Link
                   </button>
                 </div>
               )}
