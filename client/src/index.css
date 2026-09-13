@@ -234,14 +234,15 @@
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 
 @keyframes shake {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-10deg); }
-  50% { transform: rotate(10deg); }
-  75% { transform: rotate(-10deg); }
+  0%, 85% { transform: rotate(0deg); }
+  88% { transform: rotate(-15deg); }
+  92% { transform: rotate(15deg); }
+  96% { transform: rotate(-15deg); }
+  100% { transform: rotate(0deg); }
 }
 
 .animate-shake {
-  animation: shake 0.5s ease-in-out;
+  animation: shake 4s ease-in-out infinite;
 }
 /* Mobile: hide scrollbar visuals on all elements for native app feel (scrolling still works) */
 @media (max-width: 768px) {

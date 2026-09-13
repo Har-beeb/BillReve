@@ -122,14 +122,23 @@ const Dashboard: React.FC = () => {
     }
   }, [totalRevenue, outstandingAmount, overdueAmount]);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-fade-in-up pb-24">
+    <div className="space-y-6 pb-20 md:pb-0 h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-theme(spacing.12))] overflow-y-auto hide-scrollbar">
       <GettingStartedChecklist />
       
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-          <p className="text-slate-500 dark:text-slate-400">Here is what's happening with your business today.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Overview</h1>
+          <p className="text-slate-500 dark:text-slate-400">
+            {getGreeting()}, {businessProfile.name || 'there'}! Here is what's happening with your business today.
+          </p>
         </div>
         
         <AiDraftModal 
