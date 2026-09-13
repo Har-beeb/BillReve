@@ -35,7 +35,6 @@ The tables exist identically in both Dexie (`client/src/db/db.ts`) and Supabase 
 *   `clients` (Client directory)
 *   `invoices` (Invoice records, line items stored as JSONB)
 *   `quotes` (Quote records, line items stored as JSONB)
-*   `products` (Product catalog for quick insertion)
 *   `payments` (Record of transactions)
 *   `campaigns` (Email marketing tracking)
 
@@ -99,6 +98,8 @@ Supabase Edge Function (`server/supabase/functions/email-cron/index.ts`).
     *   Added a "Copy Link" quick button for SENT Quotes copying the `/quote/:id` public quote link.
 5.  **Changelog Sync:** Fixed `Changelog.tsx` so the top version dynamically syncs with `import.meta.env.VITE_APP_VERSION` (v1.4.1) while maintaining historical versions.
 6.  **Footer Theme Reactivity:** Replaced `useAppStore.getState().theme` with the reactive `const { theme, toggleTheme } = useAppStore()` hook inside `Footer.tsx` so the Moon/Sun icon updates instantly on click.
+7.  **Theme Engine Color Bleed:** Fixed a bug where the `Ocean` theme preview and `RevenueChat` FAB appeared as "Deep Purple". Since our `index.css` maps `blue` to a dark purple globally, using `bg-blue-600` for Ocean actually rendered Deep Purple. The fix removed hardcoded color maps from `RevenueChat.tsx` (allowing `bg-purple-600` to dynamically absorb the active theme color) and forced strict Hex inline styles in `PreferencesSettings.tsx` to preview colors accurately without Tailwind interference.
+8.  **SaaS Downgrade Webhook:** Fixed the Edge Function (`saas-webhook/index.ts`) which completely ignored subscription cancellation events. It now actively catches `subscription.disable` and `charge.failed`, properly setting `is_pro = false` and clearing `pro_expires_at` in the Supabase database.
 
 ### Pending / Next Up:
 *   Currently, the primary feature set for MVP (Invoicing, Quotes, Sync, AI, Payments, Reminders) is robust and stable.

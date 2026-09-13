@@ -134,6 +134,34 @@ serve(async (req) => {
       } else {
         throw new Error(`Ignored charge.success: Missing userId or type is not saas_subscription (Found type: ${type})`);
       }
+    } else if (event.event === 'subscription.disable' || event.event === 'charge.failed' || event.event === 'subscription.not_renew') {
+      const data = event.data;
+      
+      let userId = '';
+      let type = '';
+      
+      if (data.metadata && data.metadata.custom_fields) {
+        for (const field of data.metadata.custom_fields) {
+          if (field.variable_name === 'userId') userId = field.value;
+          if (field.variable_name === 'type') type = field.value;
+        }
+      }
+      
+      if (userId && type === 'saas_subscription') {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ 
+            is_pro: false,
+            pro_expires_at: null 
+          })
+          .eq('id', userId);
+
+        if (error) {
+          throw new Error(`Failed to downgrade user profile: ${error.message}`);
+        }
+        
+        console.log(`User ${userId} successfully downgraded to FREE tier.`);
+      }
     }
 
     // Mark log as success
