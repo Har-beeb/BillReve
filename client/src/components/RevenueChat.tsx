@@ -433,17 +433,7 @@ export const RevenueChat: React.FC = () => {
     if (isOpen) return 'bg-slate-700 hover:bg-slate-800 shadow-lg rotate-90';
     if (colorTheme === 'custom') return 'shadow-lg opacity-90 hover:opacity-100';
     
-    const themeMap: Record<string, string> = {
-      default: 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/50 hover:shadow-purple-500/80',
-      wine: 'bg-pink-800 hover:bg-pink-700 shadow-pink-800/50 hover:shadow-pink-700/80',
-      ocean: 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/50 hover:shadow-blue-500/80',
-      emerald: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/50 hover:shadow-emerald-500/80',
-      slate: 'bg-slate-700 hover:bg-slate-600 shadow-slate-700/50 hover:shadow-slate-600/80',
-      sunset: 'bg-orange-500 hover:bg-orange-400 shadow-orange-500/50 hover:shadow-orange-400/80',
-      mustard: 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/50 hover:shadow-yellow-400/80',
-      cherry: 'bg-red-600 hover:bg-red-500 shadow-red-600/50 hover:shadow-red-500/80',
-    };
-    return `${themeMap[colorTheme] || themeMap['default']} shadow-lg opacity-90 hover:opacity-100`;
+    return 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/50 hover:shadow-purple-500/80 shadow-lg opacity-90 hover:opacity-100';
   };
 
   if (!mounted) return null;

@@ -105,12 +105,12 @@ export const PreferencesSettings: React.FC = () => {
                 className="text-purple-600 focus:ring-purple-500 w-4 h-4"
               />
               <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-4 h-4 shrink-0 rounded-full bg-[#9333ea]"></div>
-                Vibrant Violet
+                <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: '#9333ea' }}></div>
+                Default Purple
               </span>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 ml-7">
-              The default BillReve vibrant violet and slate theme.
+              The classic BillReve purple experience.
             </p>
           </label>
           
@@ -127,7 +127,7 @@ export const PreferencesSettings: React.FC = () => {
                 className="text-purple-600 focus:ring-purple-500 w-4 h-4"
               />
               <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-4 h-4 shrink-0 rounded-full bg-pink-800"></div>
+                <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: '#831843' }}></div>
                 Glossy Wine
               </span>
             </div>
@@ -147,7 +147,7 @@ export const PreferencesSettings: React.FC = () => {
                 className="text-purple-600 focus:ring-purple-500 w-4 h-4"
               />
               <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-4 h-4 shrink-0 rounded-full bg-blue-600"></div>
+                <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: '#2563eb' }}></div>
                 Ocean Blue
               </span>
             </div>
@@ -167,12 +167,12 @@ export const PreferencesSettings: React.FC = () => {
                 className="text-purple-600 focus:ring-purple-500 w-4 h-4"
               />
               <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-4 h-4 shrink-0 rounded-full bg-emerald-600"></div>
+                <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: '#059669' }}></div>
                 Emerald Green
               </span>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 ml-7">
-              A crisp, financial-focused green theme.
+              Fresh, vibrant, and finance-focused.
             </p>
           </label>
 
@@ -187,12 +187,12 @@ export const PreferencesSettings: React.FC = () => {
                 className="text-purple-600 focus:ring-purple-500 w-4 h-4"
               />
               <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-4 h-4 shrink-0 rounded-full bg-slate-700"></div>
-                Midnight Slate
+                <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: '#475569' }}></div>
+                Minimal Slate
               </span>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 ml-7">
-              A sleek, minimal grayscale theme for focus.
+              Subdued and professional greyscale.
             </p>
           </label>
           <label className={`cursor-pointer border rounded-xl p-4 flex flex-col gap-3 transition-colors ${colorTheme === 'sunset' ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
@@ -206,12 +206,12 @@ export const PreferencesSettings: React.FC = () => {
                 className="text-purple-600 focus:ring-purple-500 w-4 h-4"
               />
               <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-4 h-4 shrink-0 rounded-full bg-orange-500"></div>
+                <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: '#ea580c' }}></div>
                 Sunset Orange
               </span>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 ml-7">
-              A warm, energetic orange theme.
+              Warm, energetic, and bold.
             </p>
           </label>
 
@@ -226,12 +226,12 @@ export const PreferencesSettings: React.FC = () => {
                 className="text-purple-600 focus:ring-purple-500 w-4 h-4"
               />
               <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-4 h-4 shrink-0 rounded-full bg-yellow-500"></div>
-                Mustard Yellow
+                <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: '#ca8a04' }}></div>
+                Golden Mustard
               </span>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 ml-7">
-              A bright, creative yellow theme.
+              A bright, creative, and distinct yellow.
             </p>
           </label>
 
@@ -246,12 +246,12 @@ export const PreferencesSettings: React.FC = () => {
                 className="text-purple-600 focus:ring-purple-500 w-4 h-4"
               />
               <span className="font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-4 h-4 shrink-0 rounded-full bg-red-600"></div>
+                <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: '#dc2626' }}></div>
                 Cherry Red
               </span>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 ml-7">
-              A bold, passionate red theme.
+              Strong, impactful, and authoritative.
             </p>
           </label>
 
