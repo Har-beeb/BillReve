@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 md:pb-0 h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-theme(spacing.12))] overflow-y-auto hide-scrollbar">
+    <div className="w-full space-y-6 pb-20 md:pb-0 h-[calc(100vh-theme(spacing.16))] md:h-[calc(100vh-theme(spacing.12))] overflow-y-auto overflow-x-hidden hide-scrollbar">
       <GettingStartedChecklist />
       
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
