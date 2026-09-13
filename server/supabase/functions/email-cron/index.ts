@@ -15,39 +15,87 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Fetch Overdue Invoices (3, 7, 14 days overdue)
-    // For simplicity, we just fetch all overdue invoices that haven't been reminded recently.
-    // In a production app, we would track `last_reminded_at` to avoid spamming.
-    const { data: overdueInvoices, error: invoiceError } = await supabase
+    // Fetch Invoices that are NOT Draft and NOT Paid
+    // For a real production app, we should also filter out 'PENDING' since they claim to have paid
+    const { data: invoicesToCheck, error: invoiceError } = await supabase
       .from('invoices')
       .select('*, client:clients(name, email), profile:profiles(business_name, email)')
-      .eq('status', 'OVERDUE');
+      .in('status', ['SENT', 'OVERDUE']);
 
     if (invoiceError) throw invoiceError;
 
     const emailsToSend = [];
+    const invoicesToUpdate = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize today to midnight for pure day math
 
-    for (const invoice of overdueInvoices) {
-      // Calculate days overdue
+    for (const invoice of invoicesToCheck) {
       const dueDate = new Date(invoice.due_date);
-      const today = new Date();
-      const diffTime = Math.abs(today.getTime() - dueDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      dueDate.setHours(0, 0, 0, 0);
+      
+      const lastRemindedDate = invoice.last_reminded_at ? new Date(invoice.last_reminded_at) : null;
+      if (lastRemindedDate) {
+        lastRemindedDate.setHours(0, 0, 0, 0);
+        // If we already sent a reminder today, skip this invoice completely
+        if (lastRemindedDate.getTime() === today.getTime()) {
+          continue;
+        }
+      }
 
-      // Send reminders at specific intervals
-      if (diffDays === 3 || diffDays === 7 || diffDays === 14) {
+      // Calculate difference in days (negative = upcoming, 0 = due today, positive = overdue)
+      const diffTime = today.getTime() - dueDate.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      let emailType = null;
+      let emailSubject = '';
+      let emailBody = '';
+
+      if (diffDays === -3 && invoice.status === 'SENT') {
+        emailType = 'upcoming';
+        emailSubject = `Upcoming Reminder: Invoice ${invoice.invoice_number} is due in 3 days`;
+        emailBody = `
+          <p>Hi ${invoice.client.name},</p>
+          <p>This is a polite reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${invoice.total}</strong> is due on ${dueDate.toDateString()}.</p>
+          <p>Thank you for your business!</p>
+        `;
+      } else if (diffDays === 0 && invoice.status === 'SENT') {
+        emailType = 'due_today';
+        emailSubject = `Due Today: Invoice ${invoice.invoice_number}`;
+        emailBody = `
+          <p>Hi ${invoice.client.name},</p>
+          <p>This is a reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${invoice.total}</strong> is due today.</p>
+          <p>Please arrange payment at your earliest convenience.</p>
+        `;
+      } else if ((diffDays === 3 || diffDays === 7 || diffDays === 14) && invoice.status === 'OVERDUE') {
+        emailType = 'overdue';
+        emailSubject = `Overdue Reminder: Invoice ${invoice.invoice_number}`;
+        emailBody = `
+          <p>Hi ${invoice.client.name},</p>
+          <p>This is a friendly reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${invoice.total}</strong> was due on ${dueDate.toDateString()} and is now overdue.</p>
+          <p>Please arrange payment as soon as possible.</p>
+        `;
+      }
+
+      if (emailType) {
         emailsToSend.push({
-          from: 'BillReve <noreply@billreve.app>', // Verified domain
+          from: 'BillReve <noreply@billreve.app>',
           to: [invoice.client.email],
-          subject: `Reminder: Invoice ${invoice.invoice_number} is Overdue`,
+          subject: emailSubject,
           html: `
-            <p>Hi ${invoice.client.name},</p>
-            <p>This is a friendly reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${invoice.total}</strong> was due on ${dueDate.toDateString()}.</p>
-            <p>Please arrange payment as soon as possible.</p>
+            ${emailBody}
             <p>Best regards,<br>${invoice.profile?.business_name || 'Your Provider'}</p>
           `
         });
+        invoicesToUpdate.push(invoice.id);
       }
+    }
+
+    // Update last_reminded_at for all processed invoices
+    if (invoicesToUpdate.length > 0) {
+      await supabase
+        .from('invoices')
+        .update({ last_reminded_at: new Date().toISOString() })
+        .in('id', invoicesToUpdate);
     }
 
     // 2. Send emails via Resend

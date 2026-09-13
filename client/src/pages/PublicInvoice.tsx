@@ -154,6 +154,24 @@ const PublicInvoice: React.FC = () => {
 
   const isPaid = invoice.status === 'PAID' || paymentStatus === 'SUCCESS';
   
+  const markAsPending = async () => {
+    try {
+      setPaymentStatus('PENDING'); // Keep optimistic UI if wanted, but realistically we want to show 'PENDING'
+      // Actually we need to set a local state or refresh the invoice.
+      const { error } = await supabase.rpc('update_invoice_status_public', {
+        p_local_id: id,
+        p_status: 'PENDING',
+        p_amount_paid: invoice.amount_paid || 0
+      });
+      if (error) throw error;
+      toast.success('We have notified the business that you have transferred the funds.');
+      setInvoice({ ...invoice, status: 'PENDING' });
+    } catch (err) {
+      console.error('Failed to mark as pending:', err);
+      toast.error('Failed to update status. Please try again.');
+    }
+  };
+
   // Paystack configuration
   const componentProps = profile?.paystack_public_key ? {
     email: client?.email || 'customer@example.com',
@@ -361,6 +379,7 @@ const PublicInvoice: React.FC = () => {
             </div>
           )}
 
+
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
              {(() => {
                 const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
@@ -379,24 +398,38 @@ const PublicInvoice: React.FC = () => {
                 // Match against the saved ID
                 const bank = actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
                 
-                if (bank) {
-                  return (
-                    <div className="text-sm">
-                      <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
-                      <p className="text-slate-600"><span className="font-medium">Bank:</span> {bank.bankName}</p>
-                      <p className="text-slate-600"><span className="font-medium">Account Name:</span> {bank.accountName}</p>
-                      <p className="text-slate-600"><span className="font-medium">Account Number:</span> {bank.accountNumber}</p>
-                    </div>
-                  );
-                }
-                return null;
-             })()}
+                return (
+                  <>
+                    {bank && (
+                      <div className="text-sm">
+                        <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
+                        <p className="text-slate-600"><span className="font-medium">Bank:</span> {bank.bankName}</p>
+                        <p className="text-slate-600"><span className="font-medium">Account Name:</span> {bank.accountName}</p>
+                        <p className="text-slate-600"><span className="font-medium">Account Number:</span> {bank.accountNumber}</p>
+                      </div>
+                    )}
              
-             <div className="w-full md:w-auto mt-4 md:mt-0 flex flex-col items-center md:items-end gap-3">
+                    <div className="w-full md:w-auto mt-4 md:mt-0 flex flex-col items-center md:items-end gap-3">
+                      {!isPaid && invoice.status === 'PENDING' && (
+                        <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
+                          <AlertCircle size={20} />
+                          <span className="font-semibold">Payment verification pending</span>
+                        </div>
+                      )}
 
-               {!isPaid && (
-                 <>
-                   {/* Conditionally render Paystack for African currencies */}
+                      {!isPaid && invoice.status !== 'PENDING' && bank && (
+                        <button 
+                          onClick={markAsPending}
+                          className="w-full md:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-bold transition-colors shadow-sm text-center border border-slate-300"
+                        >
+                          I've transferred the funds
+                        </button>
+                      )}
+
+                      {!isPaid && invoice.status !== 'PENDING' && (
+                        <>
+                          {/* Conditionally render Paystack for African currencies */}
+
                    {profile?.is_pro && ['NGN', 'GHS', 'ZAR', 'KES'].includes(invoice.currency || profile?.currency || 'NGN') && componentProps ? (
                      <>
                        <p className="text-sm text-slate-500 mb-1">Or pay instantly via Paystack</p>
@@ -438,9 +471,12 @@ const PublicInvoice: React.FC = () => {
                        </button>
                      </>
                    ) : null}
-                 </>
-               )}
-             </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                );
+             })()}
           </div>
           
 

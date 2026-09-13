@@ -540,7 +540,7 @@ const Invoices: React.FC = () => {
                             { label: 'Preview PDF', onClick: () => handleDownloadPdf(invoice) }
                           ] : [
                             { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
-                            ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT') ? [
+                            ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT' || invoice.status === 'PENDING') ? [
                               { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
                               { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
                             ] : []),
@@ -600,7 +600,7 @@ const Invoices: React.FC = () => {
                             { label: 'Preview PDF', onClick: () => handleDownloadPdf(invoice) }
                           ] : [
                             { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
-                            ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT') ? [
+                            ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT' || invoice.status === 'PENDING') ? [
                               { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
                               { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
                             ] : []),
@@ -698,10 +698,10 @@ const Invoices: React.FC = () => {
               items={[
                 { label: selectedInvoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(selectedInvoice) },
                 ...(selectedInvoice.status === 'DRAFT' ? [{ label: 'Edit Invoice', onClick: () => { navigate('/invoices/new', { state: { invoice: selectedInvoice } }); setSelectedInvoice(null); } }] : []),
-                ...((selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'OVERDUE' || selectedInvoice.status === 'SENT') ? [
+                ...((selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'OVERDUE' || selectedInvoice.status === 'SENT' || selectedInvoice.status === 'PENDING') ? [
                   { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(selectedInvoice) }
                 ] : []),
-                ...((selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'OVERDUE' || selectedInvoice.status === 'SENT') ? [
+                ...((selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'OVERDUE' || selectedInvoice.status === 'SENT' || selectedInvoice.status === 'PENDING') ? [
                   { label: 'Copy Payment Link', onClick: () => {
                     navigator.clipboard.writeText(`${window.location.origin}/pay/${selectedInvoice.localId}`);
                     toast.success('Payment link copied to clipboard');

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { supabase } from '../../lib/supabase';
-import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
-import { Building2, Upload, Trash2, Plus, Save } from 'lucide-react';
-import InfoNote from '../ui/InfoNote';
+import { Building2, Upload, Save } from 'lucide-react';
 import type { BusinessProfile } from '../../types';
 
 export const ProfileSettings: React.FC = () => {
@@ -84,38 +82,6 @@ export const ProfileSettings: React.FC = () => {
     } else {
       toast.error('Profile saved locally!');
     }
-  };
-
-  const addBankAccount = () => {
-    setLocalProfile({
-      ...localProfile,
-      bankAccounts: [
-        ...(localProfile.bankAccounts || []),
-        { id: uuidv4(), bankName: '', accountName: '', accountNumber: '', isDefault: (localProfile.bankAccounts?.length || 0) === 0 }
-      ]
-    });
-  };
-
-  const removeBankAccount = (id: string) => {
-    const updated = (localProfile.bankAccounts || []).filter(b => b.id !== id);
-    if (updated.length > 0 && !updated.some(b => b.isDefault)) {
-      updated[0].isDefault = true;
-    }
-    setLocalProfile({ ...localProfile, bankAccounts: updated });
-  };
-
-  const setBankAccountDefault = (id: string) => {
-    setLocalProfile({
-      ...localProfile,
-      bankAccounts: (localProfile.bankAccounts || []).map(b => ({ ...b, isDefault: b.id === id }))
-    });
-  };
-
-  const updateBankAccount = (id: string, field: 'bankName' | 'accountName' | 'accountNumber', value: string) => {
-    setLocalProfile({
-      ...localProfile,
-      bankAccounts: (localProfile.bankAccounts || []).map(b => b.id === id ? { ...b, [field]: value } : b)
-    });
   };
 
   return (
@@ -258,75 +224,9 @@ export const ProfileSettings: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Bank Accounts</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-              Add your bank details for manual transfers. You can choose which account to display on an invoice.
+              Bank Account settings have been moved to the <span className="font-semibold text-purple-600">Payments</span> tab.
             </p>
-            <InfoNote title="How Bank Accounts Appear on Invoices" variant="info" defaultExpanded={true}>
-              When you generate a public link or PDF, only the selected default bank account (or the one you specifically choose when creating the document) will be visible to your client for payment.
-            </InfoNote>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          {(localProfile.bankAccounts || []).map((account, index) => (
-            <div key={account.id} className={`p-4 rounded-lg border ${account.isDefault ? 'border-purple-500 bg-purple-50/30 dark:bg-purple-900/10' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50'}`}>
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-sm">Account {index + 1}</span>
-                  {account.isDefault && (
-                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">Default</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  {!account.isDefault && (
-                    <button onClick={() => setBankAccountDefault(account.id)} className="text-xs text-purple-600 hover:underline">Set as Default</button>
-                  )}
-                  <button onClick={() => removeBankAccount(account.id)} className="text-slate-400 hover:text-red-500">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Bank Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Chase Bank"
-                    value={account.bankName}
-                    onChange={(e) => updateBankAccount(account.id, 'bankName', e.target.value)}
-                    className="w-full p-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Account Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. John Doe / Business LLC"
-                    value={account.accountName}
-                    onChange={(e) => updateBankAccount(account.id, 'accountName', e.target.value)}
-                    className="w-full p-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Account Number</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 1234567890"
-                    value={account.accountNumber}
-                    onChange={(e) => updateBankAccount(account.id, 'accountNumber', e.target.value)}
-                    className="w-full p-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <button 
-            onClick={addBankAccount}
-            className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-medium hover:text-purple-700 transition-colors text-sm mt-2"
-          >
-            <Plus size={16} /> Add Another Bank Account
-          </button>
         </div>
       </div>
 

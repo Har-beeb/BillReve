@@ -1,6 +1,6 @@
 export type SubscriptionPlan = 'FREE' | 'PRO' | 'ENTERPRISE';
 export type QuoteStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'DECLINED' | 'COUNTERED';
-export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PARTIAL' | 'PAID' | 'OVERDUE';
+export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
 export type SyncStatus = 'synced' | 'pending' | 'failed' | 'syncing';
 
 export interface BankAccount {

@@ -5,6 +5,8 @@ import { Logo } from './ui/Logo';
 import { useAppStore } from '../store/useAppStore';
 
 export const Footer: React.FC = () => {
+  const { theme, toggleTheme } = useAppStore();
+  
   return (
     <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -14,11 +16,11 @@ export const Footer: React.FC = () => {
               <Logo size="sm" className="flex-shrink-0" />
               <span className="font-['Outfit'] font-black text-2xl text-slate-900 dark:text-white">BillReve</span>
               <button 
-                onClick={() => useAppStore.getState().toggleTheme()}
+                onClick={toggleTheme}
                 className="ml-4 p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
                 aria-label="Toggle theme"
               >
-                {useAppStore.getState().theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
+                {theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
             </div>
             <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-6 leading-relaxed">
