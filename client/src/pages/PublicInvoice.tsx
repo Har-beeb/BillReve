@@ -384,16 +384,6 @@ const PublicInvoice: React.FC = () => {
              {(() => {
                 const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
                 let actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
-                
-                // Construct legacy bank account if JSON array doesn't exist
-                if (actualBankAccounts.length === 0 && (profile?.bank_name || profile?.account_number)) {
-                  actualBankAccounts = [{
-                    id: actualBankId || 'default', // Force it to match whatever ID the invoice asked for
-                    bankName: profile.bank_name,
-                    accountName: profile.account_name || '',
-                    accountNumber: profile.account_number
-                  }];
-                }
 
                 // Match against the saved ID
                 const bank = actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
