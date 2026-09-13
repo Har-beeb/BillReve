@@ -136,9 +136,14 @@ const Dashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Overview</h1>
-          <p className="text-slate-500 dark:text-slate-400">
-            {getGreeting()}, {businessProfile.name || 'there'}! Here is what's happening with your business today.
-          </p>
+          <div className="mt-1">
+            <p className="text-base font-medium text-slate-700 dark:text-slate-300">
+              {getGreeting()}, {businessProfile.name || 'there'}!
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Here is what's happening with your business today.
+            </p>
+          </div>
         </div>
         
         <AiDraftModal 
