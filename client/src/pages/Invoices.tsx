@@ -430,14 +430,14 @@ const Invoices: React.FC = () => {
               onChange={(e) => { setFilter(e.target.value); setCurrentPage(1); }}
               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm py-2 px-3 rounded-lg appearance-none"
             >
-              {['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Overdue'].map((f) => (
+              {['All', 'Draft', 'Sent', 'Pending', 'Paid', 'Partial', 'Overdue'].map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
           </div>
 
           <div className="hidden md:flex gap-1">
-            {['All', 'Draft', 'Sent', 'Paid', 'Partial', 'Overdue'].map((f) => (
+            {['All', 'Draft', 'Sent', 'Pending', 'Paid', 'Partial', 'Overdue'].map((f) => (
               <button
                 key={f}
                 onClick={() => { setFilter(f); setCurrentPage(1); }}
