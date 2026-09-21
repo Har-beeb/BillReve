@@ -1,5 +1,5 @@
 # BillReve — Technical Working Document
-*Last updated: 2026-09-20 | Version: 1.4.1*
+*Last updated: 2026-09-21 | Version: 1.4.1*
 
 > This document is the **authoritative internal reference** for BillReve. It is written for developers, AI agents, and collaborators continuing work on this project. It must be kept up-to-date after every significant change.
 
@@ -400,7 +400,10 @@ PDFs are rendered client-side. On very slow devices or large invoices with high-
 
 ## 15. Recent Hotfixes (Reverse Chronological)
 
-1. **Mobile Horizontal Overflow (2026-09-13):** Added `overflow-x-hidden w-full` to Dashboard root div to prevent mobile horizontal drag.
+1. **Documentation Page — Full Redesign (2026-09-21):** Completely rewrote `Documentation.tsx` with a professional two-column layout — sticky sidebar with 20-section Table of Contents, `IntersectionObserver`-based scroll-spy (active section auto-highlights), smooth scroll-to-anchor, mobile hamburger nav sheet, and a complete Tailwind `prose` typography system. Added `rehype-slug` for anchor IDs and `remark-gfm` for tables. Fixed a build-breaking syntax issue caused by raw backticks/curly braces in the markdown template literal — resolved by serializing content via `JSON.stringify()`.
+2. **Full Codebase Audit & working.md Rewrite (2026-09-20):** Performed a comprehensive audit of every file in the project. Completely rewrote `working.md` from ~110 lines to 550+ lines covering the full tech stack, database schema (all 7 tables), RPC/edge function catalogue, sync engine architecture, auth/subscription logic, theming rules, risk matrix (9 items), 16 historical hotfixes, and developer DO/DON'T rules.
+3. **Mobile Horizontal Overflow (2026-09-13):** Added `overflow-x-hidden w-full` to Dashboard root div to prevent mobile horizontal drag.
+
 2. **Notification Loop Animation (2026-09-13):** Replaced aggressive 1s infinite shake with a gentle 4s looping keyframe (0.6s shake + 3.4s rest).
 3. **Pending Invoice Quick Actions (2026-09-13):** Added `Confirm & Mark as Paid` button to PreviewPanel for PENDING invoices.
 4. **RPC Overload Fix (2026-09-13):** Fixed `PGRST203` error on `update_invoice_status_public` by dropping the duplicate overloaded function with extra parameters.
