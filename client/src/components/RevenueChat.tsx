@@ -25,6 +25,26 @@ interface Message {
   action?: Action;
 }
 
+const sanitizeHistory = (messages: Message[]) => {
+  const sanitized = [];
+  let expectedRole = 'model';
+  // Work backwards so we keep the most recent alternating messages
+  for (let i = messages.length - 1; i >= 0 && sanitized.length < 50; i--) {
+    const m = messages[i];
+    if (m.id === 'welcome' || m.id === 'loading') continue;
+    const mappedRole = m.role === 'ai' ? 'model' : 'user';
+    if (mappedRole === expectedRole) {
+      sanitized.unshift({ role: mappedRole, parts: [{ text: m.content }] });
+      expectedRole = expectedRole === 'model' ? 'user' : 'model';
+    }
+  }
+  // Gemini requires the history to start with 'user' because the system prompt is mapped as 'user' followed by 'model' 'Understood' in the backend.
+  if (sanitized.length > 0 && sanitized[0].role === 'model') {
+    sanitized.shift();
+  }
+  return sanitized;
+};
+
 export const RevenueChat: React.FC = () => {
   const { mobileNavStyle, businessProfile, clients: storeClients, incrementAiPrompts, colorTheme, customColor } = useAppStore();
   const { checkQuota } = useQuota();
@@ -201,15 +221,17 @@ export const RevenueChat: React.FC = () => {
 
       // 3. Send to API
       incrementAiPrompts();
+      let finalPrompt = userMsg;
+      if (contextData.historicalSummary && Object.keys(contextData.historicalSummary).length > 0) {
+        finalPrompt += `\n\n[System Note: Older data not shown in JSON context to save space: ${contextData.historicalSummary.olderInvoicesCount} invoices totaling ${contextData.historicalSummary.olderInvoicesTotalValue}, ${contextData.historicalSummary.olderQuotesCount} quotes totaling ${contextData.historicalSummary.olderQuotesTotalValue}]`;
+      }
+
       const result = await chatWithRevenue({
-        prompt: userMsg,
+        prompt: finalPrompt,
         data: contextData,
         businessProfile,
         currentView: location.pathname,
-        history: messages.slice(-50).map(m => ({
-          role: m.role === 'ai' ? 'model' : 'user',
-          parts: [{ text: m.content }]
-        }))
+        history: sanitizeHistory(messages)
       });
 
       setMessages(prev => [
@@ -423,15 +445,17 @@ export const RevenueChat: React.FC = () => {
       const contextData = await getAiContextData();
       
       incrementAiPrompts();
+      let finalPrompt = "The action was executed successfully! Acknowledge this briefly and ask if there is anything else I need help with. DO NOT include an 'action' object in your JSON response.";
+      if (contextData.historicalSummary && Object.keys(contextData.historicalSummary).length > 0) {
+        finalPrompt += `\n\n[System Note: Older data not shown in JSON context to save space: ${contextData.historicalSummary.olderInvoicesCount} invoices totaling ${contextData.historicalSummary.olderInvoicesTotalValue}, ${contextData.historicalSummary.olderQuotesCount} quotes totaling ${contextData.historicalSummary.olderQuotesTotalValue}]`;
+      }
+
       const result = await chatWithRevenue({
-        prompt: "The action was executed successfully! Acknowledge this briefly and ask if there is anything else I need help with. DO NOT include an 'action' object in your JSON response.",
+        prompt: finalPrompt,
         data: contextData,
         businessProfile: useAppStore.getState().businessProfile,
         currentView: window.location.pathname,
-        history: updatedMessages.slice(-50).map(m => ({
-          role: m.role === 'ai' ? 'model' : 'user',
-          parts: [{ text: m.content }]
-        }))
+        history: sanitizeHistory(updatedMessages)
       });
       
       setMessages(prev => [
