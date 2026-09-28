@@ -12,7 +12,9 @@ export const getAccurateIsoDate = () => {
 
 export const syncServerTime = async () => {
   try {
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/health`);
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/health`, {
+      headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY }
+    });
     const dateHeader = res.headers.get('Date');
     if (dateHeader) {
       serverTimeOffsetMs = new Date(dateHeader).getTime() - Date.now();
