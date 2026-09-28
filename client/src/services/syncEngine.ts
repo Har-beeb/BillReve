@@ -4,6 +4,27 @@ import { useAppStore } from '../store/useAppStore';
 
 import toast from 'react-hot-toast';
 
+export let serverTimeOffsetMs = 0;
+
+export const getAccurateIsoDate = () => {
+  return new Date(Date.now() + serverTimeOffsetMs).toISOString();
+};
+
+export const syncServerTime = async () => {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`, { 
+      method: 'HEAD', 
+      headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } 
+    });
+    const dateHeader = res.headers.get('Date');
+    if (dateHeader) {
+      serverTimeOffsetMs = new Date(dateHeader).getTime() - Date.now();
+    }
+  } catch (e) {
+    // Fail silently, use local time
+  }
+};
+
 // Helper to convert camelCase keys to snake_case for Supabase
 const toSnakeCase = (obj: any): any => {
   if (Array.isArray(obj)) {
@@ -170,6 +191,7 @@ class SyncEngine {
     useAppStore.getState().setSyncStatus('syncing');
 
     try {
+      await syncServerTime();
       await this.pushLocalChanges();
       
       const maxUpdatedAt = await this.pullRemoteChanges();
@@ -178,7 +200,7 @@ class SyncEngine {
         localStorage.setItem('last_sync_time', maxUpdatedAt);
       } else if (!localStorage.getItem('last_sync_time')) {
         // Fallback for first ever sync if no data exists
-        localStorage.setItem('last_sync_time', new Date().toISOString());
+        localStorage.setItem('last_sync_time', getAccurateIsoDate());
       }
       
       useAppStore.getState().setSyncStatus('synced');
@@ -241,7 +263,7 @@ class SyncEngine {
           
         } else if (item.action === 'UPDATE') {
           // Force updated_at so that remote pulls (which filter by updated_at) will catch this change
-          payloadSnakeCase.updated_at = new Date().toISOString();
+          payloadSnakeCase.updated_at = getAccurateIsoDate();
           
           const { error } = await supabase
             .from(tableName)
@@ -378,8 +400,8 @@ class SyncEngine {
         const local = await table.get(remote.localId);
         if (local && local.syncStatus === 'pending') {
 
-          // LWW: Last-Write-Wins logic
-          const localTime = new Date(local.updatedAt).getTime();
+          // LWW: Last-Write-Wins logic (adjusted for local clock drift)
+          const localTime = new Date(local.updatedAt).getTime() + serverTimeOffsetMs;
           const remoteTimeMs = new Date(remoteTime).getTime();
           
           // Priority statuses from client interactions override local stale edits

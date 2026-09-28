@@ -111,6 +111,33 @@ function App() {
           const isProActive = profile.is_pro && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date());
           useAppStore.getState().setProUser(isProActive);
           
+          let validLogoUrl = profile.logo_url;
+          
+          // Migrate legacy base64 to bucket storage if needed
+          if (validLogoUrl && validLogoUrl.startsWith('data:image')) {
+            try {
+              const res = await fetch(validLogoUrl);
+              const blob = await res.blob();
+              const fileExt = blob.type.split('/')[1] || 'png';
+              const fileName = `${sessionUser.id}/logo_${Date.now()}.${fileExt}`;
+              
+              const { error: uploadError } = await supabase.storage
+                .from('logos')
+                .upload(fileName, blob, { upsert: true });
+                
+              if (!uploadError) {
+                const { data: { publicUrl } } = supabase.storage
+                  .from('logos')
+                  .getPublicUrl(fileName);
+                validLogoUrl = publicUrl;
+                // Update profile in DB so we never do this again
+                await supabase.from('profiles').update({ logo_url: publicUrl }).eq('id', sessionUser.id);
+              }
+            } catch (e) {
+              console.error('Failed to migrate base64 logo', e);
+            }
+          }
+          
           // Hydrate business profile from database
           const store = useAppStore.getState();
           store.updateBusinessProfile({
@@ -121,7 +148,7 @@ function App() {
             address: profile.address || store.businessProfile.address,
             country: profile.country || store.businessProfile.country,
             currency: profile.currency || store.businessProfile.currency,
-            logoUrl: profile.logo_url || store.businessProfile.logoUrl,
+            logoUrl: validLogoUrl || store.businessProfile.logoUrl,
             industry: profile.industry || store.businessProfile.industry,
             businessDescription: profile.business_description || store.businessProfile.businessDescription,
             bankAccounts: profile.bank_accounts && profile.bank_accounts.length > 0 

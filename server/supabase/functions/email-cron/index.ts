@@ -118,9 +118,16 @@ serve(async (req) => {
       }
     }
 
+    // Sweep expired pro subscriptions as a failsafe
+    await supabase
+      .from('profiles')
+      .update({ is_pro: false, pro_expires_at: null })
+      .eq('is_pro', true)
+      .lt('pro_expires_at', new Date().toISOString());
+
     return new Response(JSON.stringify({ 
       success: true, 
-      processed: overdueInvoices.length,
+      processed: invoicesToCheck ? invoicesToCheck.length : 0,
       emailsSent: sentCount 
     }), { status: 200 });
 

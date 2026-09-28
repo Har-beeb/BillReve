@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, Download, FileText, ReceiptText, MessageSquare, Link, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, Download, FileText, ReceiptText, MessageSquare, Link } from 'lucide-react';
 import { Card, Badge, ProFeature, EmptyState } from '../components/ui';
 import { formatMoney, formatDate } from '../utils/formatters';
 import { Pagination } from '../components/Pagination';
@@ -760,7 +760,7 @@ const Invoices: React.FC = () => {
                 </div>
               )}
 
-              {(selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'PAID') && (
+              {(selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'PENDING') && (
                 <div className="mt-4">
                   <button 
                     onClick={() => { setInvoiceForPayment(selectedInvoice); setRecordPaymentModalOpen(true); setSelectedInvoice(null); }}
@@ -772,14 +772,14 @@ const Invoices: React.FC = () => {
                 </div>
               )}
 
-              {selectedInvoice.status === 'PENDING' && (
+              {selectedInvoice.status === 'PAID' && (
                 <div className="mt-4">
                   <button 
-                    onClick={() => { handleMarkAsPaid(selectedInvoice); setSelectedInvoice(null); }}
-                    className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
+                    onClick={() => { handleDownloadPdf(selectedInvoice); setSelectedInvoice(null); }}
+                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex justify-center items-center gap-2 text-sm"
                   >
-                    <CheckCircle2 size={16} />
-                    Confirm & Mark as Paid
+                    <Download size={16} />
+                    Download Receipt
                   </button>
                 </div>
               )}

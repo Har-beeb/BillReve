@@ -32,14 +32,45 @@ export const RevenueChat: React.FC = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [sendModalConfig, setSendModalConfig] = useState({ isOpen: false, documentId: '', documentType: 'Invoice' as 'Invoice' | 'Quote' });
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'ai',
-      content: 'Hi! I am your Revenue AI. Ask me anything about your finances.\n\n💡 **Tip:** Type `/` to see quick actions (like creating an invoice), or use `@` to tag a specific client!',
-      timestamp: new Date()
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sessionStartIndex, setSessionStartIndex] = useState(0);
+
+  // Load chat history from local storage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('revenue_chat_history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+        if (parsed.length > 0) {
+          setMessages(parsed);
+          setSessionStartIndex(parsed.length);
+          const welcomeMsg: Message = {
+            id: uuidv4(),
+            role: 'ai',
+            content: 'Hi! I am your Revenue AI. Ask me anything about your finances.\n\n💡 **Tip:** Type `/` to see quick actions (like creating an invoice), or use `@` to tag a specific client!',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, welcomeMsg]);
+          return;
+        }
+      } catch (e) {}
     }
-  ]);
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'ai',
+        content: 'Hi! I am your Revenue AI. Ask me anything about your finances.\n\n💡 **Tip:** Type `/` to see quick actions (like creating an invoice), or use `@` to tag a specific client!',
+        timestamp: new Date()
+      }
+    ]);
+  }, []);
+
+  // Save chat history on change (keeping last 100 messages)
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('revenue_chat_history', JSON.stringify(messages.slice(-100)));
+    }
+  }, [messages]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -112,6 +143,33 @@ export const RevenueChat: React.FC = () => {
     });
   };
 
+  const getAiContextData = async () => {
+    const rawInvoices = await db.invoices.filter(x => !x.deletedAt).toArray();
+    const rawQuotes = await db.quotes.filter(x => !x.deletedAt).toArray();
+    const rawClients = await db.clients.filter(x => !x.deletedAt).toArray();
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffTime = cutoff.getTime();
+
+    const recentInvoices = rawInvoices.filter(i => new Date(i.createdAt).getTime() >= cutoffTime);
+    const recentQuotes = rawQuotes.filter(q => new Date(q.createdAt).getTime() >= cutoffTime);
+    const oldInvoices = rawInvoices.filter(i => new Date(i.createdAt).getTime() < cutoffTime);
+    const oldQuotes = rawQuotes.filter(q => new Date(q.createdAt).getTime() < cutoffTime);
+
+    return {
+      invoices: stripSensitiveData(recentInvoices, 'invoice'),
+      quotes: stripSensitiveData(recentQuotes, 'quote'),
+      clients: stripSensitiveData(rawClients, 'client'),
+      historicalSummary: {
+        olderInvoicesCount: oldInvoices.length,
+        olderInvoicesTotalValue: oldInvoices.reduce((sum, i) => sum + (i.total || 0), 0),
+        olderQuotesCount: oldQuotes.length,
+        olderQuotesTotalValue: oldQuotes.reduce((sum, q) => sum + (q.total || 0), 0)
+      }
+    };
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
 
@@ -139,24 +197,16 @@ export const RevenueChat: React.FC = () => {
     setIsTyping(true);
 
     try {
-      // 1. Fetch data from DB
-      const rawInvoices = await db.invoices.filter(x => !x.deletedAt).toArray();
-      const rawQuotes = await db.quotes.filter(x => !x.deletedAt).toArray();
-      const rawClients = await db.clients.filter(x => !x.deletedAt).toArray();
-
-      // 2. Strip sensitive info
-      const invoices = stripSensitiveData(rawInvoices, 'invoice');
-      const quotes = stripSensitiveData(rawQuotes, 'quote');
-      const clients = stripSensitiveData(rawClients, 'client');
+      const contextData = await getAiContextData();
 
       // 3. Send to API
       incrementAiPrompts();
       const result = await chatWithRevenue({
         prompt: userMsg,
-        data: { invoices, quotes, clients },
+        data: contextData,
         businessProfile,
         currentView: location.pathname,
-        history: messages.slice(-20).map(m => ({
+        history: messages.slice(-50).map(m => ({
           role: m.role === 'ai' ? 'model' : 'user',
           parts: [{ text: m.content }]
         }))
@@ -370,21 +420,15 @@ export const RevenueChat: React.FC = () => {
       
       // Automatically prompt the AI to continue the conversation without needing the user to press "okay"
       setIsTyping(true);
-      const rawInvoices = await db.invoices.filter(x => !x.deletedAt).toArray();
-      const rawQuotes = await db.quotes.filter(x => !x.deletedAt).toArray();
-      const rawClients = await db.clients.filter(x => !x.deletedAt).toArray();
-      
-      const invoices = stripSensitiveData(rawInvoices, 'invoice');
-      const quotes = stripSensitiveData(rawQuotes, 'quote');
-      const clients = stripSensitiveData(rawClients, 'client');
+      const contextData = await getAiContextData();
       
       incrementAiPrompts();
       const result = await chatWithRevenue({
         prompt: "The action was executed successfully! Acknowledge this briefly and ask if there is anything else I need help with. DO NOT include an 'action' object in your JSON response.",
-        data: { invoices, quotes, clients },
+        data: contextData,
         businessProfile: useAppStore.getState().businessProfile,
         currentView: window.location.pathname,
-        history: updatedMessages.slice(-20).map(m => ({
+        history: updatedMessages.slice(-50).map(m => ({
           role: m.role === 'ai' ? 'model' : 'user',
           parts: [{ text: m.content }]
         }))
@@ -477,7 +521,17 @@ export const RevenueChat: React.FC = () => {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-slate-50/50 dark:bg-slate-900/50">
-          {messages.map((msg) => (
+          {sessionStartIndex > 0 && (
+            <div className="flex justify-center mb-2 mt-1">
+              <button
+                onClick={() => setSessionStartIndex(0)}
+                className="text-[11px] font-medium px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-purple-600 hover:border-purple-300 transition-colors shadow-sm"
+              >
+                View previous chats ({sessionStartIndex})
+              </button>
+            </div>
+          )}
+          {messages.slice(sessionStartIndex).map((msg) => (
             <div key={msg.id} className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
               <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${msg.role === 'user' ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' : 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400'}`}>
                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
