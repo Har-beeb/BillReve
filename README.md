@@ -316,15 +316,24 @@ BillReve is designed to feel **premium and frictionless**:
 
 ## 📋 Known Limitations & Roadmap
 
-| Issue | Status | Notes |
+### Resolved Tech Debt ✅
+
+| Issue | Status | Resolution |
 | --- | --- | --- |
-| `logo_url` stored as base64 in DB | ⚠️ Tech Debt | Should migrate to Supabase Storage |
-| AI context size grows with invoice count | ⚠️ Tech Debt | Need pagination/summarisation for large accounts |
-| Client clock drift affects LWW resolution | ⚠️ Tech Debt | Should use server timestamps |
-| `is_pro` not swept for expired subscriptions | ⚠️ Tech Debt | Needs a Supabase cron job |
-| Payment gateways (Stripe full integration) | 🔜 Roadmap | Paystack & Flutterwave live; Stripe partial |
-| Team accounts / multi-user | 🔜 Roadmap | Single-user only currently |
-| Mobile native app (React Native) | 🔜 Roadmap | PWA is current mobile solution |
+| `logo_url` stored as base64 in DB | ✅ Fixed | Auto-migration in `App.tsx` detects legacy base64 strings on login, uploads to Supabase `logos` bucket, and saves the public URL back to the profile |
+| AI context size grows with invoice count | ✅ Fixed | `RevenueChat.tsx` time-boxes data to the last 90 days; older documents are aggregated into a compact `historicalSummary` block to save token cost |
+| Client clock drift affects LWW resolution | ✅ Fixed | `syncEngine.ts` fetches the `Date` header from the Supabase API on boot to calculate `serverTimeOffsetMs`, which is applied during LWW conflict resolution |
+| `is_pro` not swept for expired subscriptions | ✅ Fixed | `email-cron` Edge Function includes a failsafe sweep that sets `is_pro = false` for any profile where `pro_expires_at < now()` |
+
+### Roadmap 🔜
+
+| Feature | Notes |
+| --- | --- |
+| Payment gateways (Stripe full integration) | Paystack & Flutterwave live; Stripe partial |
+| Team accounts / multi-user | Single-user only currently |
+| Mobile native app (React Native) | PWA is current mobile solution |
+| Rate limiting on public endpoints | Add CAPTCHA or Turnstile to `/pay/:id` and `/quote/:id` |
+| Bank account snapshot on invoice creation | Freeze payment details into the invoice record at creation time |
 
 ---
 
