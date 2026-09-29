@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://billreve.app/logo192.png" width="80" height="80" alt="BillReve Logo" />
+<img src="./client/public/pwa-192x192.png" width="80" height="80" alt="BillReve Logo" />
 
 # BillReve
 
