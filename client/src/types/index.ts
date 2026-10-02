@@ -9,6 +9,7 @@ export interface BankAccount {
   accountName: string;
   accountNumber: string;
   isDefault: boolean;
+  accountType?: string;
 }
 
 export interface BusinessProfile {
@@ -96,6 +97,12 @@ export interface Invoice {
   description?: string;
   notes?: string;
   bankAccountId?: string | null;
+  bankAccountSnapshot?: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    accountType?: string;
+  } | null;
   status: InvoiceStatus;
   currency: string;
   theme?: 'standard' | 'professional' | 'modern' | 'classic' | 'monochrome';

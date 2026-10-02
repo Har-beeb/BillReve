@@ -1,3 +1,4 @@
+import { getThemeStyles } from '../utils/documentThemes';
 import React from 'react';
 import { Eye } from 'lucide-react';
 import DOMPurify from 'dompurify';
@@ -57,68 +58,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
     fontSize: fontSize === 'small' ? '0.875rem' : fontSize === 'large' ? '1.125rem' : '1rem'
   } : {};
 
-  // Theme-specific styles
-  const t = {
-    standard: {
-      docWrapper: "p-8 shadow-2xl rounded-sm border-t-4 border-slate-800",
-      header: "mb-12",
-      title: "text-4xl font-bold text-slate-900 tracking-tight uppercase",
-      detailsGrid: "border-y border-slate-100 py-6",
-      tableWrapper: "bg-slate-50 rounded-xl overflow-hidden border border-slate-200",
-      tableHead: "bg-slate-100 text-slate-600 border-b border-slate-200",
-      totalRow: "text-purple-600",
-      accentText: "text-slate-400"
-    },
-    professional: {
-      docWrapper: "p-0 shadow-2xl rounded-sm",
-      header: "bg-slate-800 text-white p-8 pb-12 mb-8",
-      title: "text-3xl font-medium tracking-widest uppercase text-white",
-      detailsGrid: "px-8 mb-8 border-b border-slate-200 pb-8",
-      tableWrapper: "px-8",
-      tableHead: "border-b-2 border-slate-800 text-slate-900 uppercase tracking-wider text-[10px]",
-      totalRow: "text-slate-900 text-lg",
-      accentText: "text-slate-500"
-    },
-    modern: {
-      docWrapper: "p-8 shadow-2xl rounded-3xl bg-purple-50/10 border-2 border-purple-100 bg-[linear-gradient(45deg,transparent_25%,rgba(243,232,255,0.3)_25%,rgba(243,232,255,0.3)_50%,transparent_50%,transparent_75%,rgba(243,232,255,0.3)_75%,rgba(243,232,255,0.3)_100%)] bg-[length:20px_20px]",
-      header: "mb-8",
-      title: "text-5xl font-black text-purple-600 tracking-tighter uppercase",
-      detailsGrid: "bg-purple-50/50 rounded-2xl p-6 mb-8",
-      tableWrapper: "",
-      tableHead: "bg-purple-100/50 text-purple-900 rounded-lg",
-      totalRow: "text-purple-700 text-xl font-black",
-      accentText: "text-purple-400"
-    },
-    classic: {
-      docWrapper: "p-10 shadow-xl rounded-sm font-serif border-4 border-double border-slate-300",
-      header: "mb-10 text-center border-b-2 border-slate-800 pb-8",
-      title: "text-4xl font-serif text-slate-900 tracking-widest uppercase",
-      detailsGrid: "py-4 mb-6",
-      tableWrapper: "border-t border-b border-slate-300 py-4",
-      tableHead: "border-b border-slate-300 text-slate-900 font-serif uppercase tracking-widest text-xs",
-      totalRow: "text-slate-900 font-serif text-xl border-t-2 border-slate-800 pt-2",
-      accentText: "text-slate-600 font-serif italic"
-    },
-    monochrome: {
-      docWrapper: "p-8 shadow-none border-8 border-black rounded-none",
-      header: "mb-10 border-b-4 border-black pb-6",
-      title: "text-4xl font-black text-black tracking-tight uppercase",
-      detailsGrid: "border-y-2 border-black py-6 font-mono",
-      tableWrapper: "border-2 border-black",
-      tableHead: "bg-black text-white font-bold tracking-widest uppercase text-xs",
-      totalRow: "text-black font-black text-2xl",
-      accentText: "text-gray-500 font-bold uppercase tracking-widest text-[10px]"
-    }
-  }[theme] || {
-    docWrapper: "p-8 shadow-2xl rounded-sm",
-    header: "mb-12",
-    title: "text-4xl font-bold text-slate-900 tracking-tight uppercase",
-    detailsGrid: "border-y border-slate-100 py-6",
-    tableWrapper: "bg-slate-50 rounded-xl overflow-hidden border border-slate-200",
-    tableHead: "bg-slate-100 text-slate-600 border-b border-slate-200",
-    totalRow: "text-purple-600",
-    accentText: "text-slate-400"
-  };
+  const t = getThemeStyles(theme as any);
 
   return (
     <div className={className || "hidden md:flex flex-1 bg-slate-200/50 dark:bg-slate-900/80 border-l border-slate-200 dark:border-slate-700 p-6 flex-col overflow-y-auto custom-scrollbar"}>

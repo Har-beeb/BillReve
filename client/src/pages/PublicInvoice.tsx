@@ -1,3 +1,4 @@
+import { getThemeStyles, type DocumentTheme } from '../utils/documentThemes';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -228,6 +229,8 @@ const PublicInvoice: React.FC = () => {
     fontSize: fontSize === 'small' ? '0.875rem' : fontSize === 'large' ? '1.125rem' : '1rem'
   } : {};
 
+  const themeStyles = getThemeStyles((invoice?.theme || 'standard') as DocumentTheme);
+
   return (
     <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto space-y-8" style={typographyStyle}>
@@ -258,14 +261,14 @@ const PublicInvoice: React.FC = () => {
           </div>
         )}
 
-        <div className="bg-white p-8 md:p-12 shadow-lg w-full flex flex-col relative overflow-hidden">
+        <div className={`bg-white p-8 md:p-12 shadow-lg w-full flex flex-col relative overflow-hidden ${themeStyles.docWrapper}`}>
           {isPaid && (
             <div className="absolute top-12 -right-12 transform rotate-45 bg-green-500 text-white font-bold tracking-widest uppercase py-1 px-16 shadow-md z-10">
               PAID
             </div>
           )}
 
-          <div className="flex justify-between items-start mb-12">
+          <div className={`flex justify-between items-start p-6 -m-8 md:-m-12 mb-8 ${themeStyles.header}`}>
             <div>
               {profile?.logo_url ? (
                 <div className="w-32 h-32 mb-6">
@@ -276,7 +279,7 @@ const PublicInvoice: React.FC = () => {
                    <img src="/billreve.svg" alt="BillReve Logo" className="w-full h-full object-contain object-left" />
                 </div>
               )}
-              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Invoice</h1>
+              <h1 className={`text-4xl font-bold tracking-tight ${themeStyles.title}`}>Invoice</h1>
               <p className="text-slate-500 mt-2 font-medium">#{invoice.invoice_number || invoice.local_id.slice(0,8)}</p>
             </div>
             <div className="text-right text-slate-600">
@@ -285,7 +288,7 @@ const PublicInvoice: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-12 mb-12 border-y border-slate-100 py-8">
+          <div className={`grid grid-cols-2 gap-12 mb-12 ${themeStyles.detailsGrid}`}>
              <div>
                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Bill To</p>
                <p className="font-bold text-slate-900 text-lg">{client?.name || 'Unknown Client'}</p>
