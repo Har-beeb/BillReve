@@ -146,10 +146,14 @@ const PublicQuote: React.FC = () => {
         if (error) throw error;
         setQuote({...quote, status});
         setStatusMessage({ type: 'success', text: `Quote successfully accepted!` });
-     } catch (err) {
-        console.error("Failed to update status", err);
-        setStatusMessage({ type: 'error', text: 'Failed to update quote status. Please try again.' });
-     }
+     } catch (err: any) {
+          console.error("Failed to update status", err);
+          if (err?.message?.includes('Rate limit')) {
+            setStatusMessage({ type: 'error', text: 'Too many attempts. Please wait a few minutes and try again.' });
+          } else {
+            setStatusMessage({ type: 'error', text: 'Failed to update quote status. Please try again.' });
+          }
+       }
   };
 
   const handleDeclineSubmit = async (e: React.FormEvent) => {
@@ -168,10 +172,14 @@ const PublicQuote: React.FC = () => {
         setQuote({...quote, status: 'DECLINED', clientMessage: declineReason});
         setStatusMessage({ type: 'success', text: 'Quote successfully declined!' });
         setShowDeclineModal(false);
-     } catch (err) {
-        console.error("Failed to update status", err);
-        setStatusMessage({ type: 'error', text: 'Failed to decline quote. Please try again.' });
-     } finally {
+     } catch (err: any) {
+          console.error("Failed to update status", err);
+          if (err?.message?.includes('Rate limit')) {
+            setStatusMessage({ type: 'error', text: 'Too many attempts. Please wait a few minutes and try again.' });
+          } else {
+            setStatusMessage({ type: 'error', text: 'Failed to decline quote. Please try again.' });
+          }
+       } finally {
         setIsSubmittingDecline(false);
      }
   };
@@ -202,10 +210,14 @@ const PublicQuote: React.FC = () => {
       setQuote({ ...quote, status: 'COUNTERED', counterAmount: amount, clientMessage: counterMessage });
       setStatusMessage({ type: 'success', text: 'Counter offer submitted successfully! The business owner will be notified.' });
       setShowCounterModal(false);
-    } catch (err) {
-      console.error("Failed to submit counter offer", err);
-      setStatusMessage({ type: 'error', text: 'Failed to submit counter offer. Please try again.' });
-    } finally {
+    } catch (err: any) {
+        console.error("Failed to submit counter offer", err);
+        if (err?.message?.includes('Rate limit')) {
+          setStatusMessage({ type: 'error', text: 'Too many attempts. Please wait a few minutes and try again.' });
+        } else {
+          setStatusMessage({ type: 'error', text: 'Failed to submit counter offer. Please try again.' });
+        }
+      } finally {
       setIsSubmittingCounter(false);
     }
   };

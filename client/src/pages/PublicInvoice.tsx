@@ -166,10 +166,14 @@ const PublicInvoice: React.FC = () => {
       if (error) throw error;
       toast.success('We have notified the business that you have transferred the funds.');
       setInvoice({ ...invoice, status: 'PENDING' });
-    } catch (err) {
-      console.error('Failed to mark as pending:', err);
-      toast.error('Failed to update status. Please try again.');
-    }
+    } catch (err: any) {
+        console.error('Failed to mark as pending:', err);
+        if (err?.message?.includes('Rate limit')) {
+          toast.error('Too many attempts. Please wait a few minutes and try again.');
+        } else {
+          toast.error('Failed to update status. Please try again.');
+        }
+      }
   };
 
   // Paystack configuration

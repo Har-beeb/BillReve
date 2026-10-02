@@ -384,8 +384,8 @@ The `is_pro` boolean can remain `true` even after `pro_expires_at` has passed. T
 `Upgrade.tsx` has the automated Paystack Pro subscription commented out, reverting to a manual verification flow. This means Pro upgrades are not fully automated.
 - **Fix:** Re-enable when business verification is complete.
 
-### 🟢 7. No Rate Limiting on Public RPCs
-`update_invoice_status_public` and `update_quote_status_public` are callable by anyone who knows the `localId`. While Row Level Security restricts *reading* data, there is no rate limiting on status mutations.
+### 🟢 7. No Rate Limiting on Public RPCs (FIXED)
+`update_invoice_status_public` and `update_quote_status_public` are callable by anyone who knows the `localId`. While Row Level Security restricts *reading* data, There is no rate limiting on status mutations. Fixed by adding a PostgreSQL rate_limits table and check_rate_limit function.
 - **Fix:** Add IP-based rate limiting in the Supabase Edge Function layer or add a CAPTCHA challenge on the public pages before allowing status changes.
 
 ### 🟢 8. `syncQueue` Retry Logic
@@ -466,3 +466,6 @@ EMAIL_PROVIDER_API_KEY=
 ---
 
 **End of Document**
+
+
+- **2026-10-02 (Phase 1):** Implemented server-side rate limiting for public RPCs.
