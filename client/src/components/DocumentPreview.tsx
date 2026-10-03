@@ -205,7 +205,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
             <div className="pt-6 border-t border-slate-100">
               <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${t.accentText}`}>Payment Details</p>
               {(() => {
-                const bank = businessProfile.bankAccounts.find((b: any) => b.id === bankAccountId);
+                const bank = initialDoc?.bankAccountSnapshot || businessProfile.bankAccounts.find((b: any) => b.id === bankAccountId);
                 return (
                   <div className="text-xs space-y-1">
                     <p className="text-slate-600"><span className="font-medium text-slate-900">Bank:</span> {bank?.bankName}</p>

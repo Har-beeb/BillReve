@@ -412,7 +412,7 @@ const PublicInvoice: React.FC = () => {
                 let actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
 
                 // Match against the saved ID
-                const bank = actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
+                const bank = invoice.bank_account_snapshot || invoice.bankAccountSnapshot || actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
                 
                 return (
                   <>

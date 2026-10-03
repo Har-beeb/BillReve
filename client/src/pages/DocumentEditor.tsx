@@ -65,7 +65,24 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const [theme, setTheme] = useState<'standard' | 'professional' | 'modern' | 'classic' | 'monochrome'>(initialDoc?.theme || 'standard');
   // Bank Account Selection
   const defaultBankId = businessProfile.bankAccounts?.find(b => b.isDefault)?.id || businessProfile.bankAccounts?.[0]?.id || '';
-  const [bankAccountId, setBankAccountId] = useState<string>(initialDoc?.bankAccountId || defaultBankId);
+      const [bankAccountId, setBankAccountId] = useState<string>(initialDoc && initialDoc.bankAccountId !== undefined ? initialDoc.bankAccountId : defaultBankId);
+    const hasModifiedBank = React.useRef(false);
+
+    React.useEffect(() => {
+      if (!initialDoc && !hasModifiedBank.current && !bankAccountId) {
+        const defId = businessProfile?.bankAccounts?.find((b: any) => b.isDefault)?.id || businessProfile?.bankAccounts?.[0]?.id;
+        if (defId) {
+          setBankAccountId(defId);
+        }
+      }
+    }, [businessProfile?.bankAccounts, initialDoc, bankAccountId]);
+
+    // Wrap setBankAccountId to mark as modified
+    const handleSetBankAccountId = (id: string) => {
+      hasModifiedBank.current = true;
+      setBankAccountId(id);
+    };
+
 
   const [items, setItems] = useState<LineItem[]>(initialDoc?.items?.length > 0 ? initialDoc.items.map((i: any) => ({ ...i, id: i.id || uuidv4() })) : [
     { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, amount: 0 }
@@ -495,7 +512,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
             dueDate={dueDate}
             setDueDate={setDueDate}
             bankAccountId={bankAccountId}
-            setBankAccountId={setBankAccountId}
+            setBankAccountId={handleSetBankAccountId}
             businessProfile={businessProfile}
           />
 
