@@ -290,22 +290,24 @@ const PublicQuote: React.FC = () => {
             </div>
           </div>
 
-          <div className={`grid grid-cols-2 gap-12 mb-12 ${themeStyles.detailsGrid}`}>
+          <div className={`grid grid-cols-2 gap-12 ${themeStyles.detailsGrid}`}>
              <div>
-               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Quote For</p>
+               <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Quote For</p>
                <p className="font-bold text-slate-900 text-lg">{client?.name || 'Unknown Client'}</p>
                <p className="text-slate-500 mt-1">{client?.email}</p>
                {client?.address && <p className="text-slate-500 mt-1 whitespace-pre-line text-sm">{client.address}</p>}
              </div>
-             <div className="text-right">
-               <div className="mb-4">
-                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Date Issued</p>
+             <div className="text-right flex flex-col items-end gap-4">
+               <div>
+                 <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${themeStyles.accentText}`}>Date Issued</p>
                  <p className="font-medium text-slate-900">{new Date(quote.created_at).toLocaleDateString()}</p>
                </div>
-               <div>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date</p>
-                 <p className="font-medium text-slate-900 text-sm">{quote.createdAt ? new Date(quote.expires_at || quote.expiresAt).toLocaleDateString() : 'N/A'}</p>
-               </div>
+               {(quote.expires_at || quote.expiresAt) && (
+                 <div>
+                   <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${themeStyles.accentText}`}>Valid Until</p>
+                   <p className="font-medium text-slate-900">{new Date(quote.expires_at || quote.expiresAt).toLocaleDateString()}</p>
+                 </div>
+               )}
              </div>
           </div>
 
@@ -348,21 +350,21 @@ const PublicQuote: React.FC = () => {
               </div>
 
               <div className="bg-white p-6 flex justify-end border-t border-slate-100">
-                <div className="w-full md:w-1/2 lg:w-1/3 space-y-3">
-                  <div className="flex justify-between text-slate-600 text-sm">
-                    <span>Subtotal</span>
-                    <span>{formatMoney(quote.subtotal, quote.currency)}</span>
+                <div className="w-full md:w-1/2 lg:w-[45%] space-y-3">
+                  <div className="flex justify-between gap-6 text-slate-600 text-sm">
+                    <span className="shrink-0">Subtotal</span>
+                    <span className="break-all text-right">{formatMoney(quote.subtotal, quote.currency)}</span>
                   </div>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {quote.taxes?.map((t: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-slate-600 text-sm">
-                      <span>{t.name}</span>
-                      <span>{t.isDeduction ? '-' : ''}{formatMoney(t.amount, quote.currency)}</span>
+                    <div key={idx} className="flex justify-between gap-6 text-slate-600 text-sm">
+                      <span className="shrink-0">{t.name}</span>
+                      <span className="break-all text-right">{t.isDeduction ? '-' : ''}{formatMoney(t.amount, quote.currency)}</span>
                     </div>
                   ))}
-                  <div className={`flex justify-between font-bold text-xl text-slate-900 pt-4 mt-2 ${themeStyles.totalRow}`}>
-                    <span>Total</span>
-                    <span className={themeStyles.accentText}>{formatMoney(quote.total, quote.currency)}</span>
+                  <div className={`flex justify-between items-center gap-8 font-bold text-xl text-slate-900 pt-4 mt-2 ${themeStyles.totalRow}`}>
+                    <span className="shrink-0">Total</span>
+                    <span className={`break-all text-right ${themeStyles.accentText}`}>{formatMoney(quote.total, quote.currency)}</span>
                   </div>
                 </div>
               </div>

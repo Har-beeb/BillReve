@@ -351,32 +351,32 @@ const PublicInvoice: React.FC = () => {
               </div>
 
               <div className="bg-white p-6 flex justify-end border-t border-slate-100">
-                <div className="w-full md:w-1/2 lg:w-1/3 space-y-3">
-                  <div className="flex justify-between text-slate-600 text-sm">
-                    <span>Subtotal</span>
-                    <span>{formatMoney(invoice.subtotal, invoice.currency)}</span>
+                <div className="w-full md:w-1/2 lg:w-[45%] space-y-3">
+                  <div className="flex justify-between gap-6 text-slate-600 text-sm">
+                    <span className="shrink-0">Subtotal</span>
+                    <span className="break-all text-right">{formatMoney(invoice.subtotal, invoice.currency)}</span>
                   </div>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {invoice.taxes?.map((t: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-slate-600 text-sm">
-                      <span>{t.name}</span>
-                      <span>{t.isDeduction ? '-' : ''}{formatMoney(t.amount, invoice.currency)}</span>
+                    <div key={idx} className="flex justify-between gap-6 text-slate-600 text-sm">
+                      <span className="shrink-0">{t.name}</span>
+                      <span className="break-all text-right">{t.isDeduction ? '-' : ''}{formatMoney(t.amount, invoice.currency)}</span>
                     </div>
                   ))}
-                  <div className={`flex justify-between font-bold text-xl text-slate-900 pt-4 mt-2 ${themeStyles.totalRow}`}>
-                    <span>Total</span>
-                    <span className={themeStyles.accentText}>{formatMoney(invoice.total, invoice.currency)}</span>
+                  <div className={`flex justify-between items-center gap-8 font-bold text-xl text-slate-900 pt-4 mt-2 ${themeStyles.totalRow}`}>
+                    <span className="shrink-0">Total</span>
+                    <span className={`break-all text-right ${themeStyles.accentText}`}>{formatMoney(invoice.total, invoice.currency)}</span>
                   </div>
                   {invoice.amount_paid > 0 && (
-                    <div className="flex justify-between font-medium text-green-600 text-sm pt-2">
-                      <span>Amount Paid</span>
-                      <span>-{formatMoney(invoice.amount_paid, invoice.currency)}</span>
+                    <div className="flex justify-between gap-6 font-medium text-green-600 text-sm pt-2">
+                      <span className="shrink-0">Amount Paid</span>
+                      <span className="break-all text-right">-{formatMoney(invoice.amount_paid, invoice.currency)}</span>
                     </div>
                   )}
                   {invoice.amount_paid > 0 && invoice.total - invoice.amount_paid > 0 && (
-                    <div className="flex justify-between font-bold text-lg text-slate-900 pt-2">
-                      <span>Balance Due</span>
-                      <span>{formatMoney(invoice.total - invoice.amount_paid, invoice.currency)}</span>
+                    <div className="flex justify-between gap-6 font-bold text-lg text-slate-900 pt-2">
+                      <span className="shrink-0">Balance Due</span>
+                      <span className="break-all text-right">{formatMoney(invoice.total - invoice.amount_paid, invoice.currency)}</span>
                     </div>
                   )}
                 </div>

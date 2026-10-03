@@ -175,7 +175,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
           <div className="bg-white p-4 flex justify-end border-t border-slate-100">
             <div className="w-full sm:w-2/3 md:w-1/2 space-y-2 text-xs">
               <div className="flex justify-between text-slate-600">
-                <span>Subtotal</span>
+                <span className="shrink-0">Subtotal</span>
                 <span>{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               {computedTaxes.map((tx, idx) => (
@@ -184,9 +184,9 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
                   <span>{tx.isDeduction ? '-' : ''}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               ))}
-              <div className={`flex justify-between pt-3 mt-2 ${t.totalRow}`}>
+              <div className={`flex justify-between items-center gap-8 pt-3 mt-2 ${t.totalRow}`}>
                 <span className="font-bold text-sm text-slate-900">Total</span>
-                <span className={`font-bold text-sm ${t.accentText}`}>{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className={`font-bold text-sm break-all text-right ${t.accentText}`}>{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>

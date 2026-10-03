@@ -54,7 +54,7 @@ export function getThemeStyles(theme: DocumentTheme = 'standard') {
       tableWrapper: 'border-b-[6px] border-black mx-8 md:mx-12 my-8',
       tableHead: 'bg-white text-black font-black uppercase tracking-widest border-b-[6px] border-black',
       tableStripe: 'bg-white border-b-[3px] border-black',
-      totalRow: 'border-t-[6px] border-black bg-black text-white',
+      totalRow: 'border-t-[6px] border-black bg-white text-black',
       accentText: 'text-black font-black uppercase tracking-widest',
     },
   };
