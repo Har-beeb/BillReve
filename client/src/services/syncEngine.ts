@@ -251,6 +251,10 @@ class SyncEngine {
           delete payloadSnakeCase.minimum_counter_amount;
           delete payloadSnakeCase.allow_counter_offer;
         }
+        if (tableName === 'quotes') {
+          // quotes table does not have bank_account_snapshot — strip it to prevent PGRST204
+          delete payloadSnakeCase.bank_account_snapshot;
+        }
 
         // We always use local_id to match rows in Supabase
         if (item.action === 'CREATE') {
