@@ -228,7 +228,17 @@ const PublicQuote: React.FC = () => {
     }
   };
 
+
   const themeStyles = getThemeStyles((quote?.theme || 'standard') as DocumentTheme);
+  const theme = quote?.theme || 'standard';
+
+  const headerTextColor = (theme === 'professional' || theme === 'modern' || theme === 'monochrome')
+    ? 'text-white'
+    : 'text-slate-900';
+  const headerSubColor = (theme === 'professional' || theme === 'modern' || theme === 'monochrome')
+    ? 'text-white/70'
+    : 'text-slate-500';
+
 
   return (
     <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -248,7 +258,7 @@ const PublicQuote: React.FC = () => {
         
         {/* Status Message Modal is rendered at the bottom */}
 
-        <div className={`bg-white p-8 md:p-12 shadow-lg w-full flex flex-col relative overflow-hidden ${themeStyles.docWrapper}`}>
+        <div className={`bg-white text-slate-900 w-full flex flex-col relative overflow-hidden transition-all duration-300 ${themeStyles.docWrapper}`}>
           {isAccepted && (
             <div className="absolute top-12 -right-12 transform rotate-45 bg-green-500 text-white font-bold tracking-widest uppercase py-1 px-16 shadow-md z-10">
               ACCEPTED
@@ -260,7 +270,7 @@ const PublicQuote: React.FC = () => {
             </div>
           )}
 
-          <div className={`flex justify-between items-start p-6 -m-8 md:-m-12 mb-8 ${themeStyles.header}`}>
+          <div className={`flex justify-between items-start p-8 md:p-12 ${themeStyles.header}`}>
             <div>
               {profile?.logo_url ? (
                 <div className="w-32 h-32 mb-6">
@@ -272,10 +282,10 @@ const PublicQuote: React.FC = () => {
                 </div>
               )}
               <h1 className={`text-4xl font-bold tracking-tight ${themeStyles.title}`}>Quote</h1>
-              <p className="text-slate-500 mt-2 font-medium">#{quote.quote_number || quote.local_id.slice(0,8)}</p>
+              <p className={`mt-2 font-medium ${headerSubColor}`}>#{quote.quote_number || quote.local_id.slice(0,8)}</p>
             </div>
-            <div className="text-right text-slate-600">
-              <p className="font-bold text-slate-900 text-lg mb-1">{profile?.name || 'Business Name'}</p>
+            <div className={`text-right ${headerSubColor}`}>
+              <p className={`font-bold text-lg mb-1 ${headerTextColor}`}>{profile?.name || 'Business Name'}</p>
               <p className="whitespace-pre-line text-sm">{profile?.address}</p>
             </div>
           </div>
@@ -300,17 +310,16 @@ const PublicQuote: React.FC = () => {
           </div>
 
           {quote.description && (
-             <div className="mb-8">
-               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Project Description</p>
-               <p className="text-slate-700">{quote.description}</p>
+             <div className="px-8 md:px-12 mb-6">
+               <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Project Description</p>
+               <p className="text-slate-700 text-sm">{quote.description}</p>
              </div>
           )}
 
-          <div className="flex-1">
-            <div className="bg-slate-50  rounded-xl overflow-hidden border border-slate-200 ">
+          <div className={`flex-1 mx-8 md:mx-12 ${themeStyles.tableWrapper}`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left whitespace-nowrap md:whitespace-normal">
-                  <thead className="bg-slate-100  text-slate-600  border-b border-slate-200 ">
+                  <thead className={themeStyles.tableHead}>
                     <tr>
                       <th className="px-6 py-4 font-semibold">Description</th>
                       <th className="px-6 py-4 font-semibold text-right">Qty</th>
@@ -318,15 +327,15 @@ const PublicQuote: React.FC = () => {
                       <th className="px-6 py-4 font-semibold text-right">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 ">
+                  <tbody className="divide-y divide-slate-100">
                     {quote.items && quote.items.length > 0 ? (
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       quote.items.map((i: any, idx: number) => (
-                        <tr key={idx} className="bg-white  hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4 text-slate-900  font-medium whitespace-normal min-w-[200px]">{i.description}</td>
-                          <td className="px-6 py-4 text-right text-slate-600 ">{i.quantity}</td>
-                          <td className="px-6 py-4 text-right text-slate-600 ">{i.unitPrice?.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-right text-slate-900  font-bold">{i.amount?.toLocaleString()}</td>
+                        <tr key={idx} className={idx % 2 !== 0 ? themeStyles.tableStripe : 'bg-white'}>
+                          <td className="px-6 py-4 text-slate-900 font-medium whitespace-normal min-w-[200px]">{i.description}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{i.quantity}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{i.unitPrice?.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right text-slate-900 font-bold">{i.amount?.toLocaleString()}</td>
                         </tr>
                       ))
                     ) : (
@@ -338,37 +347,36 @@ const PublicQuote: React.FC = () => {
                 </table>
               </div>
 
-              <div className="bg-white  p-6 flex justify-end border-t border-slate-200 ">
+              <div className="bg-white p-6 flex justify-end border-t border-slate-100">
                 <div className="w-full md:w-1/2 lg:w-1/3 space-y-3">
-                  <div className="flex justify-between text-slate-600  text-sm">
+                  <div className="flex justify-between text-slate-600 text-sm">
                     <span>Subtotal</span>
                     <span>{formatMoney(quote.subtotal, quote.currency)}</span>
                   </div>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {quote.taxes?.map((t: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-slate-600  text-sm">
+                    <div key={idx} className="flex justify-between text-slate-600 text-sm">
                       <span>{t.name}</span>
                       <span>{t.isDeduction ? '-' : ''}{formatMoney(t.amount, quote.currency)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between font-bold text-xl text-slate-900  pt-4 border-t border-slate-200  mt-2">
+                  <div className={`flex justify-between font-bold text-xl text-slate-900 pt-4 mt-2 ${themeStyles.totalRow}`}>
                     <span>Total</span>
-                    <span>{formatMoney(quote.total, quote.currency)}</span>
+                    <span className={themeStyles.accentText}>{formatMoney(quote.total, quote.currency)}</span>
                   </div>
                 </div>
               </div>
-            </div>
           </div>
 
           {quote.notes && (
-            <div className="mt-8 bg-amber-50 text-amber-800 p-4 rounded-xl text-sm border border-amber-100 w-full text-left">
-              <span className="font-bold block mb-1">Notes / Terms:</span>
-              <span className="whitespace-pre-wrap">{quote.notes}</span>
+            <div className="mt-8 px-8 md:px-12 pt-6 border-t border-slate-100 w-full text-left">
+              <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Notes / Terms</p>
+              <p className="text-slate-600 text-sm whitespace-pre-wrap">{quote.notes}</p>
             </div>
           )}
 
           {!isAccepted && !isDeclined && !isCountered && !showCounterModal && !showDeclineModal && (
-            <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-end items-center border-t border-slate-100 pt-8">
+            <div className="mt-12 px-8 md:px-12 flex flex-col sm:flex-row gap-4 justify-end items-center border-t border-slate-100 pt-8">
                {(quote.allow_counter_offer || quote.allowCounterOffer) && (
                  <button 
                    onClick={() => setShowCounterModal(true)}
@@ -394,7 +402,7 @@ const PublicQuote: React.FC = () => {
           )}
           
           {showCounterModal && (
-            <div className="mt-8 p-6 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="mt-8 mx-8 md:mx-12 p-6 bg-slate-50 rounded-xl border border-slate-200">
               <h3 className="text-lg font-bold text-slate-900 mb-4">Make a Counter Offer</h3>
               <form onSubmit={handleCounterOffer} className="space-y-4">
                 <div>
@@ -446,7 +454,7 @@ const PublicQuote: React.FC = () => {
           )}
 
           {showDeclineModal && (
-            <div className="mt-8 p-6 bg-red-50 rounded-xl border border-red-100">
+            <div className="mt-8 mx-8 md:mx-12 p-6 bg-red-50 rounded-xl border border-red-100">
               <h3 className="text-lg font-bold text-red-900 mb-2">Decline Quote</h3>
               <p className="text-sm text-red-700 mb-4">Please let the business know why you are declining this quote.</p>
               <form onSubmit={handleDeclineSubmit} className="space-y-4">
@@ -480,7 +488,7 @@ const PublicQuote: React.FC = () => {
             </div>
           )}
           
-          <div className="mt-12 text-center text-xs text-slate-400 border-t border-slate-100 pt-8">
+          <div className="mt-12 pb-8 px-8 md:px-12 text-center text-[10px] text-slate-400 border-t border-slate-100 pt-8">
              Powered by <span className="font-semibold">{profile?.is_pro ? (profile?.name || 'BillReve Inc.') : 'BillReve Inc.'}</span>
           </div>
 
