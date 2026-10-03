@@ -232,10 +232,10 @@ const PublicQuote: React.FC = () => {
   const themeStyles = getThemeStyles((quote?.theme || 'standard') as DocumentTheme);
   const theme = quote?.theme || 'standard';
 
-  const headerTextColor = (theme === 'professional' || theme === 'modern' || theme === 'monochrome')
+  const headerTextColor = (theme === 'monochrome')
     ? 'text-white'
     : 'text-slate-900';
-  const headerSubColor = (theme === 'professional' || theme === 'modern' || theme === 'monochrome')
+  const headerSubColor = (theme === 'monochrome')
     ? 'text-white/70'
     : 'text-slate-500';
 
