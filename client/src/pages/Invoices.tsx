@@ -18,7 +18,6 @@ import { SplitButton, ActionMenu, LongPressable, BottomSheet } from '../componen
 import { useAppStore } from '../store/useAppStore';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
-import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { useQuota } from '../hooks/useQuota';
 import { SidePanelDetails } from '../components/SidePanelDetails';
 import toast from 'react-hot-toast';
@@ -147,7 +146,7 @@ const Invoices: React.FC = () => {
   const handleDownloadPdf = async (invoice: Invoice) => {
     try {
       const client = allClients.find(c => c.localId === invoice.clientId);
-      await generateDocumentPdf(invoice, client, businessProfile, 'INVOICE', true);
+      (await import('../utils/pdfGenerator')).generateDocumentPdf(invoice, client, businessProfile, 'INVOICE', true);
     } catch (err) {
       console.error('Failed to generate PDF', err);
       toast.error('Failed to generate PDF');

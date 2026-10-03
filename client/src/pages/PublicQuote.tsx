@@ -4,7 +4,6 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AlertCircle, CheckCircle2, Download, MessageSquare } from 'lucide-react';
 import { formatMoney } from '../utils/formatters';
-import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { db } from '../db/db';
 import toast from 'react-hot-toast';
 
@@ -242,7 +241,7 @@ const PublicQuote: React.FC = () => {
           amountPaid: quote.amount_paid
       };
       const profileData = { ...profile, bankAccounts: profile.bank_accounts };
-        await generateDocumentPdf(docData, profileData, client, 'QUOTE', true);
+        (await import('../utils/pdfGenerator')).generateDocumentPdf(docData, profileData, client, 'QUOTE', true);
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');

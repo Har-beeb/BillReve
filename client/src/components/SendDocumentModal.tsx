@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Mail, MessageCircle, Loader2, Sparkles } from 'lucide-react';
-import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { draftAiEmail } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
@@ -158,7 +157,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       // 2. Generate PDF as base64
       let pdfBase64 = null;
       if (documentType.toUpperCase() === 'INVOICE') {
-        pdfBase64 = await generateDocumentPdf(document, client, businessProfile, documentType.toUpperCase() as any, false);
+        pdfBase64 = (await import('../utils/pdfGenerator')).generateDocumentPdf(document, client, businessProfile, documentType.toUpperCase() as any, false);
         if (!pdfBase64 || (typeof pdfBase64 === 'string' && pdfBase64.length < 1000)) {
           console.error('PDF Generation failed or returned empty payload:', pdfBase64);
           throw new Error('Failed to generate a valid PDF document. Please try again.');

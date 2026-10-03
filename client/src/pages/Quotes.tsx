@@ -18,7 +18,6 @@ import { SplitButton, ActionMenu, LongPressable, EmptyState, BottomSheet } from 
 import { useAppStore } from '../store/useAppStore';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
-import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { useQuota } from '../hooks/useQuota';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -123,7 +122,7 @@ const Quotes: React.FC = () => {
   const handleDownloadPdf = async (quote: Quote) => {
     try {
       const client = allClients.find(c => c.localId === quote.clientId);
-      await generateDocumentPdf(quote, client, businessProfile, 'QUOTE', true);
+      (await import('../utils/pdfGenerator')).generateDocumentPdf(quote, client, businessProfile, 'QUOTE', true);
     } catch (err) {
       console.error('Failed to generate PDF', err);
       toast.error('Failed to generate PDF');

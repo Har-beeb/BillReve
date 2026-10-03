@@ -6,7 +6,6 @@ import { PaystackButton } from 'react-paystack';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { CheckCircle2, AlertCircle, Download } from 'lucide-react';
 import { formatMoney } from '../utils/formatters';
-import { generateDocumentPdf } from '../utils/pdfGenerator';
 import { db } from '../db/db';
 import { useAppStore } from '../store/useAppStore';
 import toast from 'react-hot-toast';
@@ -135,7 +134,7 @@ const PublicInvoice: React.FC = () => {
           amountPaid: invoice.amount_paid
       };
       const profileData = { ...profile, bankAccounts: profile.bank_accounts };
-        await generateDocumentPdf(docData, profileData, client, 'INVOICE', true);
+        (await import('../utils/pdfGenerator')).generateDocumentPdf(docData, profileData, client, 'INVOICE', true);
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');
