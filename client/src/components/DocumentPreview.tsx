@@ -81,7 +81,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       >
         
         {/* Header */}
-        <div className={`flex justify-between items-start p-8 ${t.header}`}>
+        <div className={`flex justify-between items-start ${t.header}`}>
           <div>
             {businessProfile?.logoUrl ? (
               <div className="w-24 h-24 mb-4">
@@ -102,7 +102,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         </div>
 
         {/* Bill To & Dates Grid */}
-        <div className={`grid grid-cols-2 gap-12 p-8 ${t.detailsGrid}`}>
+        <div className={`grid grid-cols-2 gap-12 ${t.detailsGrid}`}>
            <div>
              <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${t.accentText}`}>Bill To</p>
              {isCreatingClient ? (
@@ -143,7 +143,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         )}
 
         {/* Line Items Table */}
-        <div className={`flex-1 mx-8 ${t.tableWrapper}`}>
+        <div className={`flex-1 ${t.tableWrapper}`}>
           <table className="w-full text-xs text-left">
             <thead className={t.tableHead}>
               <tr>

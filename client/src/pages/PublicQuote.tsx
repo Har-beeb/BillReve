@@ -270,7 +270,7 @@ const PublicQuote: React.FC = () => {
             </div>
           )}
 
-          <div className={`flex justify-between items-start p-8 md:p-12 ${themeStyles.header}`}>
+          <div className={`flex justify-between items-start ${themeStyles.header}`}>
             <div>
               {profile?.logo_url ? (
                 <div className="w-32 h-32 mb-6">
@@ -304,7 +304,7 @@ const PublicQuote: React.FC = () => {
                </div>
                <div>
                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date</p>
-                 <p className="font-medium text-slate-900 text-sm">{quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'N/A'}</p>
+                 <p className="font-medium text-slate-900 text-sm">{quote.createdAt ? new Date(quote.expires_at || quote.expiresAt).toLocaleDateString() : 'N/A'}</p>
                </div>
              </div>
           </div>
@@ -316,7 +316,7 @@ const PublicQuote: React.FC = () => {
              </div>
           )}
 
-          <div className={`flex-1 mx-8 md:mx-12 ${themeStyles.tableWrapper}`}>
+          <div className={`flex-1 ${themeStyles.tableWrapper}`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left whitespace-nowrap md:whitespace-normal">
                   <thead className={themeStyles.tableHead}>
