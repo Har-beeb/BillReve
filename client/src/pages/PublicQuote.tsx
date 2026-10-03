@@ -217,9 +217,20 @@ const PublicQuote: React.FC = () => {
     try {
       const docData = {
         ...quote,
-        id: quote.local_id || quote.id
+        id: quote.local_id || quote.id,
+          localId: quote.local_id || quote.id,
+          invoiceNumber: quote.invoice_number,
+          quoteNumber: quote.quote_number,
+          createdAt: quote.created_at,
+          updatedAt: quote.updated_at,
+          dueDate: quote.due_date,
+          expiresAt: quote.expires_at,
+          bankAccountId: quote.bank_account_id,
+          bankAccountSnapshot: quote.bank_account_snapshot,
+          amountPaid: quote.amount_paid
       };
-      await generateDocumentPdf(docData, profile, client, 'QUOTE', true);
+      const profileData = { ...profile, bankAccounts: profile.bank_accounts };
+        await generateDocumentPdf(docData, profileData, client, 'QUOTE', true);
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');
@@ -336,7 +347,7 @@ const PublicQuote: React.FC = () => {
                         <tr key={idx} className={idx % 2 !== 0 ? themeStyles.tableStripe : 'bg-white'}>
                           <td className="px-6 py-4 text-slate-900 font-medium whitespace-normal min-w-[200px]">{i.description}</td>
                           <td className="px-6 py-4 text-right text-slate-600">{i.quantity}</td>
-                          <td className="px-6 py-4 text-right text-slate-600">{i.unitPrice?.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{(i.unitPrice || i.unit_price)?.toLocaleString()}</td>
                           <td className="px-6 py-4 text-right text-slate-900 font-bold">{i.amount?.toLocaleString()}</td>
                         </tr>
                       ))
@@ -359,7 +370,7 @@ const PublicQuote: React.FC = () => {
                   {quote.taxes?.map((t: any, idx: number) => (
                     <div key={idx} className="flex justify-between gap-6 text-slate-600 text-sm">
                       <span className="shrink-0">{t.name}</span>
-                      <span className="break-all text-right">{t.isDeduction ? '-' : ''}{formatMoney(t.amount, quote.currency)}</span>
+                      <span className="break-all text-right">{(t.isDeduction || t.is_deduction) ? '-' : ''}{formatMoney(t.amount, quote.currency)}</span>
                     </div>
                   ))}
                   <div className={`flex justify-between items-center gap-8 font-bold text-xl text-slate-900 pt-4 mt-2 ${themeStyles.totalRow}`}>

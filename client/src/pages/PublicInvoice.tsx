@@ -122,9 +122,20 @@ const PublicInvoice: React.FC = () => {
     try {
       const docData = {
         ...invoice,
-        id: invoice.local_id || invoice.id
+        id: invoice.local_id || invoice.id,
+          localId: invoice.local_id || invoice.id,
+          invoiceNumber: invoice.invoice_number,
+          quoteNumber: invoice.quote_number,
+          createdAt: invoice.created_at,
+          updatedAt: invoice.updated_at,
+          dueDate: invoice.due_date,
+          expiresAt: invoice.expires_at,
+          bankAccountId: invoice.bank_account_id,
+          bankAccountSnapshot: invoice.bank_account_snapshot,
+          amountPaid: invoice.amount_paid
       };
-      await generateDocumentPdf(docData, profile, client, 'INVOICE', true);
+      const profileData = { ...profile, bankAccounts: profile.bank_accounts };
+        await generateDocumentPdf(docData, profileData, client, 'INVOICE', true);
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');
@@ -337,7 +348,7 @@ const PublicInvoice: React.FC = () => {
                         <tr key={idx} className={idx % 2 !== 0 ? themeStyles.tableStripe : 'bg-white'}>
                           <td className="px-6 py-4 text-slate-900 font-medium whitespace-normal min-w-[200px]">{i.description}</td>
                           <td className="px-6 py-4 text-right text-slate-600">{i.quantity}</td>
-                          <td className="px-6 py-4 text-right text-slate-600">{i.unitPrice?.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{(i.unitPrice || i.unit_price)?.toLocaleString()}</td>
                           <td className="px-6 py-4 text-right text-slate-900 font-bold">{i.amount?.toLocaleString()}</td>
                         </tr>
                       ))
@@ -360,7 +371,7 @@ const PublicInvoice: React.FC = () => {
                   {invoice.taxes?.map((t: any, idx: number) => (
                     <div key={idx} className="flex justify-between gap-6 text-slate-600 text-sm">
                       <span className="shrink-0">{t.name}</span>
-                      <span className="break-all text-right">{t.isDeduction ? '-' : ''}{formatMoney(t.amount, invoice.currency)}</span>
+                      <span className="break-all text-right">{(t.isDeduction || t.is_deduction) ? '-' : ''}{formatMoney(t.amount, invoice.currency)}</span>
                     </div>
                   ))}
                   <div className={`flex justify-between items-center gap-8 font-bold text-xl text-slate-900 pt-4 mt-2 ${themeStyles.totalRow}`}>
@@ -404,9 +415,9 @@ const PublicInvoice: React.FC = () => {
                     {bank && (
                       <div className="text-sm">
                         <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Payment Details</p>
-                        <p className="text-slate-600"><span className="font-medium">Bank:</span> {bank.bankName}</p>
-                        <p className="text-slate-600"><span className="font-medium">Account Name:</span> {bank.accountName}</p>
-                        <p className="text-slate-600"><span className="font-medium">Account Number:</span> {bank.accountNumber}</p>
+                        <p className="text-slate-600"><span className="font-medium">Bank:</span> {(bank.bankName || bank.bank_name)}</p>
+                        <p className="text-slate-600"><span className="font-medium">Account Name:</span> {(bank.accountName || bank.account_name)}</p>
+                        <p className="text-slate-600"><span className="font-medium">Account Number:</span> {(bank.accountNumber || bank.account_number)}</p>
                       </div>
                     )}
              

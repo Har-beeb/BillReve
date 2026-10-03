@@ -81,7 +81,7 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
                 <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? ts.stripeBg : 'transparent' }}>
                   <td className="py-3 pl-4" style={{ color: '#334155' }}>{i.description}</td>
                   <td className="text-right py-3 pr-4 whitespace-nowrap" style={{ color: '#475569' }}>{i.quantity}</td>
-                  <td className="text-right py-3 pr-4 whitespace-nowrap" style={{ color: '#475569' }}>{i.unitPrice?.toLocaleString()}</td>
+                  <td className="text-right py-3 pr-4 whitespace-nowrap" style={{ color: '#475569' }}>{(i.unitPrice || i.unit_price)?.toLocaleString()}</td>
                   <td className="text-right py-3 pr-4 font-medium whitespace-nowrap" style={{ color: '#1e293b' }}>{i.amount?.toLocaleString()}</td>
                 </tr>
               ))
@@ -103,7 +103,7 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
           {document.taxes?.map((t: any, idx: number) => (
             <div key={idx} className="flex justify-between gap-4 text-sm mb-2" style={{ color: '#475569' }}>
               <span className="whitespace-nowrap">{t.name}</span>
-              <span className="text-right font-medium">{t.isDeduction ? '-' : ''}{formatMoney(t.amount, document.currency)}</span>
+              <span className="text-right font-medium">{(t.isDeduction || t.is_deduction) ? '-' : ''}{formatMoney(t.amount, document.currency)}</span>
             </div>
           ))}
           <div className="flex justify-between gap-4 font-bold text-lg mt-2 pt-2 border-t" style={{ borderColor: '#f1f5f9' }}>
@@ -137,9 +137,9 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
             {bank && (
               <div className="text-sm">
                 <p className="font-bold mb-2 uppercase tracking-wide" style={{ color: ts.accentColor }}>Payment Details</p>
-                <p style={{ color: '#475569' }}><span className="font-medium">Bank:</span> {bank.bankName}</p>
-                <p style={{ color: '#475569' }}><span className="font-medium">Account Name:</span> {bank.accountName || bank.accountName}</p>
-                <p style={{ color: '#475569' }}><span className="font-medium">Account Number:</span> {bank.accountNumber}</p>
+                <p style={{ color: '#475569' }}><span className="font-medium">Bank:</span> {(bank.bankName || bank.bank_name)}</p>
+                <p style={{ color: '#475569' }}><span className="font-medium">Account Name:</span> {(bank.accountName || bank.account_name) || (bank.accountName || bank.account_name)}</p>
+                <p style={{ color: '#475569' }}><span className="font-medium">Account Number:</span> {(bank.accountNumber || bank.account_number)}</p>
               </div>
             )}
         </div>
