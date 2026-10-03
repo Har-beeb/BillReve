@@ -1,3 +1,4 @@
+import { getThemeStyles, type DocumentTheme } from '../utils/documentThemes';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -121,9 +122,20 @@ const PublicInvoice: React.FC = () => {
     try {
       const docData = {
         ...invoice,
-        id: invoice.local_id || invoice.id
+        id: invoice.local_id || invoice.id,
+          localId: invoice.local_id || invoice.id,
+          invoiceNumber: invoice.invoice_number,
+          quoteNumber: invoice.quote_number,
+          createdAt: invoice.created_at,
+          updatedAt: invoice.updated_at,
+          dueDate: invoice.due_date,
+          expiresAt: invoice.expires_at,
+          bankAccountId: invoice.bank_account_id,
+          bankAccountSnapshot: invoice.bank_account_snapshot,
+          amountPaid: invoice.amount_paid
       };
-      await generateDocumentPdf(docData, profile, client, 'INVOICE', true);
+      const profileData = { ...profile, bankAccounts: profile.bank_accounts };
+        await generateDocumentPdf(docData, profileData, client, 'INVOICE', true);
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');
@@ -232,6 +244,18 @@ const PublicInvoice: React.FC = () => {
     fontSize: fontSize === 'small' ? '0.875rem' : fontSize === 'large' ? '1.125rem' : '1rem'
   } : {};
 
+
+  const themeStyles = getThemeStyles((invoice?.theme || 'standard') as DocumentTheme);
+  const theme = invoice?.theme || 'standard';
+
+  const headerTextColor = (theme === 'monochrome')
+    ? 'text-white'
+    : 'text-slate-900';
+  const headerSubColor = (theme === 'monochrome')
+    ? 'text-white/70'
+    : 'text-slate-500';
+
+
   return (
     <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto space-y-8" style={typographyStyle}>
@@ -262,14 +286,14 @@ const PublicInvoice: React.FC = () => {
           </div>
         )}
 
-        <div className="bg-white p-8 md:p-12 shadow-lg w-full flex flex-col relative overflow-hidden">
+        <div className={`bg-white text-slate-900 w-full flex flex-col relative overflow-hidden transition-all duration-300 ${themeStyles.docWrapper}`}>
           {isPaid && (
             <div className="absolute top-12 -right-12 transform rotate-45 bg-green-500 text-white font-bold tracking-widest uppercase py-1 px-16 shadow-md z-10">
               PAID
             </div>
           )}
 
-          <div className="flex justify-between items-start mb-12">
+          <div className={`flex justify-between items-start ${themeStyles.header}`}>
             <div>
               {profile?.logo_url ? (
                 <div className="w-32 h-32 mb-6">
@@ -280,41 +304,40 @@ const PublicInvoice: React.FC = () => {
                    <img src="/billreve.svg" alt="BillReve Logo" className="w-full h-full object-contain object-left" />
                 </div>
               )}
-              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Invoice</h1>
-              <p className="text-slate-500 mt-2 font-medium">#{invoice.invoice_number || invoice.local_id.slice(0,8)}</p>
+              <h1 className={`text-4xl font-bold tracking-tight ${themeStyles.title}`}>Invoice</h1>
+              <p className={`mt-2 font-medium ${headerSubColor}`}>#{invoice.invoice_number || invoice.local_id.slice(0,8)}</p>
             </div>
-            <div className="text-right text-slate-600">
-              <p className="font-bold text-slate-900 text-lg mb-1">{profile?.name || 'Business Name'}</p>
+            <div className={`text-right ${headerSubColor}`}>
+              <p className={`font-bold text-lg mb-1 ${headerTextColor}`}>{profile?.name || 'Business Name'}</p>
               <p className="whitespace-pre-line text-sm">{profile?.address}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-12 mb-12 border-y border-slate-100 py-8">
+          <div className={`grid grid-cols-2 gap-12 ${themeStyles.detailsGrid}`}>
              <div>
-               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Bill To</p>
+               <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Bill To</p>
                <p className="font-bold text-slate-900 text-lg">{client?.name || 'Unknown Client'}</p>
                <p className="text-slate-500 mt-1">{client?.email}</p>
                {client?.address && <p className="text-slate-500 mt-1 whitespace-pre-line text-sm">{client.address}</p>}
              </div>
-             <div className="text-right">
-               <div className="mb-4">
-                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Date Issued</p>
+             <div className="text-right flex flex-col items-end gap-4">
+               <div>
+                 <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${themeStyles.accentText}`}>Date Issued</p>
                  <p className="font-medium text-slate-900">{new Date(invoice.created_at).toLocaleDateString()}</p>
                </div>
-               {invoice.dueDate && (
+               {(invoice.due_date || invoice.dueDate) && (
                  <div>
-                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Due Date</p>
-                   <p className="font-medium text-slate-900">{new Date(invoice.dueDate).toLocaleDateString()}</p>
+                   <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${themeStyles.accentText}`}>Due Date</p>
+                   <p className="font-medium text-slate-900">{new Date(invoice.due_date || invoice.dueDate).toLocaleDateString()}</p>
                  </div>
                )}
              </div>
           </div>
 
-          <div className="flex-1">
-            <div className="bg-slate-50  rounded-xl overflow-hidden border border-slate-200 ">
+          <div className={`flex-1 ${themeStyles.tableWrapper}`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left whitespace-nowrap md:whitespace-normal">
-                  <thead className="bg-slate-100  text-slate-600  border-b border-slate-200 ">
+                  <thead className={themeStyles.tableHead}>
                     <tr>
                       <th className="px-6 py-4 font-semibold">Description</th>
                       <th className="px-6 py-4 font-semibold text-right">Qty</th>
@@ -322,15 +345,15 @@ const PublicInvoice: React.FC = () => {
                       <th className="px-6 py-4 font-semibold text-right">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 ">
+                  <tbody className="divide-y divide-slate-100">
                     {invoice.items && invoice.items.length > 0 ? (
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       invoice.items.map((i: any, idx: number) => (
-                        <tr key={idx} className="bg-white  hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4 text-slate-900  font-medium whitespace-normal min-w-[200px]">{i.description}</td>
-                          <td className="px-6 py-4 text-right text-slate-600 ">{i.quantity}</td>
-                          <td className="px-6 py-4 text-right text-slate-600 ">{i.unitPrice?.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-right text-slate-900  font-bold">{i.amount?.toLocaleString()}</td>
+                        <tr key={idx} className={idx % 2 !== 0 ? themeStyles.tableStripe : 'bg-white'}>
+                          <td className="px-6 py-4 text-slate-900 font-medium whitespace-normal min-w-[200px]">{i.description}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{i.quantity}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{(i.unitPrice || i.unit_price)?.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right text-slate-900 font-bold">{i.amount?.toLocaleString()}</td>
                         </tr>
                       ))
                     ) : (
@@ -342,49 +365,48 @@ const PublicInvoice: React.FC = () => {
                 </table>
               </div>
 
-              <div className="bg-white  p-6 flex justify-end border-t border-slate-200 ">
-                <div className="w-full md:w-1/2 lg:w-1/3 space-y-3">
-                  <div className="flex justify-between text-slate-600  text-sm">
-                    <span>Subtotal</span>
-                    <span>{formatMoney(invoice.subtotal, invoice.currency)}</span>
+              <div className="bg-white p-6 flex justify-end border-t border-slate-100">
+                <div className="w-full md:w-1/2 lg:w-[45%] space-y-3">
+                  <div className="flex justify-between gap-6 text-slate-600 text-sm">
+                    <span className="shrink-0">Subtotal</span>
+                    <span className="break-all text-right">{formatMoney(invoice.subtotal, invoice.currency)}</span>
                   </div>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {invoice.taxes?.map((t: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-slate-600  text-sm">
-                      <span>{t.name}</span>
-                      <span>{t.isDeduction ? '-' : ''}{formatMoney(t.amount, invoice.currency)}</span>
+                    <div key={idx} className="flex justify-between gap-6 text-slate-600 text-sm">
+                      <span className="shrink-0">{t.name}</span>
+                      <span className="break-all text-right">{(t.isDeduction || t.is_deduction) ? '-' : ''}{formatMoney(t.amount, invoice.currency)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between font-bold text-xl text-slate-900  pt-4 border-t border-slate-200  mt-2">
-                    <span>Total</span>
-                    <span>{formatMoney(invoice.total, invoice.currency)}</span>
+                  <div className={`flex justify-between items-center gap-8 font-bold text-xl text-slate-900 pt-4 mt-2 ${themeStyles.totalRow}`}>
+                    <span className="shrink-0">Total</span>
+                    <span className={`break-all text-right ${themeStyles.accentText}`}>{formatMoney(invoice.total, invoice.currency)}</span>
                   </div>
                   {invoice.amount_paid > 0 && (
-                    <div className="flex justify-between font-medium text-green-600 text-sm pt-2">
-                      <span>Amount Paid</span>
-                      <span>-{formatMoney(invoice.amount_paid, invoice.currency)}</span>
+                    <div className="flex justify-between gap-6 font-medium text-green-600 text-sm pt-2">
+                      <span className="shrink-0">Amount Paid</span>
+                      <span className="break-all text-right">-{formatMoney(invoice.amount_paid, invoice.currency)}</span>
                     </div>
                   )}
                   {invoice.amount_paid > 0 && invoice.total - invoice.amount_paid > 0 && (
-                    <div className="flex justify-between font-bold text-lg text-slate-900  pt-2">
-                      <span>Balance Due</span>
-                      <span>{formatMoney(invoice.total - invoice.amount_paid, invoice.currency)}</span>
+                    <div className="flex justify-between gap-6 font-bold text-lg text-slate-900 pt-2">
+                      <span className="shrink-0">Balance Due</span>
+                      <span className="break-all text-right">{formatMoney(invoice.total - invoice.amount_paid, invoice.currency)}</span>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
           </div>
 
           {invoice.notes && (
-            <div className="mt-8 bg-amber-50 text-amber-800 p-4 rounded-xl text-sm border border-amber-100 w-full text-left">
-              <span className="font-bold block mb-1">Notes / Terms:</span>
-              <span className="whitespace-pre-wrap">{invoice.notes}</span>
+            <div className="mt-8 px-8 md:px-12 pt-6 border-t border-slate-100 w-full text-left">
+              <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Notes / Terms</p>
+              <p className="text-slate-600 text-sm whitespace-pre-wrap">{invoice.notes}</p>
             </div>
           )}
 
 
-          <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-12 border-t border-slate-100 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-8 border-t border-slate-100 pt-8 px-8 md:px-12">
              {(() => {
                 const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
                 let actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
@@ -396,10 +418,10 @@ const PublicInvoice: React.FC = () => {
                   <>
                     {bank && (
                       <div className="text-sm">
-                        <p className="font-bold text-slate-700 mb-2 uppercase tracking-wide">Payment Details</p>
-                        <p className="text-slate-600"><span className="font-medium">Bank:</span> {bank.bankName}</p>
-                        <p className="text-slate-600"><span className="font-medium">Account Name:</span> {bank.accountName}</p>
-                        <p className="text-slate-600"><span className="font-medium">Account Number:</span> {bank.accountNumber}</p>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Payment Details</p>
+                        <p className="text-slate-600"><span className="font-medium">Bank:</span> {(bank.bankName || bank.bank_name)}</p>
+                        <p className="text-slate-600"><span className="font-medium">Account Name:</span> {(bank.accountName || bank.account_name)}</p>
+                        <p className="text-slate-600"><span className="font-medium">Account Number:</span> {(bank.accountNumber || bank.account_number)}</p>
                       </div>
                     )}
              
@@ -474,7 +496,7 @@ const PublicInvoice: React.FC = () => {
           </div>
           
 
-          <div className="mt-12 text-center text-xs text-slate-400">
+          <div className="mt-12 pb-8 px-8 text-center text-[10px] text-slate-400">
              Powered by <span className="font-semibold">{profile?.is_pro ? (profile?.name || 'BillReve Inc.') : 'BillReve Inc.'}</span>
           </div>
 

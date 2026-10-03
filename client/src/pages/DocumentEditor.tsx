@@ -181,13 +181,55 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       setUnsavedClient(allClients.find(c => c.localId === finalClientId));
     }
 
-    const docBase = {
+    
+
+        let bankAccountSnapshot = null;
+
+
+        if (bankAccountId && businessProfile?.bankAccounts) {
+
+
+          const account = businessProfile.bankAccounts.find((b: any) => b.id === bankAccountId);
+
+
+          if (account) {
+
+
+            bankAccountSnapshot = {
+
+
+              bankName: account.bankName,
+
+
+              accountNumber: account.accountNumber,
+
+
+              accountName: account.accountName,
+
+
+              accountType: account.accountType || undefined,
+
+
+            };
+
+
+          }
+
+
+        }
+
+
+    
+
+
+        const docBase = {
       localId: localId,
       userId: user?.id,
       clientId: finalClientId,
       description: description.trim() !== '' ? description : undefined,
       notes: notes.trim() !== '' ? notes : undefined,
       bankAccountId: type === 'INVOICE' ? (bankAccountId || null) : null,
+        ...(type === 'INVOICE' ? { bankAccountSnapshot: bankAccountSnapshot } : {}),
       currency: businessProfile?.currency || 'NGN',
       subtotal,
       taxes: computedTaxes,
@@ -262,18 +304,61 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     const isEditing = !!initialDoc?.localId;
     const finalLocalId = localId;
 
-    const docBase = {
+    
+
+        let bankAccountSnapshot = null;
+
+
+        if (bankAccountId && businessProfile?.bankAccounts) {
+
+
+          const account = businessProfile.bankAccounts.find((b: any) => b.id === bankAccountId);
+
+
+          if (account) {
+
+
+            bankAccountSnapshot = {
+
+
+              bankName: account.bankName,
+
+
+              accountNumber: account.accountNumber,
+
+
+              accountName: account.accountName,
+
+
+              accountType: account.accountType || undefined,
+
+
+            };
+
+
+          }
+
+
+        }
+
+
+    
+
+
+        const docBase = {
       localId: finalLocalId,
       userId: user?.id,
       clientId: finalClientId,
       description: description.trim() !== '' ? description : undefined,
       notes: notes.trim() !== '' ? notes : undefined,
       bankAccountId: type === 'INVOICE' ? (bankAccountId || null) : null,
+        ...(type === 'INVOICE' ? { bankAccountSnapshot: bankAccountSnapshot } : {}),
       currency: businessProfile?.currency || 'NGN',
       subtotal,
       taxes: computedTaxes,
       total,
       items: items.filter(i => i.description.trim() !== ''),
+      theme: theme || 'standard',
       createdAt: initialDoc?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       syncStatus: 'pending' as const

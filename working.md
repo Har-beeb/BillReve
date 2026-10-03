@@ -469,3 +469,4 @@ EMAIL_PROVIDER_API_KEY=
 
 
 - **2026-10-02 (Phase 1):** Implemented server-side rate limiting for public RPCs.
+- **2026-10-02 (Phase 2):** Implemented bank account snapshots on document creation, cleaned up Upgrade.tsx with feature flags, added Edge middleware for dynamic OG tags, and fully integrated document themes across preview, PDF generation, and public pages.
