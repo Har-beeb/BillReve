@@ -452,29 +452,60 @@ async function handleCfoReport(aiClient: GoogleGenAI, body: any) {
   }, null, 2);
   const defaultCurrency = validatedData.businessProfile?.currency || 'USD';
 
-  const systemPrompt = `You are an expert Chief Financial Officer (CFO).
-Your task is to analyze the provided business data and generate a comprehensive "Financial Health & Action Report".
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const businessName = validatedData.businessProfile?.name || 'Your Business';
+
+  const systemPrompt = `You are an expert Chief Financial Officer (CFO) preparing a formal financial report.
+Your task is to analyse the provided data and generate a professional, well-structured "Financial Health & Action Report".
 
 Business Context:
-- Name: ${validatedData.businessProfile?.name || 'A business'}
+- Company: ${businessName}
 - Industry: ${validatedData.businessProfile?.industry || 'Unspecified'}
 - Currency: ${defaultCurrency}
+- Report Date: ${today}
 
-Data Provided:
+Data Provided (the recentInvoices list includes human-readable fields: invoice_number, description, client_name, status, total, amount_paid, due_date):
 \`\`\`json
 ${businessDataStr}
 \`\`\`
 
-Instructions for the Report:
-1. Format your response entirely in valid Markdown. Use headings, bullet points, and bold text for readability.
-2. Structure the report as follows:
-   - **Executive Summary:** A 2-3 sentence overview of their financial health based on total revenue and outstanding balances.
-   - **Cash Flow Analysis:** Breakdown of what has been paid vs what is outstanding.
-   - **Client Insights:** Identify the top paying clients and any clients with large outstanding balances.
-   - **Action Plan:** Provide 3 specific, actionable steps they should take today (e.g., "Chase Client X for the overdue Invoice #0012 for ${defaultCurrency}500").
-3. Do not include raw JSON data in your output. Synthesize the numbers into readable text.
+STRICT OUTPUT FORMAT — produce exactly these 7 sections in order. Do not add extra sections:
 
-Generate the report now.`;
+# Financial Health & Action Report
+**${businessName}** · ${today}
+
+---
+
+## 1. Executive Summary
+Write 3–4 sentences giving a high-level verdict on the company's financial health. Mention total revenue collected, the outstanding balance, and how many invoices are overdue. Use confident, professional language.
+
+## 2. Key Metrics at a Glance
+Produce a markdown table with 4 rows: Total Revenue Collected, Outstanding Balance, Overdue Invoices, Active Clients. Use the exact numbers from the data.
+
+## 3. Cash Flow Analysis
+Break down the cash position. How much has been received vs how much is still owed? What percentage of total invoiced amount has been collected? Flag any concerning trends (e.g. high overdue ratio).
+
+## 4. Invoice Highlights
+List the top 5 most significant invoices from recentInvoices. For each, write one bullet using this exact format:
+- **Invoice #[invoice_number]** — [client_name] · [description] · [status] · **[defaultCurrency][total]** (Paid: [amount_paid])
+If there are no invoices, state "No invoices found."
+
+## 5. Overdue & At-Risk Accounts
+List every invoice where status = 'OVERDUE' from recentInvoices. For each, write one bullet:
+- ⚠️ **Invoice #[invoice_number]** — [client_name] — **[defaultCurrency][total - amount_paid] outstanding** — Due: [due_date]
+If there are no overdue invoices, write "✅ No overdue invoices. Great work!"
+
+## 6. Recommendations
+Provide exactly 4 numbered, specific and actionable recommendations based on the data. Reference actual invoice numbers and client names where possible. Be direct and practical.
+
+## 7. CFO Verdict
+End with a single bold sentence summarising the overall financial health: either 🟢 Healthy, 🟡 Needs Attention, or 🔴 Critical — and explain why in one sentence.
+
+RULES:
+- Never show raw UUIDs. Always use invoice_number, description, and client_name.
+- Never invent numbers. Use only the data provided.
+- Keep language professional but clear. Avoid jargon without explanation.
+- If data is missing or empty, say so gracefully.`;
 
   const response = await aiClient.models.generateContent({
     model: "gemini-3.5-flash-lite",

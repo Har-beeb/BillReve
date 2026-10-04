@@ -505,7 +505,7 @@ export const RevenueChat: React.FC = () => {
 
       {/* Chat Panel */}
       <div 
-        className={`fixed right-4 md:right-6 w-[360px] h-[550px] max-h-[70vh] md:max-h-[85vh] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col z-50 transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${mobileNavStyle === 'bottom' ? 'bottom-[110px]' : 'bottom-[88px]'} md:bottom-[88px]`}
+        className={`fixed right-4 md:right-6 w-[360px] md:w-[420px] lg:w-[480px] h-[550px] max-h-[70vh] md:max-h-[85vh] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col z-50 transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'} ${mobileNavStyle === 'bottom' ? 'bottom-[110px]' : 'bottom-[88px]'} md:bottom-[88px]`}
       >
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800 rounded-t-2xl">
