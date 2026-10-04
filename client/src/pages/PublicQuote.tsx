@@ -241,7 +241,7 @@ const PublicQuote: React.FC = () => {
           amountPaid: quote.amount_paid
       };
       const profileData = { ...profile, bankAccounts: profile.bank_accounts };
-        (await import('../utils/pdfGenerator')).generateDocumentPdf(docData, profileData, client, 'QUOTE', true);
+        await (await import('../utils/pdfGenerator')).generateDocumentPdf(docData, profileData, client, 'QUOTE', true);
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');

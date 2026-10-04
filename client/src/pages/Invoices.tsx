@@ -146,7 +146,7 @@ const Invoices: React.FC = () => {
   const handleDownloadPdf = async (invoice: Invoice) => {
     try {
       const client = allClients.find(c => c.localId === invoice.clientId);
-      (await import('../utils/pdfGenerator')).generateDocumentPdf(invoice, client, businessProfile, 'INVOICE', true);
+      await (await import('../utils/pdfGenerator')).generateDocumentPdf(invoice, client, businessProfile, 'INVOICE', true);
     } catch (err) {
       console.error('Failed to generate PDF', err);
       toast.error('Failed to generate PDF');

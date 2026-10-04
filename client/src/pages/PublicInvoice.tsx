@@ -134,7 +134,7 @@ const PublicInvoice: React.FC = () => {
           amountPaid: invoice.amount_paid
       };
       const profileData = { ...profile, bankAccounts: profile.bank_accounts };
-        (await import('../utils/pdfGenerator')).generateDocumentPdf(docData, profileData, client, 'INVOICE', true);
+        await (await import('../utils/pdfGenerator')).generateDocumentPdf(docData, profileData, client, 'INVOICE', true);
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');

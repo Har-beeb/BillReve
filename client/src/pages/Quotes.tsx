@@ -122,7 +122,7 @@ const Quotes: React.FC = () => {
   const handleDownloadPdf = async (quote: Quote) => {
     try {
       const client = allClients.find(c => c.localId === quote.clientId);
-      (await import('../utils/pdfGenerator')).generateDocumentPdf(quote, client, businessProfile, 'QUOTE', true);
+      await (await import('../utils/pdfGenerator')).generateDocumentPdf(quote, client, businessProfile, 'QUOTE', true);
     } catch (err) {
       console.error('Failed to generate PDF', err);
       toast.error('Failed to generate PDF');
