@@ -316,14 +316,24 @@ BillReve is designed to feel **premium and frictionless**:
 
 ## 📋 Known Limitations & Roadmap
 
-### Resolved Tech Debt ✅
+### Resolved Tech Debt & Optimizations ✅
 
 | Issue | Status | Resolution |
 | --- | --- | --- |
-| `logo_url` stored as base64 in DB | ✅ Fixed | Auto-migration in `App.tsx` detects legacy base64 strings on login, uploads to Supabase `logos` bucket, and saves the public URL back to the profile |
-| AI context size grows with invoice count | ✅ Fixed | `RevenueChat.tsx` time-boxes data to the last 90 days; older documents are aggregated into a compact `historicalSummary` block to save token cost |
-| Client clock drift affects LWW resolution | ✅ Fixed | `syncEngine.ts` fetches the `Date` header from the Supabase API on boot to calculate `serverTimeOffsetMs`, which is applied during LWW conflict resolution |
-| `is_pro` not swept for expired subscriptions | ✅ Fixed | `email-cron` Edge Function includes a failsafe sweep that sets `is_pro = false` for any profile where `pro_expires_at < now()` |
+| **Public Endpoint Abuse** | ✅ Fixed | Supabase RPCs (`update_invoice_status_public`, `update_quote_status_public`) now use strict IP-based rate limiting via `inet_client_addr()` to prevent spam. |
+| **Historic Payment Data Loss** | ✅ Fixed | Documents now freeze a `bank_account_snapshot` into a `JSONB` column at creation, preserving exact payment details even if the user deletes the bank account later. |
+| **PDF Generator Bundle Bloat** | ✅ Fixed | `pdfGenerator.tsx` and `html2pdf.js` (900KB+) are now lazily loaded via dynamic imports, splitting them into their own async chunk to drastically speed up initial app load. |
+| **AI Payload Token Bloat** | ✅ Fixed | `RevenueChat.tsx` now calls a lightweight Supabase RPC (`get_ai_context`) to pre-aggregate metrics directly on the Postgres server, eliminating massive array transfers to Gemini. |
+| **Aggressive Background Polling** | ✅ Fixed | The Sync Engine listens to `visibilitychange`, completely pausing its 10-second polling when the tab is hidden, and executing a single catch-up sync instantly upon return. |
+| **`logo_url` Base64 Crashes** | ✅ Fixed | A Postgres `CHECK` constraint (`chk_logo_url_no_base64`) physically blocks heavy base64 strings. Legacy strings are auto-uploaded to Supabase Storage on login. |
+| **Client Clock Drift (LWW)** | ✅ Fixed | `syncEngine.ts` fetches the `Date` header from the Supabase API on boot to calculate `serverTimeOffsetMs`, applied during Last-Write-Wins conflict resolution. |
+
+### Pending Tech Debt 🚧
+
+| Issue | Severity | Target Fix |
+| --- | --- | --- |
+| **Billing Bypass via `is_pro`** | High | The `profiles` table allows self-updating. A malicious user could send an API request setting `is_pro: true`. Needs a Postgres trigger to block modifications to billing columns by the `authenticated` role. |
+| **`AICfoReport` Payload Bloat** | Medium | `AICfoReport.tsx` sends raw invoice arrays to Gemini. Needs refactoring to use the Phase 4 `get_ai_context` server-side aggregation RPC to prevent payload limit crashes at scale. |
 
 ### Roadmap 🔜
 
@@ -331,9 +341,9 @@ BillReve is designed to feel **premium and frictionless**:
 | --- | --- |
 | Payment gateways (Stripe full integration) | Paystack & Flutterwave live; Stripe partial |
 | Team accounts / multi-user | Single-user only currently |
-| Mobile native app (React Native) | PWA is current mobile solution |
-| Rate limiting on public endpoints | Add CAPTCHA or Turnstile to `/pay/:id` and `/quote/:id` |
-| Bank account snapshot on invoice creation | Freeze payment details into the invoice record at creation time |
+| Native mobile app (React Native / Expo) | PWA is current mobile solution |
+| Recurring Invoices / Auto-billing | Automatically generate and send invoices on a schedule |
+| Accounting Integrations | Sync finalized documents directly to QuickBooks or Xero |
 
 ---
 
