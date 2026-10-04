@@ -470,3 +470,4 @@ EMAIL_PROVIDER_API_KEY=
 
 - **2026-10-02 (Phase 1):** Implemented server-side rate limiting for public RPCs.
 - **2026-10-02 (Phase 2):** Implemented bank account snapshots on document creation, cleaned up Upgrade.tsx with feature flags, added Edge middleware for dynamic OG tags, and fully integrated document themes across preview, PDF generation, and public pages.
+- **2026-10-03 (Phase 3):** Code-split the heavy 1MB PDF generator via dynamic imports to eliminate main bundle bloat, and added a strict PostgreSQL CHECK constraint to permanently block base64 strings in logo_url.
