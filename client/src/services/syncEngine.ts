@@ -75,6 +75,7 @@ class SyncEngine {
   // References for cleanup
   private onlineListener: (() => void) | null = null;
   private dexieHookListener: any = null;
+  private visibilityListener: (() => void) | null = null;
 
   /**
    * Initializes the synchronization process and starts listening for changes.
@@ -143,7 +144,22 @@ class SyncEngine {
     };
     window.addEventListener('online', this.onlineListener);
 
-    // Heartbeat fallback polling (10 seconds)
+    // Heartbeat fallback polling (Adaptive based on visibility)
+    if (!this.visibilityListener) {
+      this.visibilityListener = () => {
+        if (document.hidden) {
+          if (this.pollingInterval) clearInterval(this.pollingInterval);
+          this.pollingInterval = setInterval(() => this.sync(), 60000);
+        } else {
+          if (this.pollingInterval) clearInterval(this.pollingInterval);
+          this.pollingInterval = setInterval(() => this.sync(), 10000);
+          this.sync(); // Immediate sync on return
+        }
+      };
+      document.addEventListener('visibilitychange', this.visibilityListener);
+    }
+    
+    // Initial interval
     this.pollingInterval = setInterval(() => {
       this.sync();
     }, 10000);
@@ -170,6 +186,10 @@ class SyncEngine {
     if (this.dexieHookListener) {
       db.syncQueue.hook('creating').unsubscribe(this.dexieHookListener);
       this.dexieHookListener = null;
+    }
+    if (this.visibilityListener) {
+      document.removeEventListener('visibilitychange', this.visibilityListener);
+      this.visibilityListener = null;
     }
     this.isStarted = false; // Allow re-registration on next login
   }

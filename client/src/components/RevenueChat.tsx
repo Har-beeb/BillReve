@@ -7,6 +7,7 @@ import { MessageSquare, X, Send, Loader2, User, Copy, Check, CheckCircle, Bot } 
 import { db } from '../db/db';
 import { chatWithRevenue } from '../api/ai';
 import { useAppStore } from '../store/useAppStore';
+import { supabase } from '../lib/supabase';
 import { useQuota } from '../hooks/useQuota';
 import { SendDocumentModal } from './SendDocumentModal';
 import { v4 as uuidv4 } from 'uuid';
@@ -136,6 +137,7 @@ export const RevenueChat: React.FC = () => {
     }
   }, [messages, isTyping]);
 
+  // @ts-ignore
   const stripSensitiveData = (data: any[], type: 'client' | 'invoice' | 'quote') => {
     return data.map(item => {
       if (type === 'client') {
@@ -164,30 +166,17 @@ export const RevenueChat: React.FC = () => {
   };
 
   const getAiContextData = async () => {
-    const rawInvoices = await db.invoices.filter(x => !x.deletedAt).toArray();
-    const rawQuotes = await db.quotes.filter(x => !x.deletedAt).toArray();
-    const rawClients = await db.clients.filter(x => !x.deletedAt).toArray();
-
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 90);
-    const cutoffTime = cutoff.getTime();
-
-    const recentInvoices = rawInvoices.filter(i => new Date(i.createdAt).getTime() >= cutoffTime);
-    const recentQuotes = rawQuotes.filter(q => new Date(q.createdAt).getTime() >= cutoffTime);
-    const oldInvoices = rawInvoices.filter(i => new Date(i.createdAt).getTime() < cutoffTime);
-    const oldQuotes = rawQuotes.filter(q => new Date(q.createdAt).getTime() < cutoffTime);
-
-    return {
-      invoices: stripSensitiveData(recentInvoices, 'invoice'),
-      quotes: stripSensitiveData(recentQuotes, 'quote'),
-      clients: stripSensitiveData(rawClients, 'client'),
-      historicalSummary: {
-        olderInvoicesCount: oldInvoices.length,
-        olderInvoicesTotalValue: oldInvoices.reduce((sum, i) => sum + (i.total || 0), 0),
-        olderQuotesCount: oldQuotes.length,
-        olderQuotesTotalValue: oldQuotes.reduce((sum, q) => sum + (q.total || 0), 0)
+    try {
+      const { data, error } = await supabase.rpc('get_ai_context');
+      if (error) {
+        console.error('RPC failed:', error);
+        return { aggregatedSummary: null };
       }
-    };
+      return { aggregatedSummary: data };
+    } catch (err) {
+      console.error('Failed to fetch AI context:', err);
+      return { aggregatedSummary: null };
+    }
   };
 
   const handleSend = async () => {
@@ -222,9 +211,6 @@ export const RevenueChat: React.FC = () => {
       // 3. Send to API
       incrementAiPrompts();
       let finalPrompt = userMsg;
-      if (contextData.historicalSummary && Object.keys(contextData.historicalSummary).length > 0) {
-        finalPrompt += `\n\n[System Note: Older data not shown in JSON context to save space: ${contextData.historicalSummary.olderInvoicesCount} invoices totaling ${contextData.historicalSummary.olderInvoicesTotalValue}, ${contextData.historicalSummary.olderQuotesCount} quotes totaling ${contextData.historicalSummary.olderQuotesTotalValue}]`;
-      }
 
       const result = await chatWithRevenue({
         prompt: finalPrompt,
@@ -446,9 +432,6 @@ export const RevenueChat: React.FC = () => {
       
       incrementAiPrompts();
       let finalPrompt = "The action was executed successfully! Acknowledge this briefly and ask if there is anything else I need help with. DO NOT include an 'action' object in your JSON response.";
-      if (contextData.historicalSummary && Object.keys(contextData.historicalSummary).length > 0) {
-        finalPrompt += `\n\n[System Note: Older data not shown in JSON context to save space: ${contextData.historicalSummary.olderInvoicesCount} invoices totaling ${contextData.historicalSummary.olderInvoicesTotalValue}, ${contextData.historicalSummary.olderQuotesCount} quotes totaling ${contextData.historicalSummary.olderQuotesTotalValue}]`;
-      }
 
       const result = await chatWithRevenue({
         prompt: finalPrompt,

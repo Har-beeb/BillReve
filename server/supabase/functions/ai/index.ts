@@ -332,11 +332,7 @@ Context / Goal of this campaign: ${campaignContext}`;
 async function handleInsights(aiClient: GoogleGenAI, body: any) {
   const schema = z.object({
     prompt: z.string().min(1),
-    data: z.object({
-      invoices: z.array(z.any()),
-      quotes: z.array(z.any()),
-      clients: z.array(z.any())
-    }),
+    data: z.object({ invoices: z.array(z.any()).optional(), quotes: z.array(z.any()).optional(), clients: z.array(z.any()).optional(), aggregatedSummary: z.any().optional() }),
     businessProfile: z.any().optional(),
     currentView: z.string().optional(),
     history: z.array(z.object({
