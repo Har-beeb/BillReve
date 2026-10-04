@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bot, FileText, Loader2, Sparkles } from 'lucide-react';
 import { generateCfoReport } from '../../api/ai';
 import { useAppStore } from '../../store/useAppStore';
+import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,11 +13,11 @@ interface AICfoReportProps {
     outstandingBalance: number;
     totalTaxCollected: number;
   };
-  invoices: any[];
-  clients: any[];
+  invoices: any[]; // Kept for prop compatibility but unused in payload
+  clients: any[];  // Kept for prop compatibility but unused in payload
 }
 
-export const AICfoReport: React.FC<AICfoReportProps> = ({ metrics, invoices, clients }) => {
+export const AICfoReport: React.FC<AICfoReportProps> = ({ metrics }) => {
   const { businessProfile } = useAppStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportText, setReportText] = useState<string | null>(null);
@@ -25,19 +26,17 @@ export const AICfoReport: React.FC<AICfoReportProps> = ({ metrics, invoices, cli
     try {
       setIsGenerating(true);
       
+      // Fetch compressed AI context from the server instead of sending heavy client arrays
+      const { data: aiContext, error: rpcError } = await supabase.rpc('get_ai_context');
+      
+      if (rpcError) {
+        console.error('Failed to fetch AI context:', rpcError);
+        throw new Error('Failed to gather financial context. Please try again.');
+      }
+
       const payload = {
         data: {
-          invoices: invoices.map(i => ({ 
-            id: i.localId, 
-            amount: i.total, 
-            status: i.status, 
-            clientId: i.clientId,
-            date: i.issuedAt
-          })),
-          clients: clients.map(c => ({
-            id: c.localId,
-            name: c.name
-          }))
+          aggregatedSummary: aiContext
         },
         businessProfile,
         metrics

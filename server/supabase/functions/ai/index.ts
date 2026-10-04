@@ -435,9 +435,7 @@ CRITICAL: You MUST respond ONLY with a valid JSON object matching this schema:
 async function handleCfoReport(aiClient: GoogleGenAI, body: any) {
   const schema = z.object({
     data: z.object({
-      invoices: z.array(z.any()),
-      quotes: z.array(z.any()).optional(),
-      clients: z.array(z.any())
+      aggregatedSummary: z.any().optional()
     }),
     businessProfile: z.any().optional(),
     metrics: z.object({
@@ -450,8 +448,7 @@ async function handleCfoReport(aiClient: GoogleGenAI, body: any) {
   const validatedData = schema.parse(body);
   const businessDataStr = JSON.stringify({
     metrics: validatedData.metrics,
-    invoices: validatedData.data.invoices,
-    clients: validatedData.data.clients
+    aggregatedSummary: validatedData.data.aggregatedSummary
   }, null, 2);
   const defaultCurrency = validatedData.businessProfile?.currency || 'USD';
 
