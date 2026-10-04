@@ -148,12 +148,19 @@ class SyncEngine {
     if (!this.visibilityListener) {
       this.visibilityListener = () => {
         if (document.hidden) {
-          if (this.pollingInterval) clearInterval(this.pollingInterval);
-          this.pollingInterval = setInterval(() => this.sync(), 60000);
+          // Stop polling entirely when the tab is hidden.
+          // A slow interval still causes Chrome to queue up all "missed" ticks
+          // and fire them in a rapid burst when the tab returns.
+          // Stopping completely + one immediate sync on return is cleaner.
+          if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+          }
         } else {
+          // Tab is visible again — do one immediate sync, then restart normal polling.
+          this.sync();
           if (this.pollingInterval) clearInterval(this.pollingInterval);
           this.pollingInterval = setInterval(() => this.sync(), 10000);
-          this.sync(); // Immediate sync on return
         }
       };
       document.addEventListener('visibilitychange', this.visibilityListener);
