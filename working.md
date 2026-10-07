@@ -1,5 +1,5 @@
 # BillReve — Technical Working Document
-*Last updated: 2026-09-21 | Version: 1.4.1*
+*Last updated: 2026-10-07 | Version: 1.5.0*
 
 > This document is the **authoritative internal reference** for BillReve. It is written for developers, AI agents, and collaborators continuing work on this project. It must be kept up-to-date after every significant change.
 

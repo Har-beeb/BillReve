@@ -18,7 +18,7 @@ export const CsvImportWizard: React.FC<CsvImportWizardProps> = ({ onClose, defau
   const [headers, setHeaders] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const { addClient, addInvoice } = useAppStore();
+  const { addClient, addInvoice, addQuote } = useAppStore();
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -90,6 +90,38 @@ export const CsvImportWizard: React.FC<CsvImportWizardProps> = ({ onClose, defau
             total: itemQty * itemPrice,
             amountPaid: 0,
             isRecurring: false,
+            notes: row['Notes'] || row['notes'] || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            syncStatus: 'pending'
+          });
+          importedCount++;
+        }
+      } else if (importType === 'quotes') {
+        for (const row of csvData) {
+          if (!row['Quote Number'] && !row['quote_number']) continue;
+          const itemQty = parseFloat(row['Item 1 Quantity'] || row['quantity'] || '1');
+          const itemPrice = parseFloat(row['Item 1 Price'] || row['price'] || '0');
+          addQuote({
+            localId: uuidv4(),
+            clientId: uuidv4(),
+            quoteNumber: row['Quote Number'] || row['quote_number'] || `QT-${Math.floor(Math.random() * 1000)}`,
+            issuedAt: row['Issue Date'] || row['issue_date'] || new Date().toISOString().split('T')[0],
+            expiresAt: row['Valid Until'] || row['valid_until'] || new Date().toISOString().split('T')[0],
+            status: 'DRAFT',
+            currency: row['Currency'] || row['currency'] || 'USD',
+            items: [
+              {
+                id: uuidv4(),
+                description: row['Item 1 Description'] || row['description'] || 'Imported Item',
+                quantity: itemQty,
+                unitPrice: itemPrice,
+                amount: itemQty * itemPrice
+              }
+            ],
+            subtotal: itemQty * itemPrice,
+            taxes: [],
+            total: itemQty * itemPrice,
             notes: row['Notes'] || row['notes'] || '',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

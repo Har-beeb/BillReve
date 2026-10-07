@@ -5,7 +5,15 @@ import { Zap, ShieldCheck, Sparkles } from 'lucide-react';
 
 const updates = [
   {
-    version: `v${import.meta.env.VITE_APP_VERSION || '1.4.1'}`,
+    version: `v${import.meta.env.VITE_APP_VERSION || '1.5.0'}`,
+    date: 'October 7, 2026',
+    title: 'UI Polish, Dynamic Dashboards & Social Support',
+    description: 'We refined the user interface to give you the sleekest experience yet. From smooth new data visualizations to smarter campaigns and expanded support channels.',
+    features: ['Dynamic Area Chart for Revenue', 'Interactive Month Toggle for Dashboard', 'Campaigns Recipient Pagination', 'Instagram Social Support Added', 'Desktop & Mobile Scrollbar UX Fixes'],
+    icon: <Sparkles className="text-purple-500" size={24} />
+  },
+  {
+    version: 'v1.4.1',
     date: 'September 10, 2026',
     title: 'Payments Refactor & Real-time Sync Upgrades',
     description: 'A massive overhaul introducing a dedicated Payments architecture for manual transfers, PENDING status workflows, and advanced timeline-based email reminders.',

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { Mail, Send, Loader2, Sparkles, CheckSquare, Square } from 'lucide-react';
+import { Mail, Send, Loader2, Sparkles, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { ProFeature } from '../components/ui/ProFeature';
 import { supabase } from '../lib/supabase';
@@ -21,6 +21,12 @@ const Campaigns: React.FC = () => {
   
   const [isSending, setIsSending] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(clients.length / itemsPerPage);
+  const paginatedClients = clients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const toggleClientSelection = (clientId: string) => {
     const newSelection = new Set(selectedClients);
@@ -293,7 +299,7 @@ const Campaigns: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {clients.map(client => {
+                  {paginatedClients.map(client => {
                     const isSelected = selectedClients.has(client.localId);
                     const hasEmail = Boolean(client.email);
                     
@@ -318,6 +324,28 @@ const Campaigns: React.FC = () => {
                 </div>
               )}
             </div>
+            
+            {totalPages > 1 && (
+              <div className="p-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

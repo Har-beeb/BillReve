@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SEO } from '../../components/SEO';
-import { Mail, MapPin, Send, MessageSquare, Globe } from 'lucide-react';
+import { Mail, MapPin, Send, MessageSquare, AtSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 
@@ -103,14 +103,9 @@ const Contact: React.FC = () => {
           <div>
             <h3 className="font-bold text-slate-900 dark:text-white mb-4">Follow our journey</h3>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-purple-100 hover:text-purple-600 transition-colors">
-                <Globe size={20} />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-purple-100 hover:text-purple-600 transition-colors">
-                <Globe size={20} />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-purple-100 hover:text-purple-600 transition-colors">
-                <Globe size={20} />
+              <a href="https://instagram.com/billreve.app" target="_blank" rel="noopener noreferrer" className="w-auto px-4 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-2 text-slate-500 hover:bg-pink-100 hover:text-pink-600 transition-colors font-medium text-sm">
+                <AtSign size={20} />
+                @billreve.app
               </a>
             </div>
           </div>

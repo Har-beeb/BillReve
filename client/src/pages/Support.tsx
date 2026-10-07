@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../components/ui';
 import { Logo } from '../components/ui/Logo';
-import { Mail, Copy } from 'lucide-react';
+import { Mail, Copy, AtSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Support: React.FC = () => {
@@ -12,7 +12,7 @@ const Support: React.FC = () => {
         <p className="text-slate-500 dark:text-slate-400">Need help? We're here for you.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer bg-purple-50/50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-900/30">
           <div className="w-12 h-12 bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400 rounded-full flex items-center justify-center mb-4">
             <Mail size={24} />
@@ -30,6 +30,24 @@ const Support: React.FC = () => {
           >
             support@billreve.com <Copy size={14} />
           </button>
+        </Card>
+
+        <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer bg-pink-50/50 dark:bg-pink-900/10 border-pink-100 dark:border-pink-900/30">
+          <div className="w-12 h-12 bg-pink-100 text-pink-600 dark:bg-pink-900/50 dark:text-pink-400 rounded-full flex items-center justify-center mb-4">
+            <AtSign size={24} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Social Support</h3>
+          <p className="text-slate-500 text-sm mb-4">
+            Reach out to us via direct message on Instagram for quick assistance.
+          </p>
+          <a 
+            href="https://instagram.com/billreve.app" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-pink-600 dark:text-pink-400 font-semibold text-sm flex items-center gap-1 hover:underline"
+          >
+            @billreve.app
+          </a>
         </Card>
       </div>
 

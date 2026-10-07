@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { Trash2, RefreshCw, AlertCircle, CheckSquare } from 'lucide-react';
 import { EmptyState, LongPressable } from '../components/ui';
+import { Pagination } from '../components/Pagination';
 import { v4 as uuidv4 } from 'uuid';
 import { useSelection } from '../hooks/useSelection';
 import { useAppStore } from '../store/useAppStore';
@@ -44,7 +45,13 @@ const Trash: React.FC = () => {
   const deletedInvoices = useLiveQuery(() => db.invoices.filter(i => !!i.deletedAt).toArray()) || [];
   const deletedQuotes = useLiveQuery(() => db.quotes.filter(q => !!q.deletedAt).toArray()) || [];
 
-  const allItems = [...deletedClients, ...deletedInvoices, ...deletedQuotes];
+  const allItems = [...deletedClients, ...deletedInvoices, ...deletedQuotes].sort((a, b) => new Date(b.deletedAt as string).getTime() - new Date(a.deletedAt as string).getTime());
+  
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(allItems.length / itemsPerPage);
+  const paginatedItems = allItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const { selectedIds, toggleSelect, clearSelection, setSelectedIds } = useSelection(allItems, (item: any) => item.localId);
 
   const [processingId, setProcessingId] = React.useState<string | null>(null);
@@ -328,10 +335,22 @@ const Trash: React.FC = () => {
           </div>
           
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {deletedClients.map(client => renderItem(client, 'CLIENT', client.name, new Date(client.deletedAt as string).toLocaleDateString()))}
-            {deletedInvoices.map(invoice => renderItem(invoice, 'INVOICE', invoice.invoiceNumber || 'Draft', new Date(invoice.deletedAt as string).toLocaleDateString()))}
-            {deletedQuotes.map(quote => renderItem(quote, 'QUOTE', quote.quoteNumber || 'Draft', new Date(quote.deletedAt as string).toLocaleDateString()))}
+            {paginatedItems.map(item => {
+              if ('invoiceNumber' in item) return renderItem(item, 'INVOICE', item.invoiceNumber || 'Draft', new Date(item.deletedAt as string).toLocaleDateString());
+              if ('quoteNumber' in item) return renderItem(item, 'QUOTE', item.quoteNumber || 'Draft', new Date(item.deletedAt as string).toLocaleDateString());
+              return renderItem(item, 'CLIENT', (item as any).name || 'Unknown', new Date(item.deletedAt as string).toLocaleDateString());
+            })}
           </div>
+          
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
+              <Pagination 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </div>
       )}
 

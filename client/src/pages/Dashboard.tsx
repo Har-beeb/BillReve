@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Clock, FileText, Plus, Zap, BarChart2, PieChart } from 'lucide-react';
+import { TrendingUp, Clock, FileText, Plus, Zap, BarChart2, PieChart, ChevronDown } from 'lucide-react';
+import { format, subMonths } from 'date-fns';
 import { Card, Badge } from '../components/ui';
 import { SplitButton } from '../components/ui/SplitButton';
 import { AiDraftModal } from '../components/AiDraftModal';
@@ -33,6 +34,7 @@ const Dashboard: React.FC = () => {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiModalDefaultTab, setAiModalDefaultTab] = useState<'text' | 'document'>('text');
   const [aiDocumentType, setAiDocumentType] = useState<'QUOTE' | 'INVOICE'>('QUOTE');
+  const [selectedMonthOffset, setSelectedMonthOffset] = useState(0);
 
   const handleScroll = () => {
     if (carouselRef.current) {
@@ -53,51 +55,63 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  const selectedDate = subMonths(new Date(), selectedMonthOffset);
+  const selectedMonth = selectedDate.getMonth();
+  const selectedYear = selectedDate.getFullYear();
 
-  const isCurrentMonth = (dateString: string) => {
+  const isSelectedMonth = (dateString: string) => {
     const d = new Date(dateString);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
   };
 
-  // Current Month Calculations
-  const currentMonthInvoices = invoices.filter(i => isCurrentMonth(i.updatedAt || i.createdAt));
+  // Selected Month Calculations
+  const selectedMonthInvoices = invoices.filter(i => isSelectedMonth(i.updatedAt || i.createdAt));
+  const selectedMonthQuotes = quotes.filter(q => isSelectedMonth(q.updatedAt || q.createdAt));
 
-  const paidInvoices = currentMonthInvoices.filter(i => i.status === 'PAID');
-  const outstandingInvoices = currentMonthInvoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status));
-  const overdueInvoices = currentMonthInvoices.filter(i => i.status === 'OVERDUE');
+  const paidInvoices = selectedMonthInvoices.filter(i => i.status === 'PAID');
+  const outstandingInvoices = selectedMonthInvoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status));
+  const overdueInvoices = selectedMonthInvoices.filter(i => i.status === 'OVERDUE');
 
   const totalRevenue = paidInvoices.reduce((sum, i) => sum + i.total, 0) + 
-                       currentMonthInvoices.filter(i => i.status === 'PARTIAL').reduce((sum, i) => sum + i.amountPaid, 0);
+                       selectedMonthInvoices.filter(i => i.status === 'PARTIAL').reduce((sum, i) => sum + i.amountPaid, 0);
   
   const outstandingAmount = outstandingInvoices.reduce((sum, i) => sum + (i.total - i.amountPaid), 0);
   const overdueAmount = overdueInvoices.reduce((sum, i) => sum + (i.total - i.amountPaid), 0);
 
-  // MRR Growth
-  const lastMonthRevenue = invoices
+  // MRR Growth vs Previous Month
+  const prevMonthDate = subMonths(new Date(), selectedMonthOffset + 1);
+  const prevMonthRevenue = invoices
     .filter(i => {
       const d = new Date(i.updatedAt || i.createdAt);
-      return i.status === 'PAID' && d.getMonth() === (currentMonth === 0 ? 11 : currentMonth - 1) && 
-             d.getFullYear() === (currentMonth === 0 ? currentYear - 1 : currentYear);
+      return i.status === 'PAID' && d.getMonth() === prevMonthDate.getMonth() && 
+             d.getFullYear() === prevMonthDate.getFullYear();
     })
     .reduce((sum, i) => sum + i.total, 0);
 
-  const mrrGrowth = lastMonthRevenue > 0 
-    ? ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+  const mrrGrowth = prevMonthRevenue > 0 
+    ? ((totalRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 
     : (totalRevenue > 0 ? 100 : 0);
 
-  // Line Chart Data (Days of Current Month)
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  // Line Chart Data (Days of Selected Month)
+  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
   const lineChartData = Array.from({ length: daysInMonth }).map((_, i) => {
     const day = i + 1;
+    const dateObj = new Date(selectedYear, selectedMonth, day);
     const dailyRevenue = paidInvoices
       .filter(inv => {
         const d = new Date(inv.updatedAt || inv.createdAt);
         return d.getDate() === day;
       })
       .reduce((sum, inv) => sum + inv.total, 0);
-    return { name: day.toString(), revenue: dailyRevenue };
+    return { name: day.toString(), fullDate: dateObj.toISOString(), revenue: dailyRevenue };
+  });
+
+  const monthOptions = Array.from({ length: 12 }).map((_, i) => {
+    const d = subMonths(new Date(), i);
+    return {
+      value: i,
+      label: i === 0 ? 'This Month' : i === 1 ? 'Last Month' : format(d, 'MMM yyyy')
+    };
   });
 
   const pieChartData = [
@@ -267,9 +281,9 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Accepted Quotes</h3>
               <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">
-                {quotes.filter(q => q.status === 'ACCEPTED').length}
+                {selectedMonthQuotes.filter(q => q.status === 'ACCEPTED').length}
               </div>
-              <div className="mt-1 truncate text-xs text-slate-500">Total quotes accepted</div>
+              <div className="mt-1 truncate text-xs text-slate-500">Quotes accepted {selectedMonthOffset === 0 ? 'this month' : 'selected month'}</div>
             </div>
           </div>
         </Card>
@@ -312,8 +326,17 @@ const Dashboard: React.FC = () => {
                 </button>
               </div>
               <div className="relative shrink-0">
-                <div className="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm py-1.5 px-3 rounded-md">
-                  <span className="font-medium text-slate-700 dark:text-slate-300">This Month</span>
+                <div className="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm py-1.5 pl-3 pr-8 rounded-md relative cursor-pointer hover:border-slate-300 transition-colors">
+                  <select 
+                    className="appearance-none bg-transparent font-medium text-slate-700 dark:text-slate-300 outline-none cursor-pointer w-full z-10"
+                    value={selectedMonthOffset}
+                    onChange={(e) => setSelectedMonthOffset(Number(e.target.value))}
+                  >
+                    {monthOptions.map(opt => (
+                      <option key={opt.value} value={opt.value} className="text-slate-900">{opt.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                 </div>
               </div>
             </div>
@@ -330,7 +353,7 @@ const Dashboard: React.FC = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} minTickGap={20} />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
@@ -339,7 +362,12 @@ const Dashboard: React.FC = () => {
                   />
                   <RechartsTooltip 
                     formatter={(value: any) => formatMoney(value as number)}
-                    labelFormatter={(label) => `Day ${label}`}
+                    labelFormatter={(label, payload) => {
+                      if (payload && payload.length > 0 && payload[0].payload.fullDate) {
+                        return format(new Date(payload[0].payload.fullDate), 'EEEE, MMMM d, yyyy');
+                      }
+                      return `Day ${label}`;
+                    }}
                     contentStyle={{ backgroundColor: '#1e293b', color: '#f8fafc', borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
                     itemStyle={{ color: '#e2e8f0' }}
                   />
