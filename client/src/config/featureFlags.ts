@@ -1,3 +1,3 @@
 export const FEATURE_FLAGS = {
-  PAYSTACK_ENABLED: false,
+  PAYSTACK_ENABLED: true,
 };

@@ -201,15 +201,15 @@ const Upgrade: React.FC = () => {
                         <div className="space-y-3">
                           <div>
                             <p className="text-xs text-slate-400 mb-0.5">Bank Name</p>
-                            <p className="font-semibold text-slate-900 dark:text-white">GTBank</p>
+                            <p className="font-semibold text-slate-900 dark:text-white">Opay</p>
                           </div>
                           <div>
                             <p className="text-xs text-slate-400 mb-0.5">Account Number</p>
-                            <p className="font-semibold text-slate-900 dark:text-white text-lg tracking-wider">0162562070</p>
+                            <p className="font-semibold text-slate-900 dark:text-white text-lg tracking-wider">8104473640</p>
                           </div>
                           <div>
                             <p className="text-xs text-slate-400 mb-0.5">Account Name</p>
-                            <p className="font-semibold text-slate-900 dark:text-white">Issa Habeebullah O.</p>
+                            <p className="font-semibold text-slate-900 dark:text-white">Reve App Service</p>
                           </div>
                         </div>
                       </div>
