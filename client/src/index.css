@@ -249,3 +249,18 @@
   * { scrollbar-width: none; -ms-overflow-style: none; }
   *::-webkit-scrollbar { display: none; }
 }
+
+/* Sidebar scrollbar hide until hover */
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: var(--color-slate-300);
+}
+.dark .sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: var(--color-slate-600);
+}
+
+.scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
