@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { PaystackButton } from 'react-paystack';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { CheckCircle2, AlertCircle, Download } from 'lucide-react';
+import { SEO } from '../components/SEO';
 import { formatMoney } from '../utils/formatters';
 import { db } from '../db/db';
 import { useAppStore } from '../store/useAppStore';
@@ -256,7 +257,13 @@ const PublicInvoice: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+    <>
+      <SEO 
+        title={`Invoice ${invoice.invoiceNumber || invoice.localId.slice(0, 8)}`} 
+        description={`Invoice from ${profile?.businessName || 'us'}`}
+        image="https://billreve.app/og-invoice.png"
+      />
+      <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto space-y-8" style={typographyStyle}>
         
         {/* Header Actions */}
@@ -501,7 +508,7 @@ const PublicInvoice: React.FC = () => {
 
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

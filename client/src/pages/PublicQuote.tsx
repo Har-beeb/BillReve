@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AlertCircle, CheckCircle2, Download, MessageSquare } from 'lucide-react';
+import { SEO } from '../components/SEO';
 import { formatMoney } from '../utils/formatters';
 import { db } from '../db/db';
 import toast from 'react-hot-toast';
@@ -263,7 +264,13 @@ const PublicQuote: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+    <>
+      <SEO 
+        title={`Quote ${quote.quoteNumber || quote.localId.slice(0, 8)}`} 
+        description={`Quote from ${profile?.businessName || 'us'}`}
+        image="https://billreve.app/og-quote.png"
+      />
+      <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto space-y-8">
         
         {/* Header Actions */}
@@ -540,6 +547,7 @@ const PublicQuote: React.FC = () => {
       )}
 
     </div>
+    </>
   );
 };
 

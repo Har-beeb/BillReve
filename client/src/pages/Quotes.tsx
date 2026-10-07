@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Plus, Download, RefreshCw, FileText, MessageSquare, Link } from 'lucide-react';
+import { Search, Plus, Download, RefreshCw, FileText, MessageSquare, Link, ExternalLink } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Badge, ProFeature } from '../components/ui';
 import { formatMoney, formatDate } from '../utils/formatters';
@@ -762,9 +762,18 @@ const Quotes: React.FC = () => {
         title="Quote Details"
         actions={
           selectedQuote && (
-            <ActionMenu 
-              items={[
-                { label: 'Download PDF', onClick: () => handleDownloadPdf(selectedQuote) },
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.open(`/quote/${selectedQuote.localId}`, '_blank')}
+                className="px-3 py-1.5 text-xs font-semibold bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center gap-1.5"
+                title="View Live Public Link"
+              >
+                <ExternalLink size={14} />
+                <span className="hidden sm:inline">Live Preview</span>
+              </button>
+              <ActionMenu 
+                items={[
+                  { label: 'Download PDF', onClick: () => handleDownloadPdf(selectedQuote) },
                 ...(selectedQuote.status === 'DRAFT' ? [{ label: 'Edit Quote', onClick: () => { navigate('/quotes/new', { state: { quote: selectedQuote } }); setSelectedQuote(null); } }] : []),
                 ...((selectedQuote.status === 'SENT' || selectedQuote.status === 'ACCEPTED') ? [{ label: 'Convert to Invoice', onClick: () => { 
                    const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = selectedQuote;
@@ -789,6 +798,7 @@ const Quotes: React.FC = () => {
                 { label: 'Send / Share', onClick: () => { setQuoteToSend(selectedQuote); setSendModalOpen(true); setSelectedQuote(null); } }
               ]} 
             />
+            </div>
           )
         }
       >

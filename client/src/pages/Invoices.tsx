@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Plus, Download, FileText, ReceiptText, MessageSquare, Link } from 'lucide-react';
+import { Search, Plus, Download, FileText, ReceiptText, MessageSquare, Link, ExternalLink } from 'lucide-react';
 import { Card, Badge, ProFeature, EmptyState } from '../components/ui';
 import { formatMoney, formatDate } from '../utils/formatters';
 import { Pagination } from '../components/Pagination';
@@ -693,9 +693,18 @@ const Invoices: React.FC = () => {
         title="Invoice Details"
         actions={
           selectedInvoice && (
-            <ActionMenu 
-              items={[
-                { label: selectedInvoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(selectedInvoice) },
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.open(`/pay/${selectedInvoice.localId}`, '_blank')}
+                className="px-3 py-1.5 text-xs font-semibold bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center gap-1.5"
+                title="View Live Public Link"
+              >
+                <ExternalLink size={14} />
+                <span className="hidden sm:inline">Live Preview</span>
+              </button>
+              <ActionMenu 
+                items={[
+                  { label: selectedInvoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(selectedInvoice) },
                 ...(selectedInvoice.status === 'DRAFT' ? [{ label: 'Edit Invoice', onClick: () => { navigate('/invoices/new', { state: { invoice: selectedInvoice } }); setSelectedInvoice(null); } }] : []),
                 ...((selectedInvoice.status === 'PARTIAL' || selectedInvoice.status === 'OVERDUE' || selectedInvoice.status === 'SENT' || selectedInvoice.status === 'PENDING') ? [
                   { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(selectedInvoice) }
@@ -709,6 +718,7 @@ const Invoices: React.FC = () => {
                 ] : [])
               ]} 
             />
+            </div>
           )
         }
       >
