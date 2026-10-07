@@ -259,7 +259,7 @@ const PublicInvoice: React.FC = () => {
   return (
     <>
       <SEO 
-        title={`Invoice ${invoice.invoiceNumber || invoice.localId.slice(0, 8)}`} 
+        title={`Invoice ${invoice.invoice_number || invoice.local_id?.slice(0, 8) || invoice.id?.slice(0, 8)}`} 
         description={`Invoice from ${profile?.businessName || 'us'}`}
         image="https://billreve.app/og-invoice.png"
       />
@@ -311,7 +311,7 @@ const PublicInvoice: React.FC = () => {
                 </div>
               )}
               <h1 className={`text-4xl font-bold tracking-tight ${themeStyles.title}`}>Invoice</h1>
-              <p className={`mt-2 font-medium ${headerSubColor}`}>#{invoice.invoice_number || invoice.local_id.slice(0,8)}</p>
+              <p className={`mt-2 font-medium ${headerSubColor}`}>#{invoice.invoice_number || invoice.local_id?.slice(0,8)}</p>
             </div>
             <div className={`text-right ${headerSubColor}`}>
               <p className={`font-bold text-lg mb-1 ${headerTextColor}`}>{profile?.name || 'Business Name'}</p>

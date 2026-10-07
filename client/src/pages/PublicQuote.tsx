@@ -266,7 +266,7 @@ const PublicQuote: React.FC = () => {
   return (
     <>
       <SEO 
-        title={`Quote ${quote.quoteNumber || quote.localId.slice(0, 8)}`} 
+        title={`Quote ${quote.quote_number || quote.local_id?.slice(0, 8) || quote.id?.slice(0, 8)}`} 
         description={`Quote from ${profile?.businessName || 'us'}`}
         image="https://billreve.app/og-quote.png"
       />
@@ -311,7 +311,7 @@ const PublicQuote: React.FC = () => {
                 </div>
               )}
               <h1 className={`text-4xl font-bold tracking-tight ${themeStyles.title}`}>Quote</h1>
-              <p className={`mt-2 font-medium ${headerSubColor}`}>#{quote.quote_number || quote.local_id.slice(0,8)}</p>
+              <p className={`mt-2 font-medium ${headerSubColor}`}>#{quote.quote_number || quote.local_id?.slice(0,8)}</p>
             </div>
             <div className={`text-right ${headerSubColor}`}>
               <p className={`font-bold text-lg mb-1 ${headerTextColor}`}>{profile?.name || 'Business Name'}</p>
