@@ -212,6 +212,14 @@ const Upgrade: React.FC = () => {
                             <p className="font-semibold text-slate-900 dark:text-white">Reve App Service</p>
                           </div>
                         </div>
+                        <div className="mt-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-lg flex items-start gap-2">
+                          <div className="shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                          </div>
+                          <p className="text-xs text-indigo-800 dark:text-indigo-300 leading-relaxed">
+                            <strong className="font-bold">Important:</strong> Please use your <strong className="font-bold">Business Name</strong> as the transfer description/narration so we can quickly identify your payment and activate your account.
+                          </p>
+                        </div>
                       </div>
                       <button 
                         onClick={() => setIsPending(true)}
