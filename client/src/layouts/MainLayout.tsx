@@ -430,7 +430,7 @@ const MainLayout: React.FC = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto pb-16 md:pb-0 relative scrollbar-gutter-stable">
+        <main className="flex-1 overflow-y-auto pb-16 md:pb-6 relative scrollbar-gutter-stable">
           <div key={location.pathname} className="p-4 md:p-6 flex-1 mx-auto w-full max-w-7xl animate-page-transition min-w-0">
             <Outlet />
           </div>

@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="w-full space-y-6 pb-20 md:pb-0 overflow-x-hidden">
+    <div className="w-full space-y-6 pb-20 md:pb-4 overflow-hidden">
       <GettingStartedChecklist />
       
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
