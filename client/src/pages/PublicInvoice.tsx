@@ -508,6 +508,7 @@ const PublicInvoice: React.FC = () => {
 
         </div>
       </div>
+    </div>
     </>
   );
 };
