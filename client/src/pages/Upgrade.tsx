@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Star, Check, Zap, Palette, FileSpreadsheet, Bot, Send } from 'lucide-react';
-import { PaystackButton } from 'react-paystack';
+// import { PaystackButton } from 'react-paystack';
 import { useAppStore } from '../store/useAppStore';
 import { FEATURE_FLAGS } from '../config/featureFlags';
 
@@ -161,13 +161,13 @@ const Upgrade: React.FC = () => {
                       onClick={() => setPaymentMethod('paystack')}
                       className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${paymentMethod === 'paystack' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-700 dark:text-purple-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
                     >
-                      Card (Paystack)
+                      Pay Online
                     </button>
                     <button 
                       onClick={() => setPaymentMethod('transfer')}
                       className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${paymentMethod === 'transfer' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-700 dark:text-purple-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
                     >
-                      Bank Transfer
+                      Manual Transfer
                     </button>
                   </div>
                 )}
@@ -175,7 +175,7 @@ const Upgrade: React.FC = () => {
                 {!FEATURE_FLAGS.PAYSTACK_ENABLED && !isProUser && (
                   <div className="w-full p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl mb-6">
                     <p className="text-sm font-medium text-purple-800 dark:text-purple-300 text-center">
-                      Card payments (Paystack) are temporarily unavailable while we complete our business verification. Please use Bank Transfer.
+                      Card payments are temporarily unavailable while we complete our business verification. Please use Manual Transfer.
                     </p>
                   </div>
                 )}
@@ -190,10 +190,12 @@ const Upgrade: React.FC = () => {
                 ) : (
                   <div className="w-full">
                     {FEATURE_FLAGS.PAYSTACK_ENABLED && paymentMethod === 'paystack' ? (
-                      <PaystackButton 
-                        {...componentProps} 
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-[0_8px_30px_rgb(147,51,234,0.3)] transition-all active:scale-[0.98] text-lg"
-                      />
+                      <button 
+                        disabled
+                        className="w-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold py-4 px-6 rounded-xl cursor-not-allowed text-lg"
+                      >
+                        Initializing Gateway...
+                      </button>
                     ) : (
                     <div className="w-full text-left">
                       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4">

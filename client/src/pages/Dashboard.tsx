@@ -11,7 +11,7 @@ import { formatMoney } from '../utils/formatters';
 import { useAppStore } from '../store/useAppStore';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 /**
  * Dashboard Component
@@ -322,7 +322,13 @@ const Dashboard: React.FC = () => {
           {chartType === 'bar' ? (
             <div className="flex-1 mt-4 h-64 min-h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={lineChartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                <AreaChart data={lineChartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#9333ea" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#9333ea" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
                   <YAxis 
@@ -334,10 +340,20 @@ const Dashboard: React.FC = () => {
                   <RechartsTooltip 
                     formatter={(value: any) => formatMoney(value as number)}
                     labelFormatter={(label) => `Day ${label}`}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                    contentStyle={{ backgroundColor: '#1e293b', color: '#f8fafc', borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
+                    itemStyle={{ color: '#e2e8f0' }}
                   />
-                  <Line type="monotone" dataKey="revenue" stroke="var(--color-purple-600)" strokeWidth={3} dot={{ r: 3, fill: "var(--color-purple-600)" }} activeDot={{ r: 6 }} />
-                </LineChart>
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#9333ea" 
+                    strokeWidth={3} 
+                    fillOpacity={1} 
+                    fill="url(#colorRevenue)" 
+                    dot={false} 
+                    activeDot={{ r: 6, strokeWidth: 2, fill: "#fff", stroke: "#9333ea" }} 
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           ) : (

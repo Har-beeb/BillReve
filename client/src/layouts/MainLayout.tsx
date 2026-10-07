@@ -472,6 +472,7 @@ const MainLayout: React.FC = () => {
                       onClick={(e) => {
                         if (isLocked) {
                           e.preventDefault();
+                          setIsMobileMenuOpen(false);
                           navigate('/upgrade');
                         } else {
                           setIsMobileMenuOpen(false);
@@ -536,6 +537,7 @@ const MainLayout: React.FC = () => {
                     onClick={(e) => {
                       if (isLocked) {
                         e.preventDefault();
+                        setIsMoreMenuOpen(false);
                         navigate('/upgrade');
                       } else {
                         setIsMoreMenuOpen(false);
