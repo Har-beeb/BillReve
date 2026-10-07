@@ -205,7 +205,7 @@ const Upgrade: React.FC = () => {
                           </div>
                           <div>
                             <p className="text-xs text-slate-400 mb-0.5">Account Number</p>
-                            <p className="font-semibold text-slate-900 dark:text-white text-lg tracking-wider">8104473640</p>
+                            <p className="font-semibold text-slate-900 dark:text-white text-lg tracking-wider">6507059936</p>
                           </div>
                           <div>
                             <p className="text-xs text-slate-400 mb-0.5">Account Name</p>
