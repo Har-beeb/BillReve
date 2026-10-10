@@ -316,7 +316,7 @@ const Reports: React.FC = () => {
                   tick={{ fill: '#64748b', fontSize: 12 }} 
                   tickFormatter={(value: any) => {
                     const major = value / 100;
-                    return major >= 1000 ? `${(major/1000).toFixed(1)}k` : major;
+                    return major >= 1000 ? `${(major/1000).toFixed(1)}k` : major.toString();
                   }}
                 />
                 <Tooltip 
@@ -401,3 +401,4 @@ const Reports: React.FC = () => {
 };
 
 export default Reports;
+
