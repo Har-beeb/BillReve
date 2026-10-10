@@ -49,7 +49,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
           <div className="relative group">
             <select 
               className="appearance-none w-full p-3.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white cursor-pointer outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all group-hover:border-slate-300 dark:group-hover:border-slate-700 font-medium"
-              value={clientId}
+              value={clientId || ""}
               onChange={(e) => {
                 if (e.target.value === 'NEW') setIsCreatingClient(true);
                 else setClientId(e.target.value);
@@ -136,7 +136,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
               <div className="relative group">
                 <select 
                   className="appearance-none w-full p-3.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white cursor-pointer outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all group-hover:border-slate-300 dark:group-hover:border-slate-700"
-                  value={bankAccountId}
+                  value={bankAccountId || ""}
                   onChange={(e) => setBankAccountId(e.target.value)}
                 >
                   <option value="">Do not include bank details</option>

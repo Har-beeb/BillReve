@@ -67,11 +67,11 @@ export const CsvImportWizard: React.FC<CsvImportWizardProps> = ({ onClose, defau
         for (const row of csvData) {
           if (!row['Invoice Number'] && !row['invoice_number']) continue;
           const itemQty = parseFloat(row['Item 1 Quantity'] || row['quantity'] || '1');
-          const itemPrice = parseFloat(row['Item 1 Price'] || row['price'] || '0');
+          const itemPrice = Math.round(parseFloat(row['Item 1 Price'] || row['price'] || '0') * 100);
           addInvoice({
             localId: uuidv4(),
             clientId: uuidv4(), // Need to map to real client ideally
-            invoiceNumber: row['Invoice Number'] || row['invoice_number'] || `INV-${Math.floor(Math.random() * 1000)}`,
+            invoiceNumber: row['Invoice Number'] || row['invoice_number'] || `DRAFT-INV-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
             issuedAt: row['Issue Date'] || row['issue_date'] || new Date().toISOString().split('T')[0],
             dueDate: row['Due Date'] || row['due_date'] || new Date().toISOString().split('T')[0],
             status: 'DRAFT',
@@ -101,7 +101,7 @@ export const CsvImportWizard: React.FC<CsvImportWizardProps> = ({ onClose, defau
         for (const row of csvData) {
           if (!row['Quote Number'] && !row['quote_number']) continue;
           const itemQty = parseFloat(row['Item 1 Quantity'] || row['quantity'] || '1');
-          const itemPrice = parseFloat(row['Item 1 Price'] || row['price'] || '0');
+          const itemPrice = Math.round(parseFloat(row['Item 1 Price'] || row['price'] || '0') * 100);
           addQuote({
             localId: uuidv4(),
             clientId: uuidv4(),

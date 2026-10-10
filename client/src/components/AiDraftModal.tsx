@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Wand2, UploadCloud, FileText, Loader2 } from 'lucide-react';
-import { generateAiQuote } from '../api/ai';
+import { generateAiQuote } from '../services/ai';
 import { useAppStore } from '../store/useAppStore';
 import { useNavigate } from 'react-router-dom';
 

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 export interface Notification {
   id: string;
-  user_id: string;
+  organization_id: string;
   title: string;
   message: string;
   type: 'QUOTE_ACCEPTED' | 'QUOTE_DECLINED' | 'QUOTE_COUNTERED' | 'INVOICE_PAID' | 'INVOICE_PARTIAL' | string;
@@ -29,6 +29,9 @@ export function useNotifications() {
           if (isMounted) setLoading(false);
           return;
         }
+        const { data: orgMember } = await supabase.from('organization_members').select('organization_id').eq('user_id', session.user.id).limit(1).single();
+        if (!orgMember) return;
+        const orgId = orgMember.organization_id;
 
         const { data, error } = await supabase
           .from('notifications')
@@ -53,7 +56,7 @@ export function useNotifications() {
               event: '*',
               schema: 'public',
               table: 'notifications',
-              filter: `user_id=eq.${session.user.id}`
+              filter: `organization_id=eq.${orgId}`
             },
             (payload: any) => {
               if (payload.eventType === 'INSERT') {
@@ -110,11 +113,14 @@ export function useNotifications() {
   const clearAll = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    const { data: orgMember } = await supabase.from('organization_members').select('organization_id').eq('user_id', session.user.id).limit(1).single();
+    if (!orgMember) return;
+    const orgId = orgMember.organization_id;
     
     setNotifications([]);
     setUnreadCount(0);
     
-    await supabase.from('notifications').delete().eq('user_id', session.user.id);
+    await supabase.from('notifications').delete().eq('organization_id', orgId);
   };
 
   return {

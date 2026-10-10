@@ -97,28 +97,41 @@ class SyncEngine {
     this.isStarted = true;
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session?.user) return;
+    
+    const { data: orgMember } = await supabase.from('organization_members').select('organization_id').eq('user_id', session.user.id).limit(1).single();
+    if (!orgMember) return;
+    const orgId = orgMember.organization_id;
+    
+    await syncServerTime();
     
     if (!this.channel) {
       this.channel = supabase
         .channel(`user-changes-${session.user.id}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'clients', filter: `user_id=eq.${session.user.id}` },
+          { event: '*', schema: 'public', table: 'clients', filter: `organization_id=eq.${orgId}` },
           () => {
             this.sync();
           }
         )
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'invoices', filter: `user_id=eq.${session.user.id}` },
+          { event: '*', schema: 'public', table: 'invoices', filter: `organization_id=eq.${orgId}` },
           () => {
             this.sync();
           }
         )
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'quotes', filter: `user_id=eq.${session.user.id}` },
+          { event: '*', schema: 'public', table: 'quotes', filter: `organization_id=eq.${orgId}` },
+          () => {
+            this.sync();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'recurring_schedules', filter: `organization_id=eq.${orgId}` },
           () => {
             this.sync();
           }
@@ -217,17 +230,10 @@ class SyncEngine {
     useAppStore.getState().setSyncStatus('syncing');
 
     try {
-      await syncServerTime();
+      
       await this.pushLocalChanges();
       
-      const maxUpdatedAt = await this.pullRemoteChanges();
-      
-      if (maxUpdatedAt && maxUpdatedAt !== '') {
-        localStorage.setItem('last_sync_time', maxUpdatedAt);
-      } else if (!localStorage.getItem('last_sync_time')) {
-        // Fallback for first ever sync if no data exists
-        localStorage.setItem('last_sync_time', getAccurateIsoDate());
-      }
+      await this.pullRemoteChanges();
       
       useAppStore.getState().setSyncStatus('synced');
       this.retryCount = 0;
@@ -264,7 +270,10 @@ class SyncEngine {
   private async pushLocalChanges() {
     // Check if authenticated with Supabase
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session?.user) return;
+    const { data: orgMember } = await supabase.from('organization_members').select('organization_id').eq('user_id', session.user.id).limit(1).single();
+    if (!orgMember) return;
+    const orgId = orgMember.organization_id;
 
     const pendingItems = await db.syncQueue.where('status').equals('pending').sortBy('createdAt');
     
@@ -287,7 +296,7 @@ class SyncEngine {
         if (item.action === 'CREATE') {
           const { error } = await supabase
             .from(tableName)
-            .upsert({ ...payloadSnakeCase, user_id: session.user.id }, { onConflict: 'user_id, local_id' });
+            .upsert({ ...payloadSnakeCase, organization_id: orgId }, { onConflict: 'organization_id, local_id' });
             
           if (error) throw error;
           
@@ -297,8 +306,9 @@ class SyncEngine {
           
           const { error } = await supabase
             .from(tableName)
-            .update({ ...payloadSnakeCase, user_id: session.user.id })
-            .eq('local_id', payloadSnakeCase.local_id);
+            .update({ ...payloadSnakeCase, organization_id: orgId })
+            .eq('local_id', payloadSnakeCase.local_id)
+            .eq('organization_id', orgId);
             
           if (error) throw error;
           
@@ -306,7 +316,8 @@ class SyncEngine {
           const { error } = await supabase
             .from(tableName)
             .delete()
-            .eq('local_id', payloadSnakeCase.local_id);
+            .eq('local_id', payloadSnakeCase.local_id)
+            .eq('organization_id', orgId);
             
           if (error) throw error;
         }
@@ -324,6 +335,8 @@ class SyncEngine {
             await db.invoices.update(entityId as string, { syncStatus: 'synced' });
           } else if (item.entity === 'QUOTE') {
             await db.quotes.update(entityId as string, { syncStatus: 'synced' });
+          } else if (item.entity === 'RECURRING_SCHEDULE') {
+            await db.recurringSchedules.update(entityId as string, { syncStatus: 'synced' });
           }
         }
 
@@ -342,14 +355,14 @@ class SyncEngine {
 
   private async pullRemoteChanges() {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const userId = session.user.id;
-
-    const lastSyncTime = localStorage.getItem('last_sync_time');
+    if (!session?.user) return;
+    const { data: orgMember } = await supabase.from('organization_members').select('organization_id').eq('user_id', session.user.id).limit(1).single();
+    if (!orgMember) return;
+    const orgId = orgMember.organization_id;
 
     // Helper to fetch in batches of 500 to prevent memory crashes on large datasets
     const fetchPaginated = async (table: string) => {
+      const lastSyncTime = localStorage.getItem(`last_sync_time_${table}`);
       let allData: any[] = [];
       let from = 0;
       const limit = 500;
@@ -358,7 +371,7 @@ class SyncEngine {
         let query = supabase
           .from(table)
           .select('*')
-          .eq('user_id', userId)
+          .eq('organization_id', orgId)
           .order('updated_at', { ascending: true })
           .order('local_id', { ascending: true });
           
@@ -378,7 +391,7 @@ class SyncEngine {
         }
         if (!data || data.length === 0) break;
         
-        allData = [...allData, ...data];
+        allData.push(...data);
         if (data.length < limit) break;
         from += limit;
       }
@@ -392,9 +405,15 @@ class SyncEngine {
       fetchPaginated('quotes')
     ]);
 
-    const processRemoteData = async (table: any, remoteData: any[]) => {
-      let maxUpdatedAt = '';
-      if (!remoteData || remoteData.length === 0) return maxUpdatedAt;
+    const processRemoteData = async (tableName: string, table: any, remoteData: any[]) => {
+      let maxUpdatedAt = localStorage.getItem(`last_sync_time_${tableName}`) || '';
+      
+      if (!remoteData || remoteData.length === 0) {
+        if (!localStorage.getItem(`last_sync_time_${tableName}`)) {
+          localStorage.setItem(`last_sync_time_${tableName}`, getAccurateIsoDate());
+        }
+        return;
+      }
       
       const remoteItems = remoteData.map(toCamelCase);
       const toDeleteLocally: string[] = [];
@@ -449,19 +468,16 @@ class SyncEngine {
       if (toDeleteLocally.length > 0) await table.bulkDelete(toDeleteLocally);
       if (toPutLocally.length > 0) await table.bulkPut(toPutLocally);
       
-      return maxUpdatedAt;
+      if (maxUpdatedAt !== '') {
+        localStorage.setItem(`last_sync_time_${tableName}`, maxUpdatedAt);
+      }
     };
 
-    const maxTimes = await Promise.all([
-      processRemoteData(db.clients, clientsRes.data || []),
-      processRemoteData(db.invoices, invoicesRes.data || []),
-      processRemoteData(db.quotes, quotesRes.data || [])
+    await Promise.all([
+      processRemoteData('clients', db.clients, clientsRes.data || []),
+      processRemoteData('invoices', db.invoices, invoicesRes.data || []),
+      processRemoteData('quotes', db.quotes, quotesRes.data || [])
     ]);
-    
-    // Sort strings chronologically to find the true maximum timestamp
-    const validTimes = maxTimes.filter(t => t !== '');
-    if (validTimes.length === 0) return '';
-    return validTimes.sort().pop() || '';
   }
 }
 

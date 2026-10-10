@@ -47,6 +47,33 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // AI Quota Enforcement (C9)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('is_pro')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_pro) {
+      const { count } = await supabaseAdmin
+        .from('api_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .like('endpoint', 'ai/%');
+        
+      if (count !== null && count >= 10) {
+        return new Response(JSON.stringify({ 
+          error: 'AI Quota Exceeded', 
+          message: 'You have reached the free tier limit of 10 AI requests. Please upgrade to Pro to continue using AI.' 
+        }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+
     // Rate Limit: 10 requests per 1 minute (adjust as needed)
     const { data: isAllowed, error: rateLimitError } = await supabaseClient.rpc('check_and_log_rate_limit', {
       p_user_id: user.id,

@@ -72,7 +72,7 @@ export const OnboardingWizard: React.FC = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
-        await supabase.from('profiles').update({
+        await supabase.from('organizations').update({
           name: profile.name,
           phone: profile.phone,
           industry: profile.industry,

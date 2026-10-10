@@ -1,4 +1,6 @@
 import React from 'react';
+import { CurrencyInput } from '../ui/CurrencyInput';
+import { formatMoney } from '../../utils/formatters';
 import { Loader2, Sparkles } from 'lucide-react';
 
 interface EditorSummaryProps {
@@ -103,18 +105,18 @@ export const EditorSummary: React.FC<EditorSummaryProps> = ({
           <div className="bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 p-5 rounded-xl space-y-3">
              <div className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
                <span>Subtotal</span>
-               <span className="font-medium text-slate-700 dark:text-slate-300">{currency} {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+               <span className="font-medium text-slate-700 dark:text-slate-300">{formatMoney(subtotal, currency)}</span>
              </div>
              {computedTaxes.map((t, idx) => (
                <div key={idx} className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
                  <span>{t.name}</span>
-                 <span className="font-medium text-slate-700 dark:text-slate-300">{t.isDeduction ? '- ' : '+ '}{currency} {t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                 <span className="font-medium text-slate-700 dark:text-slate-300">{t.isDeduction ? '- ' : '+ '}{currency} {formatMoney(t.amount, currency).replace(/^.*?([\d,.]+)/, '$1')}</span>
                </div>
              ))}
              {computedTaxes.length > 0 && <hr className="border-slate-200 dark:border-slate-700" />}
              <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-between font-bold text-lg">
                <span className="text-slate-900 dark:text-white">Total</span>
-               <span className="text-purple-600 dark:text-purple-400">{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+               <span className="text-purple-600 dark:text-purple-400">{formatMoney(total, currency)}</span>
              </div>
           </div>
         </div>
@@ -148,14 +150,11 @@ export const EditorSummary: React.FC<EditorSummaryProps> = ({
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">
                   {currency}
                 </span>
-                <input
-                  type="number"
-                  value={minimumCounterAmount || ''}
-                  onChange={(e) => setMinimumCounterAmount(e.target.value ? Number(e.target.value) : undefined)}
+                <CurrencyInput
+                  valueInMinor={minimumCounterAmount || 0}
+                  onChangeMinor={(val) => setMinimumCounterAmount(val === 0 ? undefined : val)}
                   className="w-full pl-12 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-shadow"
                   placeholder="0.00"
-                  min="0"
-                  step="0.01"
                 />
               </div>
             </div>

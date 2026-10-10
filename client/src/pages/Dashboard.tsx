@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Clock, FileText, Plus, Zap, BarChart2, PieChart, ChevronDown } from 'lucide-react';
+import { TrendingUp, Clock, FileText, Plus, Zap, LineChart, BarChart3, ChevronDown } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
 import { Card, Badge } from '../components/ui';
 import { SplitButton } from '../components/ui/SplitButton';
@@ -12,7 +12,7 @@ import { formatMoney } from '../utils/formatters';
 import { useAppStore } from '../store/useAppStore';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell, AreaChart, Area } from 'recharts';
 
 /**
  * Dashboard Component
@@ -27,7 +27,8 @@ const Dashboard: React.FC = () => {
   const allClients = useLiveQuery(() => db.clients.toArray()) || [];
   const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
   const quotes = useLiveQuery(() => db.quotes.filter(q => !q.deletedAt).toArray()) || [];
-  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
+  const recurringSchedules = useLiveQuery(() => db.recurringSchedules.filter(s => !s.deletedAt).toArray()) || [];
+  const [chartType, setChartType] = useState<'line' | 'bar'>('line');
   const [activeSlide, setActiveSlide] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
   
@@ -65,12 +66,13 @@ const Dashboard: React.FC = () => {
   };
 
   // Selected Month Calculations
-  const selectedMonthInvoices = invoices.filter(i => isSelectedMonth(i.updatedAt || i.createdAt));
-  const selectedMonthQuotes = quotes.filter(q => isSelectedMonth(q.updatedAt || q.createdAt));
+  const selectedMonthInvoices = React.useMemo(() => invoices.filter(i => isSelectedMonth(i.updatedAt || i.createdAt)), [invoices, selectedMonthOffset]);
+  const selectedMonthQuotes = React.useMemo(() => quotes.filter(q => isSelectedMonth(q.updatedAt || q.createdAt)), [quotes, selectedMonthOffset]);
+  selectedMonthQuotes; // keep TS happy
 
-  const paidInvoices = selectedMonthInvoices.filter(i => i.status === 'PAID');
-  const outstandingInvoices = selectedMonthInvoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status));
-  const overdueInvoices = selectedMonthInvoices.filter(i => i.status === 'OVERDUE');
+  const paidInvoices = React.useMemo(() => selectedMonthInvoices.filter(i => i.status === 'PAID'), [selectedMonthInvoices]);
+  const outstandingInvoices = React.useMemo(() => selectedMonthInvoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status)), [selectedMonthInvoices]);
+  const overdueInvoices = React.useMemo(() => selectedMonthInvoices.filter(i => i.status === 'OVERDUE'), [selectedMonthInvoices]);
 
   const totalRevenue = paidInvoices.reduce((sum, i) => sum + i.total, 0) + 
                        selectedMonthInvoices.filter(i => i.status === 'PARTIAL').reduce((sum, i) => sum + i.amountPaid, 0);
@@ -92,19 +94,73 @@ const Dashboard: React.FC = () => {
     ? ((totalRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 
     : (totalRevenue > 0 ? 100 : 0);
 
-  // Line Chart Data (Days of Selected Month)
-  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-  const lineChartData = Array.from({ length: daysInMonth }).map((_, i) => {
-    const day = i + 1;
-    const dateObj = new Date(selectedYear, selectedMonth, day);
-    const dailyRevenue = paidInvoices
+  // Monthly Recurring Revenue (MRR) Calculation
+  let trueMRR = 0;
+  const activeSchedules = React.useMemo(() => recurringSchedules.filter(s => s.status === 'ACTIVE'), [recurringSchedules]);
+  activeSchedules.forEach(schedule => {
+     const template = invoices.find(i => i.localId === schedule.templateInvoiceId);
+     if (template) {
+        if (schedule.frequency === 'WEEKLY') trueMRR += template.total * 4.33;
+        else if (schedule.frequency === 'MONTHLY') trueMRR += template.total;
+        else if (schedule.frequency === 'YEARLY') trueMRR += template.total / 12;
+     }
+  });
+
+  // Cash Flow Data (Last 6 Months)
+  const cashFlowData = Array.from({ length: 6 }).map((_, i) => {
+    const monthOffset = 5 - i; 
+    const dateObj = subMonths(new Date(), monthOffset);
+    const m = dateObj.getMonth();
+    const y = dateObj.getFullYear();
+    
+    const invoiced = invoices
       .filter(inv => {
-        const d = new Date(inv.updatedAt || inv.createdAt);
-        return d.getDate() === day;
+        const d = new Date(inv.createdAt);
+        return d.getMonth() === m && d.getFullYear() === y && inv.status !== 'DRAFT';
       })
       .reduce((sum, inv) => sum + inv.total, 0);
-    return { name: day.toString(), fullDate: dateObj.toISOString(), revenue: dailyRevenue };
+
+    const collected = invoices
+      .filter(inv => {
+        const d = new Date(inv.updatedAt || inv.createdAt);
+        return d.getMonth() === m && d.getFullYear() === y && ['PAID', 'PARTIAL'].includes(inv.status);
+      })
+      .reduce((sum, inv) => sum + (inv.status === 'PAID' ? inv.total : (inv.amountPaid || 0)), 0);
+
+    return { 
+      name: format(dateObj, 'MMM'), 
+      fullDate: dateObj.toISOString(), 
+      invoiced, 
+      collected 
+    };
   });
+
+  // Aged Receivables Data (Buckets)
+  const now = new Date();
+  const getDaysOverdue = (dueDateStr: string | undefined | null) => {
+    if (!dueDateStr) return 0;
+    const dueDate = new Date(dueDateStr);
+    const diffTime = Math.max(0, now.getTime() - dueDate.getTime());
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  let bucket0_30 = 0;
+  let bucket31_60 = 0;
+  let bucket60Plus = 0;
+
+  invoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status)).forEach(inv => {
+    const amount = inv.total - (inv.amountPaid || 0);
+    const days = getDaysOverdue(inv.dueDate);
+    if (days > 60) bucket60Plus += amount;
+    else if (days > 30) bucket31_60 += amount;
+    else if (days > 0) bucket0_30 += amount;
+  });
+
+  const agedReceivablesData = [
+    { name: '0-30 Days', value: bucket0_30, fill: '#f59e0b' },
+    { name: '31-60 Days', value: bucket31_60, fill: '#ea580c' },
+    { name: '60+ Days', value: bucket60Plus, fill: '#be123c' },
+  ].filter(d => d.value > 0);
 
   const monthOptions = Array.from({ length: 12 }).map((_, i) => {
     const d = subMonths(new Date(), i);
@@ -114,12 +170,6 @@ const Dashboard: React.FC = () => {
     };
   });
 
-  const pieChartData = [
-    { name: 'Paid', value: totalRevenue, color: '#0d9488' }, // Teal-600
-    { name: 'Unpaid/Partial', value: outstandingAmount, color: '#f59e0b' }, // Amber-500
-    { name: 'Overdue', value: overdueAmount, color: '#e11d48' } // Rose-600
-  ].filter(d => d.value > 0);
-
   // Recent Activity (combine quotes and invoices, sort by date)
   const recentActivity = [...invoices, ...quotes]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -128,13 +178,6 @@ const Dashboard: React.FC = () => {
   const getClientName = (id: string) => {
     return allClients.find(c => c.localId === id)?.name || 'Unknown Client';
   };
-
-  React.useEffect(() => {
-    const hasData = totalRevenue > 0 || outstandingAmount > 0 || overdueAmount > 0;
-    if (!hasData) {
-      setChartType('pie');
-    }
-  }, [totalRevenue, outstandingAmount, overdueAmount]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -220,7 +263,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Total Revenue</h3>
               <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(totalRevenue)}>{formatMoney(totalRevenue)}</div>
-              <div className="mt-1 truncate text-xs text-slate-500">From paid invoices this month</div>
+              <div className="mt-1 truncate text-xs text-slate-500">From paid invoices {selectedMonthOffset === 0 ? 'this month' : 'in selected month'}</div>
             </div>
           </div>
         </Card>
@@ -265,25 +308,25 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* Card 4: Accepted Quotes */}
+        {/* Card 4: Monthly Recurring Revenue */}
         <Card 
           className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors" 
           style={{ animationDelay: '350ms' }}
-          onClick={() => navigate('/quotes?status=ACCEPTED')}
+          onClick={() => navigate('/recurring')}
         >
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <FileText size={20} />
+                <TrendingUp size={20} />
               </div>
-              <span className="text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors" onClick={(e) => { e.stopPropagation(); navigate('/quotes'); }}>View Quotes</span>
+              <span className="text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors" onClick={(e) => { e.stopPropagation(); navigate('/recurring'); }}>Manage MRR</span>
             </div>
             <div>
-              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Accepted Quotes</h3>
-              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">
-                {selectedMonthQuotes.filter(q => q.status === 'ACCEPTED').length}
+              <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Monthly Recurring Revenue</h3>
+              <div className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate" title={formatMoney(trueMRR)}>
+                {formatMoney(trueMRR)}
               </div>
-              <div className="mt-1 truncate text-xs text-slate-500">Quotes accepted {selectedMonthOffset === 0 ? 'this month' : 'selected month'}</div>
+              <div className="mt-1 truncate text-xs text-slate-500">From {activeSchedules.length} active schedules</div>
             </div>
           </div>
         </Card>
@@ -304,25 +347,25 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '450ms' }}>
-        {/* Revenue Overview Chart */}
+        {/* Cash Flow & Collections Chart */}
         <Card className="lg:col-span-2 p-6 flex flex-col">
           <div className="flex justify-between items-center gap-2 mb-6 w-full">
-            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white truncate">Revenue Overview</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white truncate">Cash Flow & Collections</h2>
             <div className="flex items-center gap-1 sm:gap-3 shrink-0">
               <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 sm:p-1">
                 <button 
-                  onClick={() => setChartType('bar')}
-                  className={`p-1.5 rounded-md transition-colors ${chartType === 'bar' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                  title="Line Chart"
-                >
-                  <BarChart2 size={16} />
+                  onClick={() => setChartType('line')}
+                    className={`p-1.5 rounded-md transition-colors ${chartType === 'line' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    title="Cash Flow Area Chart"
+                  >
+                    <LineChart size={16} />
                 </button>
                 <button 
-                  onClick={() => setChartType('pie')}
-                  className={`p-1.5 rounded-md transition-colors ${chartType === 'pie' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                  title="Pie Chart"
-                >
-                  <PieChart size={16} />
+                  onClick={() => setChartType('bar')}
+                    className={`p-1.5 rounded-md transition-colors ${chartType === 'bar' ? 'bg-white dark:bg-slate-700 shadow-sm text-purple-600 dark:text-purple-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    title="Aged Receivables Bar Chart"
+                  >
+                    <BarChart3 size={16} />
                 </button>
               </div>
               <div className="relative shrink-0">
@@ -342,86 +385,51 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           
-          {chartType === 'bar' ? (
+                    {chartType === 'line' ? (
             <div className="flex-1 mt-4 h-64 min-h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={lineChartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                <AreaChart data={cashFlowData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                   <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#9333ea" stopOpacity={0.4}/>
+                    <linearGradient id="colorInvoiced" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#9333ea" stopOpacity={0.3}/>
                       <stop offset="95%" stopColor="#9333ea" stopOpacity={0}/>
                     </linearGradient>
+                    <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0d9488" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#0d9488" stopOpacity={0}/>
+                    </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} minTickGap={20} />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#64748b', fontSize: 12 }} 
-                    tickFormatter={(value: any) => value > 1000 ? `${(value/1000).toFixed(0)}k` : value}
-                  />
-                  <RechartsTooltip 
-                    formatter={(value: any) => formatMoney(value as number)}
-                    labelFormatter={(label, payload) => {
-                      if (payload && payload.length > 0 && payload[0].payload.fullDate) {
-                        return format(new Date(payload[0].payload.fullDate), 'EEEE, MMMM d, yyyy');
-                      }
-                      return `Day ${label}`;
-                    }}
-                    contentStyle={{ backgroundColor: '#1e293b', color: '#f8fafc', borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
-                    itemStyle={{ color: '#e2e8f0' }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#9333ea" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorRevenue)" 
-                    dot={false} 
-                    activeDot={{ r: 6, strokeWidth: 2, fill: "#fff", stroke: "#9333ea" }} 
-                  />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} tickFormatter={(value: any) => value > 1000 ? `${(value/1000).toFixed(0)}k` : value} />
+                  <RechartsTooltip formatter={(value: any) => formatMoney(value as number)} labelFormatter={(label) => `Month: ${label}`} contentStyle={{ backgroundColor: '#1e293b', color: '#f8fafc', borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                  <Legend verticalAlign="top" height={36}/>
+                  <Area type="monotone" dataKey="invoiced" name="Invoiced" stroke="#9333ea" strokeWidth={3} fillOpacity={1} fill="url(#colorInvoiced)" dot={false} activeDot={{ r: 6, strokeWidth: 2, fill: "#fff", stroke: "#9333ea" }} />
+                  <Area type="monotone" dataKey="collected" name="Collected" stroke="#0d9488" strokeWidth={3} fillOpacity={1} fill="url(#colorCollected)" dot={false} activeDot={{ r: 6, strokeWidth: 2, fill: "#fff", stroke: "#0d9488" }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 h-64 mt-4">
-              {pieChartData.length > 0 ? (
-                <>
-                  <div className="h-48 w-48 relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsPieChart>
-                        <Pie
-                          data={pieChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {pieChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <RechartsTooltip formatter={(value: any) => formatMoney(value as number)} />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex flex-row md:flex-col flex-wrap justify-center gap-3 md:gap-4 w-full md:w-auto px-2">
-                    {pieChartData.map((data, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: data.color }}></div>
-                        <div className="flex flex-row md:flex-col items-center md:items-start gap-1 md:gap-0">
-                          <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">{data.name}</p>
-                          <p className="text-xs text-slate-500 hidden md:block">{formatMoney(data.value)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 h-64 mt-4">
+              {agedReceivablesData.length > 0 ? (
+                <div className="flex-1 mt-2 w-full">
+                  <h3 className="text-sm font-medium text-slate-500 mb-2 text-center md:text-left">Aged Receivables (Overdue)</h3>
+                  <ResponsiveContainer width="100%" height="90%">
+                    <BarChart data={agedReceivablesData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.5} />
+                      <XAxis type="number" tickFormatter={(value: any) => value > 1000 ? `${(value/1000).toFixed(0)}k` : value} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }} width={80} />
+                      <RechartsTooltip formatter={(value: any) => formatMoney(value as number)} contentStyle={{ backgroundColor: '#1e293b', color: '#f8fafc', borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} cursor={{fill: 'transparent'}} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                        {agedReceivablesData.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <div className="text-slate-500 flex items-center justify-center h-full">No data to display</div>
+                <div className="text-slate-500 flex items-center justify-center h-full">No overdue receivables</div>
               )}
             </div>
           )}

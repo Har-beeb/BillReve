@@ -1,24 +1,32 @@
 /**
- * Utility functions for formatting data in the Billflow application.
+ * Utility functions for formatting data in the BillReve application.
  */
 
 import { useAppStore } from '../store/useAppStore';
 
 /**
- * Formats a numeric amount as a localized currency string.
- * @param amount - The numeric amount to format.
- * @param currency - The currency code (defaults to business profile currency or 'NGN').
- * @returns A formatted currency string (e.g., ₦100,000).
+ * Rounds a monetary minor unit (cents/kobo) to ensure it stays a clean integer.
  */
-export const formatMoney = (amount: number, currency?: string): string => {
+export const roundMoney = (value: number): number => {
+  return Math.round(value);
+};
+
+/**
+ * Formats a numeric minor unit amount (e.g. cents/kobo) as a localized currency string.
+ * @param amountInMinor - The numeric amount in minor units (e.g. 350000 for 3500.00).
+ * @param currency - The currency code (defaults to business profile currency or 'NGN').
+ * @returns A formatted currency string (e.g., ₦100,000.00).
+ */
+export const formatMoney = (amountInMinor: number, currency?: string): string => {
   const defaultCurrency = useAppStore.getState().businessProfile?.currency || 'NGN';
   const finalCurrency = currency || defaultCurrency;
   
   return new Intl.NumberFormat(undefined, { 
     style: 'currency', 
     currency: finalCurrency, 
-    minimumFractionDigits: 0 
-  }).format(amount);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format((amountInMinor || 0) / 100);
 };
 
 export const getCurrencySymbol = (currencyCode?: string): string => {

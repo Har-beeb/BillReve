@@ -46,7 +46,7 @@ export const ProfileSettings: React.FC = () => {
     if (user?.id) {
       try {
         const { error } = await supabase
-          .from('profiles')
+          .from('organizations')
           .update({
             name: localProfile.name,
             phone: localProfile.phone,

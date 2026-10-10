@@ -151,11 +151,14 @@ export const clearAllData = async (userId: string) => {
 
     // 2. Clear from Supabase (RLS ensures user can only delete their own)
     const { supabase } = await import('../lib/supabase');
-    await Promise.all([
-      supabase.from('quotes').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('clients').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    ]);
+    const { data: member } = await supabase.from('organization_members').select('organization_id').eq('user_id', userId).limit(1).single();
+    if (member) {
+      await Promise.all([
+        supabase.from('quotes').delete().eq('organization_id', member.organization_id),
+        supabase.from('invoices').delete().eq('organization_id', member.organization_id),
+        supabase.from('clients').delete().eq('organization_id', member.organization_id)
+      ]);
+    }
 
     return { success: true };
   } catch (error) {

@@ -42,18 +42,27 @@ const Clients: React.FC = () => {
 
 
   // Derived metrics
-  const getClientMetrics = (clientId: string) => {
-    const clientInvoices = invoices.filter(i => i.clientId === clientId);
-    const totalInvoiced = clientInvoices.reduce((sum, i) => sum + i.total, 0);
-    const totalPaid = clientInvoices.reduce((sum, i) => sum + i.amountPaid, 0);
-    return { totalInvoiced, totalPaid, invoiceCount: clientInvoices.length, invoices: clientInvoices };
-  };
+  const clientMetricsMap = React.useMemo(() => {
+    const map: Record<string, { totalInvoiced: number, totalPaid: number, invoiceCount: number, invoices: any[] }> = {};
+    invoices.forEach(inv => {
+      if (!map[inv.clientId]) map[inv.clientId] = { totalInvoiced: 0, totalPaid: 0, invoiceCount: 0, invoices: [] };
+      map[inv.clientId].invoices.push(inv);
+      map[inv.clientId].totalInvoiced += inv.total || 0;
+      map[inv.clientId].totalPaid += inv.amountPaid || 0;
+      map[inv.clientId].invoiceCount++;
+    });
+    return map;
+  }, [invoices]);
 
-  const filteredClients = clients.filter(c => 
+  const getClientMetrics = React.useCallback((clientId: string) => {
+    return clientMetricsMap[clientId] || { totalInvoiced: 0, totalPaid: 0, invoiceCount: 0, invoices: [] };
+  }, [clientMetricsMap]);
+
+  const filteredClients = React.useMemo(() => clients.filter(c => 
     search === '' || 
     c.name.toLowerCase().includes(search.toLowerCase()) || 
     c.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  ), [clients, search]);
   
   const { currentPage, setCurrentPage, totalPages, paginatedItems: paginatedClients } = usePagination(filteredClients, 10);
   const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedClients, (c) => c.localId);

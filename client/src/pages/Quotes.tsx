@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Search, Plus, Download, RefreshCw, FileText, MessageSquare, Link, ExternalLink } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Badge, ProFeature } from '../components/ui';
-import { formatMoney, formatDate } from '../utils/formatters';
+import { formatMoney, formatDate, roundMoney } from '../utils/formatters';
 import { Pagination } from '../components/Pagination';
 import { PreviewPanel } from '../components/PreviewPanel';
 import { db } from '../db/db';
@@ -83,10 +83,10 @@ const Quotes: React.FC = () => {
 
 
 
-  const filteredQuotes = quotes.filter(q => 
+  const filteredQuotes = React.useMemo(() => quotes.filter(q => 
     (filter === 'All' || q.status === filter.toUpperCase() || (filter === 'Declined' && (q.status as any) === 'REJECTED')) &&
     (search === '' || (q.quoteNumber && q.quoteNumber.toLowerCase().includes(search.toLowerCase())) || q.clientId.toLowerCase().includes(search.toLowerCase()))
-  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [quotes, filter, search]);
   
   const { currentPage, setCurrentPage, totalPages, paginatedItems: paginatedQuotes } = usePagination(filteredQuotes, 10);
   const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedQuotes, (q) => q.localId);
@@ -122,7 +122,7 @@ const Quotes: React.FC = () => {
   const handleDownloadPdf = async (quote: Quote) => {
     try {
       const client = allClients.find(c => c.localId === quote.clientId);
-      await (await import('../utils/pdfGenerator')).generateDocumentPdf(quote, client, businessProfile, 'QUOTE', true);
+      await (await import('../utils/pdfGenerator')).generateDocumentPdf({ document: quote, client, profile: businessProfile, type: 'QUOTE', download: true });
     } catch (err) {
       console.error('Failed to generate PDF', err);
       toast.error('Failed to generate PDF');
@@ -232,9 +232,23 @@ const Quotes: React.FC = () => {
     let updatedItems = quote.items;
     let finalTotal = quote.total;
     let finalSubtotal = quote.subtotal;
+    let finalTaxes = quote.taxes;
 
     if (accept && quote.counterAmount !== undefined && quote.counterAmount !== quote.total) {
-        const discountAmount = quote.total - quote.counterAmount;
+        const ratio = quote.counterAmount / quote.total;
+        
+        // Pro-rate the taxes based on the new total
+        finalTaxes = quote.taxes.map(t => ({
+            ...t,
+            amount: roundMoney(t.amount * ratio)
+        }));
+        
+        const totalTaxes = roundMoney(finalTaxes.reduce((sum, t) => sum + (t.isDeduction ? -t.amount : t.amount), 0));
+        
+        // Subtotal must mathematically be exactly the counterAmount minus the new prorated taxes
+        finalSubtotal = roundMoney(quote.counterAmount - totalTaxes);
+        const discountAmount = roundMoney(quote.subtotal - finalSubtotal);
+
         updatedItems = [...quote.items, {
             id: uuidv4(),
             description: "Agreed Counter-offer Adjustment",
@@ -242,7 +256,6 @@ const Quotes: React.FC = () => {
             unitPrice: -discountAmount,
             amount: -discountAmount
         }];
-        finalSubtotal = finalSubtotal - discountAmount;
         finalTotal = quote.counterAmount;
     }
 
@@ -252,6 +265,7 @@ const Quotes: React.FC = () => {
           status: 'ACCEPTED' as const, 
           items: updatedItems,
           subtotal: finalSubtotal,
+          taxes: finalTaxes,
           total: finalTotal,
           updatedAt: new Date().toISOString() 
         } 

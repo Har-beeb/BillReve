@@ -5,6 +5,7 @@ import type { Invoice } from '../types';
 import toast from 'react-hot-toast';
 import { useAppStore } from '../store/useAppStore';
 import { formatMoney, getCurrencySymbol } from '../utils/formatters';
+import { CurrencyInput } from './ui/CurrencyInput';
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const balanceDue = invoice.total - invoice.amountPaid;
 
   const handleConfirm = async () => {
-    const numAmount = parseFloat(amount);
+    const numAmount = amount ? Math.round(parseFloat(amount) * 100) : 0;
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error("Please enter a valid amount.");
       return;
@@ -71,12 +72,10 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Payment Amount</label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base font-medium">{getCurrencySymbol(activeCurrency)}</span>
-            <input 
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={balanceDue.toString()}
-              max={balanceDue}
+            <CurrencyInput 
+              valueInMinor={amount ? Math.round(parseFloat(amount) * 100) : 0}
+              onChangeMinor={(val) => setAmount(val === 0 ? '' : (val / 100).toString())}
+              placeholder={(balanceDue / 100).toString()}
               className="w-full pl-14 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-transparent focus:ring-2 focus:ring-purple-500 outline-none dark:text-white"
             />
           </div>

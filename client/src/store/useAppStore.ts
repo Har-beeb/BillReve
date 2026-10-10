@@ -50,7 +50,7 @@ interface AppState {
   updateBusinessProfile: (profile: BusinessProfile) => void;
   updateTaxSettings: (settings: TaxSetting[]) => void;
   setSession: (session: Session | null) => void;
-  logout: () => Promise<void>;
+  logout: (force?: boolean) => Promise<void>;
   aiPromptsUsed: number;
   incrementAiPrompts: () => void;
 }
@@ -212,24 +212,30 @@ export const useAppStore = create<AppState>()(
         
         return newUpdates;
       }),
-      logout: async () => {
-        try {
-          const { syncEngine } = await import('../services/syncEngine');
-          const { db } = await import('../db/db');
-          
-          toast.loading("Syncing data before logout...", { id: "logout-sync" });
-          await syncEngine.sync();
-          
-          const pendingSyncs = await db.syncQueue.count();
-          if (pendingSyncs > 0) {
-            toast.error("Cannot logout: You have unsynced data and appear to be offline. Please connect to the internet first.", { id: "logout-sync", duration: 5000 });
-            return;
+      logout: async (force?: boolean) => {
+        if (!force) {
+          try {
+            const { syncEngine } = await import('../services/syncEngine');
+            const { db } = await import('../db/db');
+            
+            toast.loading("Syncing data before logout...", { id: "logout-sync" });
+            await syncEngine.sync();
+            
+            const pendingSyncs = await db.syncQueue.where('status').equals('pending').count();
+            const failedSyncs = await db.syncQueue.where('status').equals('failed').count();
+            if (pendingSyncs > 0 || failedSyncs > 0) {
+              toast.dismiss("logout-sync");
+              throw new Error(`UNSYNCED_DATA:${pendingSyncs}:${failedSyncs}`);
+            }
+            toast.success("Sync complete.", { id: "logout-sync" });
+          } catch (e: any) {
+            if (e.message?.startsWith('UNSYNCED_DATA')) throw e;
+            console.error("Sync before logout failed", e);
+            toast.dismiss("logout-sync");
+            throw new Error("SYNC_FAILED");
           }
-          toast.success("Sync complete.", { id: "logout-sync" });
-        } catch (e) {
-          console.error("Sync before logout failed", e);
-          toast.error("Failed to sync data before logout. Please check your connection.", { id: "logout-sync", duration: 5000 });
-          return;
+        } else {
+          toast.dismiss("logout-sync");
         }
         
         await supabase.auth.signOut();

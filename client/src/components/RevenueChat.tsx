@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { MessageSquare, X, Send, Loader2, User, Copy, Check, CheckCircle, Bot } from 'lucide-react';
 import { db } from '../db/db';
-import { chatWithRevenue } from '../api/ai';
+import { chatWithRevenue } from '../services/ai';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 import { useQuota } from '../hooks/useQuota';
@@ -285,11 +285,11 @@ export const RevenueChat: React.FC = () => {
           total += t.amount || 0;
         });
         
-        const invoiceCount = await db.invoices.count();
-        const quoteCount = await db.quotes.count();
+
+        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
         const nextNum = action.type === 'CREATE_INVOICE' 
-          ? `INV-${String(invoiceCount + 1).padStart(3, '0')}`
-          : `QTE-${String(quoteCount + 1).padStart(3, '0')}`;
+          ? `DRAFT-INV-${randomSuffix}`
+          : `DRAFT-QTE-${randomSuffix}`;
         
         if (action.type === 'CREATE_INVOICE') {
           const newInvoice = {

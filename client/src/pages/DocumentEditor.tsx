@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Send } from 'lucide-react';
+import { ArrowLeft, Save, Send, Repeat, Calendar } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -11,9 +11,10 @@ import { DocumentPreview } from '../components/DocumentPreview';
 import { EditorHeader } from '../components/editor/EditorHeader';
 import { EditorLineItems } from '../components/editor/EditorLineItems';
 import { EditorSummary } from '../components/editor/EditorSummary';
-import { enhanceAiText } from '../api/ai';
+import { enhanceAiText } from '../services/ai';
 import toast from 'react-hot-toast';
 import { syncEngine } from '../services/syncEngine';
+import { roundMoney, formatMoney } from '../utils/formatters';
 
 interface DocumentEditorProps {
   type: 'QUOTE' | 'INVOICE';
@@ -28,15 +29,15 @@ interface DocumentEditorProps {
  */
 const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const navigate = useNavigate();
-  const { businessProfile, taxSettings, user, isProUser } = useAppStore();
+  const { businessProfile, taxSettings, isProUser } = useAppStore();
   const aiEnabled = import.meta.env.VITE_ENABLE_AI_FEATURES !== 'false';
   const allClients = useLiveQuery(() => db.clients.toArray()) || [];
   const activeClients = allClients.filter(x => !x.deletedAt);
-  const invoicesList = useLiveQuery(() => db.invoices.filter(x => !x.deletedAt).toArray()) || [];
-  const quotesList = useLiveQuery(() => db.quotes.filter(x => !x.deletedAt).toArray()) || [];
 
-  const nextInvoiceNum = `INV-${String(invoicesList.length + 1).padStart(3, '0')}`;
-  const nextQuoteNum = `QTE-${String(quotesList.length + 1).padStart(3, '0')}`;
+
+  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const nextInvoiceNum = `DRAFT-INV-${randomSuffix}`;
+  const nextQuoteNum = `DRAFT-QTE-${randomSuffix}`;
   const documentNumber = type === 'INVOICE' ? nextInvoiceNum : nextQuoteNum;
 
   const location = useLocation();
@@ -63,6 +64,11 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const [dueDate, setDueDate] = useState<string>(getInitialDate());
   
   const [theme, setTheme] = useState<'standard' | 'professional' | 'modern' | 'classic' | 'monochrome'>(initialDoc?.theme || 'standard');
+
+  // Recurring settings
+  const [isRecurring, setIsRecurring] = useState<boolean>(initialDoc?.isRecurring || location.state?.defaultRecurring || false);
+  const [recurringFrequency, setRecurringFrequency] = useState<'WEEKLY' | 'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [recurringEndDate, setRecurringEndDate] = useState<string>('');
   // Bank Account Selection
   const defaultBankId = businessProfile.bankAccounts?.find(b => b.isDefault)?.id || businessProfile.bankAccounts?.[0]?.id || '';
       const [bankAccountId, setBankAccountId] = useState<string>(initialDoc && initialDoc.bankAccountId !== undefined ? initialDoc.bankAccountId : defaultBankId);
@@ -127,18 +133,18 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
   const [minimumCounterAmount, setMinimumCounterAmount] = useState<number | undefined>(initialDoc?.minimumCounterAmount);
 
   // Derived Totals
-  const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+  const subtotal = roundMoney(items.reduce((sum, item) => sum + item.amount, 0));
   
   const computedTaxes = taxSettings
     .filter(t => appliedTaxes.has(t.id))
     .map(t => ({
       name: t.name,
-      amount: subtotal * (t.rate / 100),
+      amount: roundMoney(subtotal * (t.rate / 100)),
       isDeduction: t.isDeduction
     }));
 
-  const totalTaxes = computedTaxes.reduce((sum, t) => sum + (t.isDeduction ? -t.amount : t.amount), 0);
-  const total = subtotal + totalTaxes;
+  const totalTaxes = roundMoney(computedTaxes.reduce((sum, t) => sum + (t.isDeduction ? -t.amount : t.amount), 0));
+  const total = roundMoney(subtotal + totalTaxes);
 
   // New Client creation state
   const [isCreatingClient, setIsCreatingClient] = useState(false);
@@ -167,7 +173,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         const updated = { ...item, [field]: value };
         // Auto calculate amount
         if (field === 'quantity' || field === 'unitPrice') {
-          updated.amount = updated.quantity * updated.unitPrice;
+          updated.amount = roundMoney(updated.quantity * updated.unitPrice);
         }
         return updated;
       }
@@ -241,7 +247,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
 
         const docBase = {
       localId: localId,
-      userId: user?.id,
+      organizationId: undefined,
       clientId: finalClientId,
       description: description.trim() !== '' ? description : undefined,
       notes: notes.trim() !== '' ? notes : undefined,
@@ -281,7 +287,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     setUnsavedDocument(doc);
     
     setSavedDocumentId(localId);
-    setSavedDocumentAmount(total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+    setSavedDocumentAmount(formatMoney(total, businessProfile?.currency || 'NGN'));
     setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : allClients.find(c => c.localId === (clientId === 'NEW' ? '' : clientId))?.email || '');
     setIsSendModalOpen(true);
   };
@@ -364,7 +370,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
 
         const docBase = {
       localId: finalLocalId,
-      userId: user?.id,
+      organizationId: undefined,
       clientId: finalClientId,
       description: description.trim() !== '' ? description : undefined,
       notes: notes.trim() !== '' ? notes : undefined,
@@ -417,7 +423,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
       
       if (intendedStatus === 'SENT' && !skipModal) {
         setSavedDocumentId(docBase.localId);
-        setSavedDocumentAmount(docBase.total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+        setSavedDocumentAmount(formatMoney(docBase.total, businessProfile?.currency || 'NGN'));
         setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : allClients.find(c => c.localId === finalClientId)?.email || '');
         setIsSendModalOpen(true);
       } else if (!skipModal) {
@@ -430,7 +436,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         status: finalStatus as any,
         amountPaid: initialDoc?.amountPaid || 0,
-        isRecurring: initialDoc?.isRecurring || false,
+        isRecurring: isRecurring,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         ...(finalStatus === 'SENT' && { issuedAt: new Date().toISOString() })
       };
@@ -456,10 +462,41 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           createdAt: new Date().toISOString()
         });
       }
+
+      // If it's a new recurring invoice, create the schedule
+      if (isRecurring && finalStatus === 'SENT' && !isEditing) {
+        const nextRun = new Date();
+        if (recurringFrequency === 'WEEKLY') nextRun.setDate(nextRun.getDate() + 7);
+        if (recurringFrequency === 'MONTHLY') nextRun.setMonth(nextRun.getMonth() + 1);
+        if (recurringFrequency === 'YEARLY') nextRun.setFullYear(nextRun.getFullYear() + 1);
+
+        const newSchedule = {
+          localId: uuidv4(),
+          organizationId: undefined, // handled by sync engine
+          clientId: finalClientId,
+          templateInvoiceId: finalLocalId,
+          frequency: recurringFrequency,
+          nextRunDate: nextRun.toISOString().split('T')[0],
+          endDate: recurringEndDate ? new Date(recurringEndDate).toISOString().split('T')[0] : undefined,
+          status: 'ACTIVE' as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          syncStatus: 'pending' as const
+        };
+        await db.recurringSchedules.add(newSchedule);
+        await db.syncQueue.add({
+          id: uuidv4(),
+          action: 'CREATE',
+          entity: 'RECURRING_SCHEDULE',
+          payload: newSchedule,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        });
+      }
       
       if (intendedStatus === 'SENT' && !skipModal) {
         setSavedDocumentId(docBase.localId);
-        setSavedDocumentAmount(docBase.total.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+        setSavedDocumentAmount(formatMoney(docBase.total, businessProfile?.currency || 'NGN'));
         setSavedDocumentClientEmail(isCreatingClient ? newClientEmail : allClients.find(c => c.localId === finalClientId)?.email || '');
         setIsSendModalOpen(true);
       } else if (!skipModal) {
@@ -517,6 +554,59 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
           />
 
           <hr className="border-slate-100 dark:border-slate-800/50" />
+
+          {type === 'INVOICE' && isProUser && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Repeat className="text-purple-600" size={18} />
+                  <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300">Make Recurring</h2>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-purple-600"></div>
+                </label>
+              </div>
+
+              {isRecurring && (
+                <div className="p-4 bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/30 rounded-xl space-y-4 animate-fade-in-up">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Frequency</label>
+                      <select
+                        value={recurringFrequency}
+                        onChange={(e) => setRecurringFrequency(e.target.value as any)}
+                        className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500/50 outline-none"
+                      >
+                        <option value="WEEKLY">Weekly</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="YEARLY">Yearly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">End Date (Optional)</label>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          value={recurringEndDate}
+                          onChange={(e) => setRecurringEndDate(e.target.value)}
+                          className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500/50 outline-none"
+                        />
+                        <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    This invoice will automatically be generated and emailed to the client based on this schedule starting after you send the first one.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {type === 'INVOICE' && isProUser && (
+            <hr className="border-slate-100 dark:border-slate-800/50" />
+          )}
 
           <EditorLineItems
             items={items}

@@ -10,3 +10,7 @@ export * from './InstructionNote';
 export * from './InfoNote';
 export { BottomSheet } from './BottomSheet';
 export { ColorPicker } from './ColorPicker';
+
+export { Button } from './Button';
+export { Input } from './Input';
+export { Modal } from './Modal';

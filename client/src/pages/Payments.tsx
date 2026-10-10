@@ -17,7 +17,8 @@ const Payments: React.FC = () => {
   const [flutterwaveSecKey, setFlutterwaveSecKey] = useState('');
   
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingBanks, setSavingBanks] = useState(false);
+  const [savingGateways, setSavingGateways] = useState(false);
 
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
 
@@ -37,14 +38,13 @@ const Payments: React.FC = () => {
       if (!user?.id) return;
       try {
         const { data } = await supabase
-          .from('user_secrets')
-          .select('paystack_secret_key, flutterwave_secret_key')
-          .eq('user_id', user.id)
+          .rpc('get_user_secrets')
           .maybeSingle();
           
         if (data) {
-          setPaystackSecKey(data.paystack_secret_key || '');
-          setFlutterwaveSecKey(data.flutterwave_secret_key || '');
+          const secrets = data as { paystack_secret_key: string, flutterwave_secret_key: string };
+          setPaystackSecKey(secrets.paystack_secret_key || '');
+          setFlutterwaveSecKey(secrets.flutterwave_secret_key || '');
         }
         
         // Also populate bank accounts
@@ -83,48 +83,66 @@ const Payments: React.FC = () => {
     setBankAccounts(bankAccounts.map(b => b.id === id ? { ...b, [field]: value } : b));
   };
 
-  const handleSave = async () => {
+  const handleSaveBanks = async () => {
     if (!user?.id) return;
-    setSaving(true);
+    setSavingBanks(true);
     try {
-      // Update Public Keys in profiles (via zustand and API)
       updateBusinessProfile({
         ...businessProfile,
-        paystackPublicKey: paystackPubKey,
-        flutterwavePublicKey: flutterwavePubKey,
         bankAccounts: bankAccounts
       });
 
-      // Update Public Keys and bank accounts in Supabase DB
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from('organizations')
         .update({
-          paystack_public_key: paystackPubKey,
-          flutterwave_public_key: flutterwavePubKey,
           bank_accounts: bankAccounts
         })
         .eq('id', user.id);
         
       if (profileError) throw profileError;
+      toast.success('Bank details saved successfully!');
+    } catch (err) {
+      console.error('Error saving banks:', err);
+      toast.error('Failed to save bank details.');
+    } finally {
+      setSavingBanks(false);
+    }
+  };
 
-      // Update Secret Keys in user_secrets
+  const handleSaveGateways = async () => {
+    if (!user?.id) return;
+    setSavingGateways(true);
+    try {
+      updateBusinessProfile({
+        ...businessProfile,
+        paystackPublicKey: paystackPubKey,
+        flutterwavePublicKey: flutterwavePubKey
+      });
+
+      const { error: profileError } = await supabase
+        .from('organizations')
+        .update({
+          paystack_public_key: paystackPubKey,
+          flutterwave_public_key: flutterwavePubKey
+        })
+        .eq('id', user.id);
+        
+      if (profileError) throw profileError;
+
       const { error: secretsError } = await supabase
-        .from('user_secrets')
-        .upsert({ 
-          user_id: user.id,
-          paystack_secret_key: paystackSecKey,
-          flutterwave_secret_key: flutterwaveSecKey,
-          updated_at: new Date().toISOString()
+        .rpc('set_user_secrets', { 
+          p_paystack: paystackSecKey,
+          p_flutterwave: flutterwaveSecKey
         });
 
       if (secretsError) throw secretsError;
 
-      toast.success('Payment settings saved successfully!');
+      toast.success('Payment gateways saved successfully!');
     } catch (err) {
-      console.error('Error saving payments:', err);
-      toast.error('Failed to save settings.');
+      console.error('Error saving gateways:', err);
+      toast.error('Failed to save gateway settings.');
     } finally {
-      setSaving(false);
+      setSavingGateways(false);
     }
   };
 
@@ -137,14 +155,6 @@ const Payments: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Payments</h1>
           <p className="text-slate-500 dark:text-slate-400">Manage your connected payment gateways securely.</p>
         </div>
-        <button 
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
-        >
-          <Save size={18} />
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
       </div>
 
             {/* Manual Bank Transfers (Free) */}
@@ -220,6 +230,16 @@ const Payments: React.FC = () => {
             >
               <Plus size={16} /> Add Another Bank Account
             </button>
+            <div className="mt-8 flex justify-end border-t border-slate-100 dark:border-slate-800 pt-6">
+              <button 
+                onClick={handleSaveBanks}
+                disabled={savingBanks}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-lg font-bold transition-colors disabled:opacity-50 shadow-sm"
+              >
+                <Save size={18} />
+                {savingBanks ? 'Saving...' : 'Save Bank Details'}
+              </button>
+            </div>
           </div>
         </Card>
       </div>
@@ -336,6 +356,16 @@ const Payments: React.FC = () => {
           </div>
           </div>
         </Card>
+      </div>
+      <div className={`flex justify-end mt-6 ${!isProUser ? 'hidden' : ''}`}>
+        <button 
+          onClick={handleSaveGateways}
+          disabled={savingGateways}
+          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-lg font-bold transition-colors disabled:opacity-50 shadow-sm"
+        >
+          <Save size={18} />
+          {savingGateways ? 'Saving...' : 'Save Payment Gateways'}
+        </button>
       </div>
     </div>
   );

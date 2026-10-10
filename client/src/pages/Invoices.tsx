@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams , useLocation } from 'react-router-dom';
 import { Search, Plus, Download, FileText, ReceiptText, MessageSquare, Link, ExternalLink } from 'lucide-react';
 import { Card, Badge, ProFeature, EmptyState } from '../components/ui';
 import { formatMoney, formatDate } from '../utils/formatters';
@@ -24,6 +24,7 @@ import toast from 'react-hot-toast';
 
 const Invoices: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { checkQuota } = useQuota();
   
   const handleNewInvoice = () => {
@@ -32,12 +33,16 @@ const Invoices: React.FC = () => {
     }
   };
   const [searchParams, setSearchParams] = useSearchParams();
+
+
   const isProUser = useAppStore((state) => state.isProUser);
   const businessProfile = useAppStore((state) => state.businessProfile);
   const mobileNavStyle = useAppStore((state) => state.mobileNavStyle);
   const statusParam = searchParams.get('status'); const initialFilter = statusParam ? statusParam.charAt(0).toUpperCase() + statusParam.slice(1).toLowerCase() : 'All'; const [filter, setFilter] = useState(initialFilter);
   const [search, setSearch] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
@@ -54,6 +59,19 @@ const Invoices: React.FC = () => {
   
   const invoices = useLiveQuery(() => db.invoices.filter(i => !i.deletedAt).toArray()) || [];
   const allClients = useLiveQuery(() => db.clients.toArray()) || [];
+
+  // Check if we navigated here with a request to open a specific invoice preview
+  React.useEffect(() => {
+    if (location.state?.openPreviewId && invoices.length > 0) {
+      const targetInvoice = invoices.find(i => i.localId === location.state.openPreviewId);
+      if (targetInvoice) {
+        setSelectedInvoice(targetInvoice);
+      }
+      // Clear the state so it doesn't re-open on subsequent renders/reloads
+      window.history.replaceState({}, document.title);
+    }
+  }, [location, invoices]);
+
   const [activeCard, setActiveCard] = useState(0);
   const carouselRef = React.useRef<HTMLDivElement>(null);
 
@@ -108,10 +126,10 @@ const Invoices: React.FC = () => {
     }
   };
 
-  const filteredInvoices = invoices.filter(i => 
+  const filteredInvoices = React.useMemo(() => invoices.filter(i => 
     (filter === 'All' || i.status === filter.toUpperCase()) &&
     (search === '' || (i.invoiceNumber && i.invoiceNumber.toLowerCase().includes(search.toLowerCase())) || i.clientId.toLowerCase().includes(search.toLowerCase()))
-  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [invoices, filter, search]);
   
   const { currentPage, setCurrentPage, totalPages, paginatedItems: paginatedInvoices } = usePagination(filteredInvoices, 10);
   const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedInvoices, (i) => i.localId);
@@ -146,7 +164,7 @@ const Invoices: React.FC = () => {
   const handleDownloadPdf = async (invoice: Invoice) => {
     try {
       const client = allClients.find(c => c.localId === invoice.clientId);
-      await (await import('../utils/pdfGenerator')).generateDocumentPdf(invoice, client, businessProfile, 'INVOICE', true);
+      await (await import('../utils/pdfGenerator')).generateDocumentPdf({ document: invoice, client, profile: businessProfile, type: 'INVOICE', download: true });
     } catch (err) {
       console.error('Failed to generate PDF', err);
       toast.error('Failed to generate PDF');

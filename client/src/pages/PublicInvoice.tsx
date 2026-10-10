@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PaystackButton } from 'react-paystack';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { CheckCircle2, AlertCircle, Download } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Download, X, Building2, CreditCard } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { formatMoney } from '../utils/formatters';
 import { db } from '../db/db';
@@ -22,6 +22,8 @@ const PublicInvoice: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS' | 'FAILED'>('PENDING');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'MANUAL' | 'ONLINE' | null>(null);
   const { fontFamily, fontSize } = useAppStore();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -47,7 +49,7 @@ const PublicInvoice: React.FC = () => {
               ...localInvoice,
               local_id: localInvoice.localId,
               client_id: localInvoice.clientId,
-              user_id: localInvoice.userId,
+              organization_id: localInvoice.organizationId,
               created_at: localInvoice.createdAt,
               amount_paid: localInvoice.amountPaid,
               invoice_number: localInvoice.invoiceNumber,
@@ -77,7 +79,7 @@ const PublicInvoice: React.FC = () => {
         let profileData: any;
         try {
           const { data } = await supabase
-            .rpc('get_public_profile', { p_id: invoiceData.user_id })
+            .rpc('get_public_profile', { p_id: invoiceData.organization_id })
             .maybeSingle();
           if (data) {
             profileData = data;
@@ -85,23 +87,16 @@ const PublicInvoice: React.FC = () => {
           }
           else throw new Error('Profile not found');
         } catch (e) {
-          const storageStr = localStorage.getItem('billflow-storage');
-          if (storageStr) {
-            try {
-              const state = JSON.parse(storageStr).state;
-              const p = state?.businessProfile;
-              if (p) {
-                profileData = {
-                  ...p,
-                  bankAccounts: p.bankAccounts || [],
-                  paystack_public_key: p.paystackPublicKey,
-                  flutterwave_public_key: p.flutterwavePublicKey,
-                  logo_url: p.logoUrl
-                };
-              }
-            } catch (err) {
-              console.error('Failed to parse local profile', err);
-            }
+          // Offline fallback: grab business profile directly from Zustand state
+          const p = useAppStore.getState().businessProfile;
+          if (p && p.name && p.name !== 'BillReve') { // Ensure it's not the default empty profile
+            profileData = {
+              ...p,
+              bankAccounts: p.bankAccounts || [],
+              paystack_public_key: p.paystackPublicKey,
+              flutterwave_public_key: p.flutterwavePublicKey,
+              logo_url: p.logoUrl
+            };
           }
         }
         setProfile(profileData);
@@ -135,7 +130,7 @@ const PublicInvoice: React.FC = () => {
           amountPaid: invoice.amount_paid
       };
       const profileData = { ...profile, bankAccounts: profile.bank_accounts };
-        await (await import('../utils/pdfGenerator')).generateDocumentPdf(docData, profileData, client, 'INVOICE', true);
+        await (await import('../utils/pdfGenerator')).generateDocumentPdf({ document: docData, client, profile: profileData, type: 'INVOICE', download: true });
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');
@@ -192,6 +187,7 @@ const PublicInvoice: React.FC = () => {
   const componentProps = profile?.paystack_public_key ? {
     email: client?.email || 'customer@example.com',
     amount: Math.round((invoice.total - (invoice.amount_paid || 0)) * 100), // Paystack amount is in kobo
+    currency: invoice.currency || profile?.currency || 'NGN',
     metadata: {
       custom_fields: [
          { display_name: "Invoice ID", variable_name: "invoice_id", value: invoice.local_id },
@@ -207,7 +203,7 @@ const PublicInvoice: React.FC = () => {
       try {
         await supabase.rpc('update_invoice_status_public', {
           p_local_id: id,
-          p_status: 'PAID',
+          p_status: 'PENDING',
           p_amount_paid: invoice.total
         });
       } catch (err) {
@@ -358,8 +354,8 @@ const PublicInvoice: React.FC = () => {
                         <tr key={idx} className={idx % 2 !== 0 ? themeStyles.tableStripe : 'bg-white'}>
                           <td className="px-6 py-4 text-slate-900 font-medium whitespace-normal min-w-[200px]">{i.description}</td>
                           <td className="px-6 py-4 text-right text-slate-600">{i.quantity}</td>
-                          <td className="px-6 py-4 text-right text-slate-600">{(i.unitPrice || i.unit_price)?.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-right text-slate-900 font-bold">{i.amount?.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{formatMoney((i.unitPrice || i.unit_price) || 0, invoice.currency).replace(/^.*?([\d,.]+)/, '$1')}</td>
+                          <td className="px-6 py-4 text-right text-slate-900 font-bold">{formatMoney(i.amount || 0, invoice.currency).replace(/^.*?([\d,.]+)/, '$1')}</td>
                         </tr>
                       ))
                     ) : (
@@ -416,90 +412,167 @@ const PublicInvoice: React.FC = () => {
              {(() => {
                 const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
                 let actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
-
-                // Match against the saved ID
                 const bank = invoice.bank_account_snapshot || invoice.bankAccountSnapshot || actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
                 
+                const hasOnlinePayment = (profile?.is_pro && ['NGN', 'GHS', 'ZAR', 'KES'].includes(invoice.currency || profile?.currency || 'NGN') && componentProps) ||
+                                       (profile?.is_pro && ['USD', 'EUR', 'GBP', 'CAD'].includes(invoice.currency || profile?.currency) && flutterwaveConfig);
+
                 return (
-                  <>
-                    {bank && (
-                      <div className="text-sm">
-                        <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Payment Details</p>
-                        <p className="text-slate-600"><span className="font-medium">Bank:</span> {(bank.bankName || bank.bank_name)}</p>
-                        <p className="text-slate-600"><span className="font-medium">Account Name:</span> {(bank.accountName || bank.account_name)}</p>
-                        <p className="text-slate-600"><span className="font-medium">Account Number:</span> {(bank.accountNumber || bank.account_number)}</p>
+                  <div className="w-full flex justify-center md:justify-end">
+                    {!isPaid && invoice.status === 'PENDING' ? (
+                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-3 rounded-xl border border-amber-200">
+                        <AlertCircle size={20} />
+                        <span className="font-semibold">Payment verification pending</span>
                       </div>
-                    )}
-             
-                    <div className="w-full md:w-auto mt-4 md:mt-0 flex flex-col items-center md:items-end gap-3">
-                      {!isPaid && invoice.status === 'PENDING' && (
-                        <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
-                          <AlertCircle size={20} />
-                          <span className="font-semibold">Payment verification pending</span>
-                        </div>
-                      )}
-
-                      {!isPaid && invoice.status !== 'PENDING' && bank && (
+                    ) : !isPaid ? (
+                      <>
                         <button 
-                          onClick={markAsPending}
-                          className="w-full md:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-bold transition-colors shadow-sm text-center border border-slate-300"
+                          onClick={() => setIsPaymentModalOpen(true)}
+                          className="w-full md:w-auto bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-xl font-bold transition-all shadow-lg active:scale-95 text-lg"
                         >
-                          I've transferred the funds
+                          Pay Now
                         </button>
-                      )}
 
-                      {!isPaid && invoice.status !== 'PENDING' && (
-                        <>
-                          {/* Conditionally render Paystack for African currencies */}
+                        {isPaymentModalOpen && (
+                          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <h3 className="font-bold text-lg text-slate-900">Make Payment</h3>
+                                <button onClick={() => { setIsPaymentModalOpen(false); setPaymentMethod(null); }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors">
+                                  <X size={20} />
+                                </button>
+                              </div>
 
-                   {profile?.is_pro && ['NGN', 'GHS', 'ZAR', 'KES'].includes(invoice.currency || profile?.currency || 'NGN') && componentProps ? (
-                     <>
-                       <p className="text-sm text-slate-500 mb-1">Or pay instantly via Paystack</p>
-                       <PaystackButton 
-                         {...componentProps} 
-                         className="bg-[#0ba4db] hover:bg-[#0a93c4] text-white font-medium px-8 py-3 rounded-lg shadow-md transition-all active:scale-95 w-full md:w-auto"
-                       />
-                     </>
-                   ) : profile?.is_pro && ['USD', 'EUR', 'GBP', 'CAD'].includes(invoice.currency || profile?.currency) && flutterwaveConfig ? (
-                     <>
-                       <p className="text-sm text-slate-500 mb-1">Or pay instantly via Flutterwave</p>
-                       <button 
-                         onClick={() => {
-                            handleFlutterwavePayment({
-                              callback: async (response) => {
-                                console.log("Flutterwave payment response:", response);
-                                if (response.status === 'successful') {
-                                  setPaymentStatus('SUCCESS');
-                                  try {
-                                    await supabase.rpc('update_invoice_status_public', {
-                                      p_local_id: id,
-                                      p_status: 'PAID',
-                                      p_amount_paid: invoice.total
-                                    });
-                                  } catch (err) {
-                                    console.error('Failed to update invoice status in Supabase:', err);
-                                  }
-                                }
-                                closePaymentModal();
-                              },
-                              onClose: () => {
-                                console.log("Flutterwave modal closed");
-                              }
-                            });
-                         }}
-                         className="bg-[#F5A623] hover:bg-[#e0961b] text-white font-medium px-8 py-3 rounded-lg shadow-md transition-all active:scale-95 w-full md:w-auto"
-                       >
-                         Pay with Flutterwave
-                       </button>
-                     </>
-                   ) : null}
-                        </>
-                      )}
-                    </div>
-                  </>
+                              <div className="p-6">
+                                {!paymentMethod ? (
+                                  <div className="space-y-4">
+                                    <p className="text-slate-500 mb-6 text-sm">How would you like to pay this invoice?</p>
+                                    
+                                    {hasOnlinePayment && (
+                                      <button 
+                                        onClick={() => setPaymentMethod('ONLINE')}
+                                        className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 hover:border-purple-500 hover:bg-purple-50 transition-all group text-left"
+                                      >
+                                        <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                          <CreditCard size={24} />
+                                        </div>
+                                        <div>
+                                          <h4 className="font-bold text-slate-900">Pay Online</h4>
+                                          <p className="text-sm text-slate-500">Instant secure payment</p>
+                                        </div>
+                                      </button>
+                                    )}
+
+                                    <button 
+                                      onClick={() => setPaymentMethod('MANUAL')}
+                                      className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 hover:border-blue-500 hover:bg-blue-50 transition-all group text-left"
+                                    >
+                                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                        <Building2 size={24} />
+                                      </div>
+                                      <div>
+                                        <h4 className="font-bold text-slate-900">Bank Transfer</h4>
+                                        <p className="text-sm text-slate-500">Manual wire transfer</p>
+                                      </div>
+                                    </button>
+                                  </div>
+                                ) : paymentMethod === 'MANUAL' ? (
+                                  <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
+                                    <button onClick={() => setPaymentMethod(null)} className="text-sm text-purple-600 font-medium hover:underline mb-2 block">&larr; Back to options</button>
+                                    
+                                    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                                      {bank ? (
+                                        <div className="space-y-3">
+                                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Bank Details</p>
+                                          <div>
+                                            <p className="text-xs text-slate-500">Bank Name</p>
+                                            <p className="font-bold text-slate-900">{bank.bankName || bank.bank_name}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500">Account Name</p>
+                                            <p className="font-bold text-slate-900">{bank.accountName || bank.account_name}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500">Account Number</p>
+                                            <p className="font-bold text-slate-900 text-lg tracking-widest">{bank.accountNumber || bank.account_number}</p>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="text-center py-6 text-slate-500 italic">
+                                          Account details not set by merchant.
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="pt-2">
+                                      <button 
+                                        onClick={() => { markAsPending(); setIsPaymentModalOpen(false); }}
+                                        className="w-full bg-slate-900 hover:bg-black text-white px-6 py-4 rounded-xl font-bold transition-colors shadow-lg active:scale-95"
+                                      >
+                                        I've transferred the funds
+                                      </button>
+                                      <p className="text-xs text-center text-slate-400 mt-4">Click this only after you have completed the transfer.</p>
+                                    </div>
+                                  </div>
+                                ) : paymentMethod === 'ONLINE' ? (
+                                  <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
+                                    <button onClick={() => setPaymentMethod(null)} className="text-sm text-purple-600 font-medium hover:underline mb-2 block">&larr; Back to options</button>
+                                    
+                                    <div className="pt-4 space-y-4">
+                                      {profile?.is_pro && ['NGN', 'GHS', 'ZAR', 'KES'].includes(invoice.currency || profile?.currency || 'NGN') && componentProps && (
+                                        <PaystackButton 
+                                          {...componentProps} 
+                                          className="bg-[#0ba4db] hover:bg-[#0a93c4] text-white font-medium px-8 py-4 rounded-xl shadow-lg transition-all active:scale-95 w-full text-lg text-center flex justify-center items-center"
+                                        />
+                                      )}
+                                      
+                                      {profile?.is_pro && ['USD', 'EUR', 'GBP', 'CAD'].includes(invoice.currency || profile?.currency) && flutterwaveConfig && (
+                                        <button 
+                                          onClick={() => {
+                                            handleFlutterwavePayment({
+                                              callback: async (response) => {
+                                                console.log("Flutterwave payment response:", response);
+                                                if (response.status === 'successful') {
+                                                  setPaymentStatus('SUCCESS');
+                                                  try {
+                                                    await supabase.rpc('update_invoice_status_public', {
+                                                      p_local_id: id,
+                                                      p_status: 'PENDING',
+                                                      p_amount_paid: invoice.total
+                                                    });
+                                                  } catch (err) {
+                                                    console.error('Failed to update invoice status in Supabase:', err);
+                                                  }
+                                                }
+                                                closePaymentModal();
+                                                setIsPaymentModalOpen(false);
+                                              },
+                                              onClose: () => {
+                                                console.log("Flutterwave modal closed");
+                                              }
+                                            });
+                                          }}
+                                          className="bg-[#F5A623] hover:bg-[#e0961b] text-white font-medium px-8 py-4 rounded-xl shadow-lg transition-all active:scale-95 w-full text-lg"
+                                        >
+                                          Pay with Flutterwave
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
                 );
              })()}
           </div>
+          
+
+          <div className="mt-12 pb-8 px-8 text-center text-[10px] text-slate-400">    </div>
           
 
           <div className="mt-12 pb-8 px-8 text-center text-[10px] text-slate-400">

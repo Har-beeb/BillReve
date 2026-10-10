@@ -91,7 +91,12 @@ const Reports: React.FC = () => {
 
       if ((inv.status === 'PAID' || inv.status === 'PARTIAL') && inv.taxes) {
         inv.taxes.forEach(tax => {
-          totalTaxCollected += tax.amount;
+          if (inv.status === 'PARTIAL' && inv.total > 0) {
+            const ratio = (inv.amountPaid || 0) / inv.total;
+            totalTaxCollected += tax.amount * ratio;
+          } else {
+            totalTaxCollected += tax.amount;
+          }
         });
       }
     });
@@ -173,6 +178,23 @@ const Reports: React.FC = () => {
       { name: 'Overdue', value: overdue, color: '#e11d48' },
     ].filter(d => d.value > 0);
   }, [filteredInvoices]);
+
+  const topClients = useMemo(() => {
+    const clientRev: Record<string, number> = {};
+    filteredInvoices.forEach(inv => {
+      if (inv.status === 'PAID' || inv.status === 'PARTIAL') {
+        const rev = inv.status === 'PARTIAL' ? (inv.amountPaid || 0) : inv.total;
+        clientRev[inv.clientId] = (clientRev[inv.clientId] || 0) + rev;
+      }
+    });
+    return Object.entries(clientRev)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, rev]) => {
+        const c = clients.find(cl => cl.localId === id);
+        return { name: c?.name || 'Unknown Client', revenue: rev };
+      });
+  }, [filteredInvoices, clients]);
 
   const handleExportCsv = () => {
     if (invoices.length === 0 || clients.length === 0) {
@@ -292,7 +314,10 @@ const Reports: React.FC = () => {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{ fill: '#64748b', fontSize: 12 }} 
-                  tickFormatter={(value: any) => value > 1000 ? `${(value/1000).toFixed(0)}k` : value}
+                  tickFormatter={(value: any) => {
+                    const major = value / 100;
+                    return major >= 1000 ? `${(major/1000).toFixed(1)}k` : major;
+                  }}
                 />
                 <Tooltip 
                   cursor={{ fill: 'rgba(0,0,0,0.05)' }}
@@ -345,6 +370,31 @@ const Reports: React.FC = () => {
         </Card>
       </div>
       
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <Card className="p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Top Clients by Revenue</h2>
+          {topClients.length > 0 ? (
+            <div className="space-y-4">
+              {topClients.map((tc, idx) => (
+                <div key={idx} className="flex justify-between items-center p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 flex items-center justify-center font-bold text-sm">
+                      {tc.name.charAt(0)}
+                    </div>
+                    <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px] sm:max-w-[300px]">{tc.name}</span>
+                  </div>
+                  <span className="font-bold text-slate-900 dark:text-white">{formatMoney(tc.revenue, selectedCurrency)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-slate-500 text-sm flex items-center justify-center h-40 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+              No revenue data available
+            </div>
+          )}
+        </Card>
+      </div>
+
       <RevenueChat />
     </div>
   );

@@ -10,6 +10,7 @@ import { useAppStore } from '../store/useAppStore';
 import { syncEngine } from '../services/syncEngine';
 import { useNotifications } from '../hooks/useNotifications';
 import { Logo } from '../components/ui/Logo';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { OnboardingWizard } from '../components/onboarding/OnboardingWizard';
 
 const hexToRgb = (hex: string) => {
@@ -68,6 +69,28 @@ const MainLayout: React.FC = () => {
   const notificationsRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [forceLogoutState, setForceLogoutState] = useState<{isOpen: boolean, message: string}>({isOpen: false, message: ''});
+  
+  const handleLogout = async (force: boolean = false) => {
+    try {
+      await logout(force);
+    } catch (e: any) {
+      if (e.message?.startsWith('UNSYNCED_DATA')) {
+        const parts = e.message.split(':');
+        setForceLogoutState({
+          isOpen: true,
+          message: `You have ${parts[1]} pending and ${parts[2]} failed sync items. Logging out will permanently delete this offline data. Force logout anyway?`
+        });
+      } else if (e.message === 'SYNC_FAILED') {
+        setForceLogoutState({
+          isOpen: true,
+          message: "Failed to sync data before logout. If you logout now, any unsynced offline data will be lost. Force logout anyway?"
+        });
+      }
+    }
+  };
+
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
 
   // Handle click outside to close dropdown
@@ -128,6 +151,7 @@ const MainLayout: React.FC = () => {
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Quotes', path: '/quotes', icon: <FileSignature size={20} /> },
     { name: 'Invoices', path: '/invoices', icon: <FileText size={20} /> },
+    { name: 'Recurring', path: '/recurring', icon: <RefreshCw size={20} />, isPro: true },
     { name: 'Clients', path: '/clients', icon: <Users size={20} /> },
     { name: 'Campaigns', path: '/campaigns', icon: <Mail size={20} />, isPro: true },
     { name: 'Reports', path: '/reports', icon: <BarChart3 size={20} />, isPro: true },
@@ -416,7 +440,7 @@ const MainLayout: React.FC = () => {
                   
                   <div className="p-1 border-t border-slate-100 dark:border-slate-700/50">
                     <button 
-                      onClick={() => { setIsUserMenuOpen(false); logout(); }}
+                      onClick={() => { setIsUserMenuOpen(false); setIsLogoutModalOpen(true); }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left font-medium"
                     >
                       <LogOut size={16} />
@@ -628,6 +652,31 @@ const MainLayout: React.FC = () => {
       )}
 
       
+
+      <ConfirmationModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={() => handleLogout(false)}
+        title="Log Out"
+        message="Are you sure you want to log out? We will securely sync your data before you leave."
+        confirmText="Log Out"
+        cancelText="Cancel"
+        variant="primary"
+      />
+
+      <ConfirmationModal
+        isOpen={forceLogoutState.isOpen}
+        onClose={() => setForceLogoutState({ isOpen: false, message: '' })}
+        onConfirm={() => {
+          setForceLogoutState({ isOpen: false, message: '' });
+          handleLogout(true);
+        }}
+        title="Warning: Unsynced Data"
+        message={forceLogoutState.message}
+        confirmText="Force Log Out"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 };

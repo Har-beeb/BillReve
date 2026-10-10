@@ -119,7 +119,7 @@ serve(async (req) => {
           `
             <h2>Hi ${profile.name || 'there'},</h2>
             <p>It's been a few days since you joined BillReve, and we hope you're enjoying the platform!</p>
-            <p>Did you know that upgrading to <strong>BillReve Pro</strong> unlocks unlimited clients, advanced recurring invoices, and priority support?</p>
+            <p>Did you know that upgrading to <strong>BillReve Pro</strong> unlocks unlimited clients, premium document templates, and priority support?</p>
             <p><a href="${frontendUrl}/settings">Upgrade to Pro today!</a></p>
             <p>Best,<br/>The BillReve Team</p>
           `

@@ -1,4 +1,5 @@
 import { getThemeStyles } from '../utils/documentThemes';
+import { formatMoney } from '../utils/formatters';
 import React from 'react';
 import { Eye } from 'lucide-react';
 import DOMPurify from 'dompurify';
@@ -136,7 +137,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         </div>
 
         {description && (
-          <div className="px-8 mb-6">
+          <div className={t.descriptionWrapper}>
              <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${t.accentText}`}>Project Description</p>
              <p className="text-slate-700 text-sm">{description}</p>
           </div>
@@ -159,8 +160,8 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
                   <tr key={idx} className={idx % 2 !== 0 ? t.tableStripe : 'bg-white'}>
                     <td className="px-4 py-3 text-slate-900 font-medium">{i.description}</td>
                     <td className="px-4 py-3 text-right text-slate-600">{i.quantity}</td>
-                    <td className="px-4 py-3 text-right text-slate-600">{i.unitPrice.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right text-slate-900 font-bold">{i.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{formatMoney(i.unitPrice, currency).replace(/^.*?([\d,.]+)/, '$1')}</td>
+                    <td className="px-4 py-3 text-right text-slate-900 font-bold">{formatMoney(i.amount, currency).replace(/^.*?([\d,.]+)/, '$1')}</td>
                   </tr>
                 ))
               ) : (
@@ -176,17 +177,17 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
             <div className="w-full sm:w-2/3 md:w-1/2 space-y-2 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span className="shrink-0">Subtotal</span>
-                <span>{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span>{formatMoney(subtotal, currency)}</span>
               </div>
               {computedTaxes.map((tx, idx) => (
                 <div key={idx} className="flex justify-between text-slate-600">
                   <span>{tx.name}</span>
-                  <span>{tx.isDeduction ? '-' : ''}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span>{tx.isDeduction ? '-' : ''}{formatMoney(tx.amount, currency).replace(/^.*?([\d,.]+)/, '$1')}</span>
                 </div>
               ))}
               <div className={`flex justify-between items-center gap-8 pt-3 mt-2 ${t.totalRow}`}>
                 <span className="font-bold text-sm text-slate-900">Total</span>
-                <span className={`font-bold text-sm break-all text-right ${t.accentText}`}>{currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className={`font-bold text-sm break-all text-right ${t.accentText}`}>{formatMoney(total, currency)}</span>
               </div>
             </div>
           </div>

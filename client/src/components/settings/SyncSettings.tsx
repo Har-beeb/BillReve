@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { syncEngine } from '../../services/syncEngine';
-import { Cloud, RefreshCw, Trash2, Database, FileUp, Loader2 } from 'lucide-react';
+import { Cloud, RefreshCw, Trash2, Database, FileUp, Loader2, AlertCircle, Play } from 'lucide-react';
 import { CsvImportWizard } from '../CsvImportWizard';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../../db/db';
 import toast from 'react-hot-toast';
 
 export const SyncSettings: React.FC = () => {
@@ -13,6 +15,10 @@ export const SyncSettings: React.FC = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isGeneratingData, setIsGeneratingData] = useState(false);
   const [isClearingData, setIsClearingData] = useState(false);
+
+  const failedSyncs = useLiveQuery(
+    () => db.syncQueue.where('status').equals('failed').toArray()
+  );
 
   return (
     <>
@@ -45,6 +51,50 @@ export const SyncSettings: React.FC = () => {
               Force Sync
             </button>
           </div>
+
+          {/* Dead-Letter Queue (Failed Syncs) */}
+          {failedSyncs && failedSyncs.length > 0 && (
+            <div className="w-full bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-lg p-4 mb-6 text-left">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertCircle className="text-red-600 dark:text-red-400" size={18} />
+                <h3 className="font-semibold text-red-900 dark:text-red-300">Sync Errors Detected</h3>
+              </div>
+              <p className="text-sm text-red-700 dark:text-red-400 mb-4">
+                {failedSyncs.length} {failedSyncs.length === 1 ? 'item failed' : 'items failed'} to sync to the cloud permanently. This usually happens if there was a server conflict or invalid data. You can attempt to retry them below.
+              </p>
+              
+              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                {failedSyncs.map(item => (
+                  <div key={item.id} className="bg-white/60 dark:bg-slate-900/40 p-3 rounded-md border border-red-100 dark:border-red-800/30 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-slate-700 dark:text-slate-300 capitalize">{item.action} {item.entity}</span>
+                      <span className="text-slate-500 text-xs">{new Date(item.createdAt).toLocaleString()}</span>
+                    </div>
+                    {item.error && <div className="text-red-600 dark:text-red-400 mt-1 text-xs font-mono bg-red-100/50 dark:bg-red-900/30 p-1 rounded break-words">{item.error}</div>}
+                  </div>
+                ))}
+              </div>
+              
+              <button 
+                onClick={async () => {
+                  try {
+                    // Reset status to pending to allow retry
+                    await Promise.all(failedSyncs.map(item => 
+                      db.syncQueue.update(item.id, { status: 'pending', error: undefined })
+                    ));
+                    syncEngine.sync();
+                    toast.success('Queued for retry!');
+                  } catch (e) {
+                    toast.error('Failed to retry sync queue.');
+                  }
+                }}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+              >
+                <Play size={16} />
+                Retry Failed Items
+              </button>
+            </div>
+          )}
           
           {/* Developer Tools for Mocking Data */}
           {enableMockData && (

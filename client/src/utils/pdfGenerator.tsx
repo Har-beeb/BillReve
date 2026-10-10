@@ -81,8 +81,8 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
                 <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? ts.stripeBg : 'transparent' }}>
                   <td className="py-3 pl-4" style={{ color: '#334155' }}>{i.description}</td>
                   <td className="text-right py-3 pr-4 whitespace-nowrap" style={{ color: '#475569' }}>{i.quantity}</td>
-                  <td className="text-right py-3 pr-4 whitespace-nowrap" style={{ color: '#475569' }}>{(i.unitPrice || i.unit_price)?.toLocaleString()}</td>
-                  <td className="text-right py-3 pr-4 font-medium whitespace-nowrap" style={{ color: '#1e293b' }}>{i.amount?.toLocaleString()}</td>
+                  <td className="text-right py-3 pr-4 whitespace-nowrap" style={{ color: '#475569' }}>{formatMoney((i.unitPrice || i.unit_price) || 0, document.currency).replace(/^.*?([\d,.]+)/, '$1')}</td>
+                  <td className="text-right py-3 pr-4 font-medium whitespace-nowrap" style={{ color: '#1e293b' }}>{formatMoney(i.amount || 0, document.currency).replace(/^.*?([\d,.]+)/, '$1')}</td>
                 </tr>
               ))
             ) : (
@@ -152,7 +152,15 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
   );
 };
 
-export const generateDocumentPdf = async (document: any, client: any, profile: any, type: 'QUOTE' | 'INVOICE', download: boolean = false): Promise<string | void> => {
+export interface GeneratePdfOptions {
+  document: any;
+  client: any;
+  profile: any;
+  type: 'QUOTE' | 'INVOICE';
+  download?: boolean;
+}
+
+export const generateDocumentPdf = async ({ document, client, profile, type, download = false }: GeneratePdfOptions): Promise<string | void> => {
   // Create hidden container
   const container = window.document.createElement('div');
   container.style.position = 'absolute';

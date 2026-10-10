@@ -1,6 +1,11 @@
 import type { Invoice, Client } from '../types';
 
 /**
+ * Helper to convert minor units (cents/kobo) to major units for CSV export
+ */
+const toMajor = (minorAmount: number) => (minorAmount / 100).toFixed(2);
+
+/**
  * Generates a country-specific CSV report for revenue.
  */
 export const generateTaxReportCsv = (invoices: Invoice[], clients: Client[], country: string) => {
@@ -25,14 +30,14 @@ export const generateTaxReportCsv = (invoices: Invoice[], clients: Client[], cou
     if (country === 'US') {
       const stateTax = inv.taxes?.find(t => t.name.toLowerCase().includes('state'))?.amount || 0;
       const fedTax = inv.taxes?.find(t => t.name.toLowerCase().includes('federal'))?.amount || 0;
-      return [date, invoiceNum, escapedName, inv.status, inv.subtotal.toFixed(2), stateTax.toFixed(2), fedTax.toFixed(2), inv.total.toFixed(2)].join(',');
+      return [date, invoiceNum, escapedName, inv.status, toMajor(inv.subtotal), toMajor(stateTax), toMajor(fedTax), toMajor(inv.total)].join(',');
     } else if (country === 'GB') {
       const vat = inv.taxes?.find(t => t.name.toLowerCase().includes('vat'))?.amount || 0;
-      return [date, invoiceNum, escapedName, inv.status, inv.subtotal.toFixed(2), vat.toFixed(2), inv.total.toFixed(2)].join(',');
+      return [date, invoiceNum, escapedName, inv.status, toMajor(inv.subtotal), toMajor(vat), toMajor(inv.total)].join(',');
     } else {
       const vat = inv.taxes?.find(t => t.name.toLowerCase().includes('vat'))?.amount || 0;
       const wht = inv.taxes?.find(t => t.name.toLowerCase().includes('wht'))?.amount || 0;
-      return [date, invoiceNum, escapedName, inv.status, inv.subtotal.toFixed(2), vat.toFixed(2), wht.toFixed(2), inv.total.toFixed(2)].join(',');
+      return [date, invoiceNum, escapedName, inv.status, toMajor(inv.subtotal), toMajor(vat), toMajor(wht), toMajor(inv.total)].join(',');
     }
   });
 
@@ -54,7 +59,7 @@ export const generateTaxReportCsv = (invoices: Invoice[], clients: Client[], cou
 export const exportToCsv = (filename: string, headers: string[], rows: any[][]) => {
   const csvContent = [
     headers.join(','),
-    ...rows.map(row => row.map(cell => "" + String(cell).replace(/"/g, '""""') + "").join(','))
+    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
   ].join('\n');
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

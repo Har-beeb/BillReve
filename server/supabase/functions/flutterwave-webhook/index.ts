@@ -23,10 +23,10 @@ serve(async (req) => {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-      // 1. Fetch the invoice to find the user_id
+      // 1. Fetch the invoice to find the user_id, total, and currency
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
-        .select('user_id')
+        .select('organization_id, total, currency')
         .eq('local_id', invoiceId)
         .single();
 
@@ -34,29 +34,38 @@ serve(async (req) => {
         throw new Error(`Invoice not found: ${invoiceError?.message}`);
       }
 
-      // 2. Fetch the user's Flutterwave Secret Hash
-      const { data: secrets, error: secretsError } = await supabase
-        .from('user_secrets')
-        .select('flutterwave_secret_key')
-        .eq('user_id', invoice.user_id)
-        .single();
+      // 2. Fetch the user's decrypted Flutterwave Secret Hash
+      const { data: secretKey, error: secretsError } = await supabase
+        .rpc('get_merchant_secret', {
+          p_org_id: invoice.organization_id,
+          p_gateway: 'flutterwave'
+        });
 
-      if (secretsError || !secrets || !secrets.flutterwave_secret_key) {
+      if (secretsError || !secretKey) {
         throw new Error('Merchant secret key not configured');
       }
 
       // 3. Verify Signature
-      if (signature !== secrets.flutterwave_secret_key) {
-        console.error('Invalid Flutterwave signature for user:', invoice.user_id);
+      if (signature !== secretKey) {
+        console.error('Invalid Flutterwave signature for organization:', invoice.organization_id);
         return new Response('Invalid signature', { status: 401 });
       }
 
-      // 4. Update invoice
+      // 4. Verify Amount & Currency, then update invoice
+      const paidAmount = Number(data.amount);
+      const expectedCurrency = invoice.currency || 'USD';
+      
+      if (data.currency !== expectedCurrency) {
+        throw new Error(`Currency mismatch: Expected ${expectedCurrency}, got ${data.currency}`);
+      }
+
+      const newStatus = paidAmount >= invoice.total ? 'PAID' : 'PARTIAL';
+
       const { error } = await supabase
         .from('invoices')
         .update({ 
-          status: 'PAID', 
-          amount_paid: data.amount
+          status: newStatus, 
+          amount_paid: paidAmount
         })
         .eq('local_id', invoiceId);
 
@@ -65,7 +74,7 @@ serve(async (req) => {
         throw error;
       }
       
-      console.log(`Invoice ${invoiceId} successfully marked as PAID via Flutterwave.`);
+      console.log(`Invoice ${invoiceId} successfully marked as ${newStatus} via Flutterwave. Paid: ${paidAmount}, Total: ${invoice.total}`);
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });

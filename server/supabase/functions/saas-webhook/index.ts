@@ -16,14 +16,29 @@ serve(async (req) => {
 
   try {
     bodyText = await req.text();
+
+    const signature = req.headers.get('x-paystack-signature');
+    if (!signature) {
+      throw new Error('No signature');
+    }
+    
+    // 1. Verify SaaS Paystack Signature BEFORE anything else
+    const hash = createHmac('sha512', saasSecretKey)
+      .update(bodyText)
+      .digest('hex');
+
+    if (hash !== signature) {
+      throw new Error('Invalid signature');
+    }
+
     let payload = {};
     try {
       payload = JSON.parse(bodyText);
     } catch (e) {
-      // Not JSON
+      throw new Error('Invalid JSON');
     }
 
-    // 1. Log incoming webhook immediately
+    // 2. Log incoming webhook safely now that it is authenticated
     const { data: logEntry } = await supabase
       .from('webhook_logs')
       .insert({
@@ -36,20 +51,6 @@ serve(async (req) => {
       .single();
       
     if (logEntry) logId = logEntry.id;
-
-    const signature = req.headers.get('x-paystack-signature');
-    if (!signature) {
-      throw new Error('No signature');
-    }
-    
-    // Verify SaaS Paystack Signature
-    const hash = createHmac('sha512', saasSecretKey)
-      .update(bodyText)
-      .digest('hex');
-
-    if (hash !== signature) {
-      throw new Error('Invalid signature');
-    }
 
     const event = JSON.parse(bodyText);
 
@@ -70,26 +71,36 @@ serve(async (req) => {
       
       // If the charge was for a subscription
       if (userId && type === 'saas_subscription') {
+        const { data: member } = await supabase.from('organization_members').select('organization_id').eq('user_id', userId).limit(1).single();
+        if (!member) throw new Error('User has no organization');
+        const orgId = member.organization_id;
+        const amount = data.amount; // in kobo
+        
+        // 3. Verify amount is correct for the Pro plan (3500 NGN)
+        if (amount < 350000) {
+            throw new Error(`Amount too low for PRO plan: ${amount} kobo`);
+        }
+
         // Update the user's profile to is_pro = true and add 30 days
         const { error } = await supabase
-          .from('profiles')
+          .from('organizations')
           .update({ 
             is_pro: true,
             pro_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
           })
-          .eq('id', userId);
+          .eq('id', orgId);
 
         if (error) {
           throw new Error(`Failed to update user profile: ${error.message}`);
         }
         
-        console.log(`User ${userId} successfully upgraded to PRO.`);
+        console.log(`Organization ${orgId} successfully upgraded to PRO.`);
 
         // Fetch user email for the welcome email
         const { data: profile } = await supabase
-          .from('profiles')
+          .from('organizations')
           .select('email, name')
-          .eq('id', userId)
+          .eq('id', orgId)
           .single();
 
         if (profile?.email) {
@@ -113,7 +124,7 @@ serve(async (req) => {
                     <ul>
                       <li>Accept international payments via Flutterwave</li>
                       <li>Automate email reminders for overdue invoices</li>
-                      <li>Remove BillReve branding from your public invoices</li>
+                      <li>Access premium document templates and layouts</li>
                     </ul>
                     <p>Log back into your account to explore your new tools.</p>
                     <p>Best,<br>The BillReve Team</p>
@@ -132,7 +143,7 @@ serve(async (req) => {
           }
         }
       } else {
-        throw new Error(`Ignored charge.success: Missing userId or type is not saas_subscription (Found type: ${type})`);
+        throw new Error(`Ignored charge.success: Missing orgId or type is not saas_subscription (Found type: ${type})`);
       }
     } else if (event.event === 'subscription.disable' || event.event === 'charge.failed' || event.event === 'subscription.not_renew') {
       const data = event.data;
@@ -148,19 +159,11 @@ serve(async (req) => {
       }
       
       if (userId && type === 'saas_subscription') {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ 
-            is_pro: false,
-            pro_expires_at: null 
-          })
-          .eq('id', userId);
-
-        if (error) {
-          throw new Error(`Failed to downgrade user profile: ${error.message}`);
-        }
-        
-        console.log(`User ${userId} successfully downgraded to FREE tier.`);
+        const { data: member } = await supabase.from('organization_members').select('organization_id').eq('user_id', userId).limit(1).single();
+        if (!member) throw new Error('User has no organization');
+        const orgId = member.organization_id;
+        // 4. Do not maliciously downgrade immediately. Let `pro_expires_at` expire naturally.
+        console.log(`Charge failed or subscription disabled for organization ${orgId}. Leaving pro_expires_at intact until natural expiration.`);
       }
     }
 

@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle2, Download, MessageSquare } from 'lucide-react
 import { SEO } from '../components/SEO';
 import { formatMoney } from '../utils/formatters';
 import { db } from '../db/db';
+import { useAppStore } from '../store/useAppStore';
 import toast from 'react-hot-toast';
 
 const PublicQuote: React.FC = () => {
@@ -50,7 +51,7 @@ const PublicQuote: React.FC = () => {
               ...localQuote,
               local_id: localQuote.localId,
               client_id: localQuote.clientId,
-              user_id: localQuote.userId,
+              organization_id: localQuote.organizationId,
               created_at: localQuote.createdAt,
               quote_number: localQuote.quoteNumber,
             };
@@ -79,26 +80,19 @@ const PublicQuote: React.FC = () => {
         let profileData: any;
         try {
           const { data } = await supabase
-            .rpc('get_public_profile', { p_id: quoteData.user_id })
+            .rpc('get_public_profile', { p_id: quoteData.organization_id })
             .maybeSingle();
           if (data) profileData = data;
           else throw new Error('Profile not found');
         } catch (e) {
-          const storageStr = localStorage.getItem('billflow-storage');
-          if (storageStr) {
-            try {
-              const state = JSON.parse(storageStr).state;
-              const p = state?.businessProfile;
-              if (p) {
-                profileData = {
-                  ...p,
-                  bankAccounts: p.bankAccounts || [],
-                  logo_url: p.logoUrl
-                };
-              }
-            } catch (err) {
-              console.error('Failed to parse local profile', err);
-            }
+          // Offline fallback: grab business profile directly from Zustand state
+          const p = useAppStore.getState().businessProfile;
+          if (p && p.name && p.name !== 'BillReve') {
+            profileData = {
+              ...p,
+              bankAccounts: p.bankAccounts || [],
+              logo_url: p.logoUrl
+            };
           }
         }
         setProfile(profileData);
@@ -242,7 +236,7 @@ const PublicQuote: React.FC = () => {
           amountPaid: quote.amount_paid
       };
       const profileData = { ...profile, bankAccounts: profile.bank_accounts };
-        await (await import('../utils/pdfGenerator')).generateDocumentPdf(docData, profileData, client, 'QUOTE', true);
+        await (await import('../utils/pdfGenerator')).generateDocumentPdf({ document: docData, client, profile: profileData, type: 'QUOTE', download: true });
     } catch (err) {
       console.error('Download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');
@@ -341,7 +335,7 @@ const PublicQuote: React.FC = () => {
           </div>
 
           {quote.description && (
-             <div className="px-8 md:px-12 mb-6">
+             <div className={themeStyles.descriptionWrapper}>
                <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${themeStyles.accentText}`}>Project Description</p>
                <p className="text-slate-700 text-sm">{quote.description}</p>
              </div>
@@ -365,8 +359,8 @@ const PublicQuote: React.FC = () => {
                         <tr key={idx} className={idx % 2 !== 0 ? themeStyles.tableStripe : 'bg-white'}>
                           <td className="px-6 py-4 text-slate-900 font-medium whitespace-normal min-w-[200px]">{i.description}</td>
                           <td className="px-6 py-4 text-right text-slate-600">{i.quantity}</td>
-                          <td className="px-6 py-4 text-right text-slate-600">{(i.unitPrice || i.unit_price)?.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-right text-slate-900 font-bold">{i.amount?.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{formatMoney((i.unitPrice || i.unit_price) || 0, quote.currency).replace(/^.*?([\d,.]+)/, '$1')}</td>
+                          <td className="px-6 py-4 text-right text-slate-900 font-bold">{formatMoney(i.amount || 0, quote.currency).replace(/^.*?([\d,.]+)/, '$1')}</td>
                         </tr>
                       ))
                     ) : (

@@ -6,8 +6,12 @@ import MainLayout from './layouts/MainLayout';
 import PublicLayout from './layouts/PublicLayout';
 import { useLocation } from 'react-router-dom';
 import { UpdatePrompt } from './components/ui/UpdatePrompt';
+import { initMonitoring } from './lib/monitoring';
+
+initMonitoring();
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Recurring = React.lazy(() => import('./pages/Recurring'));
 const Quotes = React.lazy(() => import('./pages/Quotes'));
 const Invoices = React.lazy(() => import('./pages/Invoices'));
 const Clients = React.lazy(() => import('./pages/Clients'));
@@ -101,11 +105,19 @@ function App() {
   useEffect(() => {
     const fetchProfile = async (sessionUser: any) => {
       if (sessionUser) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_pro, pro_expires_at, name, email, phone, address, bank_accounts, country, currency, logo_url, industry, business_description')
-          .eq('id', sessionUser.id)
-          .single();
+        const { data: member } = await supabase
+            .from('organization_members')
+            .select('organization_id')
+            .eq('user_id', sessionUser.id)
+            .single();
+          
+          if (!member) return;
+
+          const { data: profile } = await supabase
+            .from('organizations')
+            .select('is_pro, pro_expires_at, name, email, phone, address, bank_accounts, country, currency, logo_url, industry, business_description')
+            .eq('id', member.organization_id)
+            .single();
           
         if (profile) {
           const isProActive = profile.is_pro && (!profile.pro_expires_at || new Date(profile.pro_expires_at) > new Date());
@@ -131,7 +143,7 @@ function App() {
                   .getPublicUrl(fileName);
                 validLogoUrl = publicUrl;
                 // Update profile in DB so we never do this again
-                await supabase.from('profiles').update({ logo_url: publicUrl }).eq('id', sessionUser.id);
+                await supabase.from('organizations').update({ logo_url: publicUrl }).eq('id', member.organization_id);
               }
             } catch (e) {
               console.error('Failed to migrate base64 logo', e);
@@ -250,6 +262,7 @@ function App() {
               <Route path="/quotes/new" element={<DocumentEditor type="QUOTE" />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="invoices/new" element={<DocumentEditor type="INVOICE" />} />
+              <Route path="recurring" element={<Recurring />} />
               <Route path="clients" element={<Clients />} />
               <Route path="campaigns" element={<Campaigns />} />
               <Route path="settings" element={<Settings />} />

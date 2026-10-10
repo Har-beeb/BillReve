@@ -19,7 +19,7 @@ serve(async (req) => {
     // For a real production app, we should also filter out 'PENDING' since they claim to have paid
     const { data: invoicesToCheck, error: invoiceError } = await supabase
       .from('invoices')
-      .select('*, client:clients(name, email), profile:profiles(business_name, email)')
+      .select('*, client:clients(name, email), organization:organizations(business_name, email)')
       .in('status', ['SENT', 'OVERDUE']);
 
     if (invoiceError) throw invoiceError;
@@ -83,7 +83,7 @@ serve(async (req) => {
           subject: emailSubject,
           html: `
             ${emailBody}
-            <p>Best regards,<br>${invoice.profile?.business_name || 'Your Provider'}</p>
+            <p>Best regards,<br>${invoice.organization?.name || 'Your Provider'}</p>
           `
         });
         invoicesToUpdate.push(invoice.id);
@@ -120,7 +120,7 @@ serve(async (req) => {
 
     // Sweep expired pro subscriptions as a failsafe
     await supabase
-      .from('profiles')
+      .from('organizations')
       .update({ is_pro: false, pro_expires_at: null })
       .eq('is_pro', true)
       .lt('pro_expires_at', new Date().toISOString());

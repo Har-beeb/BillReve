@@ -1,5 +1,5 @@
 # BillReve — Technical Working Document
-*Last updated: 2026-10-07 | Version: 1.5.0*
+*Last updated: 2026-10-10 | Version: 1.5.0*
 
 > This document is the **authoritative internal reference** for BillReve. It is written for developers, AI agents, and collaborators continuing work on this project. It must be kept up-to-date after every significant change.
 
@@ -127,7 +127,7 @@ syncStatus
 
 ### `notifications` (Supabase only, not synced locally)
 ```
-id, user_id, title, message, type, entity_id
+id, organization_id, title, message, type, entity_id
 is_read (boolean), created_at
 ```
 
@@ -174,7 +174,7 @@ Migrations are in `server/supabase/migrations/`. Key milestones:
 | `on_invoice_status_change` | `invoices` | `handle_invoice_status_change()` | Creates notifications for PAID, PARTIAL, PENDING status changes |
 | `on_quote_status_change` | `quotes` | `handle_quote_status_change()` | Creates notifications for ACCEPTED, DECLINED, COUNTERED |
 
-> **Important:** Both trigger functions check `auth.uid() IS NOT DISTINCT FROM NEW.user_id` to prevent self-notifications when the admin changes their own records. Notifications only fire when the change originates from a public (unauthenticated) link.
+> **Important:** Both trigger functions check `auth.uid() IS NOT DISTINCT FROM NEW.organization_id` to prevent self-notifications when the admin changes their own records. Notifications only fire when the change originates from a public (unauthenticated) link.
 
 ### Supabase Edge Functions
 
@@ -357,14 +357,7 @@ RevenueChat currently sends **all invoices, quotes, and clients** to the LLM on 
 
 > **Priority:** 🔴 Critical | 🟡 Medium | 🟢 Low
 
-### 🔴 1. Logo Stored as Base64 in PostgreSQL
-`profiles.logo_url` currently stores raw base64 image strings. This:
-- Bloats the Supabase DB row size significantly on every profile sync
-- Slows down the initial `fetchProfile` call
-- Can cause JSON payload size errors
-- **Fix:** Use Supabase Storage Bucket (the `logos` bucket from migration `20260805210001_create_logos_bucket.sql` already exists). Upload logo to bucket and store only the public URL. **This is the highest priority tech debt item.**
-
-### 🔴 2. AI Context Window Overflow
+### 🔴 1. AI Context Window Overflow
 RevenueChat sends the entire user database to Gemini on every message. For users with 500+ invoices, this will fail silently or produce degraded results.
 - **Fix:** Pre-aggregate: send only summary stats (total revenue, top 10 clients, last 20 invoices) rather than raw arrays.
 
@@ -471,3 +464,6 @@ EMAIL_PROVIDER_API_KEY=
 - **2026-10-02 (Phase 1):** Implemented server-side rate limiting for public RPCs.
 - **2026-10-02 (Phase 2):** Implemented bank account snapshots on document creation, cleaned up Upgrade.tsx with feature flags, added Edge middleware for dynamic OG tags, and fully integrated document themes across preview, PDF generation, and public pages.
 - **2026-10-03 (Phase 3):** Code-split the heavy 1MB PDF generator via dynamic imports to eliminate main bundle bloat, and added a strict PostgreSQL CHECK constraint to permanently block base64 strings in logo_url.
+- **2026-10-08 (Phase 4 & 5):** Re-architected money values to integer minor units (cents) to prevent precision loss. Migrated `profiles` to `organizations` to lay groundwork for team accounts.
+- **2026-10-09 (Phase 6):** Built Sync Settings DLQ (Dead Letter Queue) UI for failed background sync payloads. Removed legacy interceptors.
+- **2026-10-10 (Phase 7 & 8):** Deployed Recurring Invoices full-stack. Refactored Dashboard charts. Fixed offline LocalStorage fallbacks by routing directly to Zustand state. Rewrote list filters with `useMemo` for O(1) rendering performance.

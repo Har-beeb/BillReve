@@ -18,7 +18,6 @@ import {
   Bot,
   Send,
   MessageSquare,
-  Quote,
   Loader2
 } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
@@ -38,7 +37,6 @@ const LandingPage: React.FC = () => {
   const [wordIndex, setWordIndex] = useState(0);
   const [feedbackEmail, setFeedbackEmail] = useState('');
   const [feedbackType, setFeedbackType] = useState('bug');
-  const [rating, setRating] = useState(5);
   const [feedbackText, setFeedbackText] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
@@ -87,7 +85,7 @@ const LandingPage: React.FC = () => {
           <h2>New Feedback Submission</h2>
           <p><strong>Email:</strong> ${feedbackEmail}</p>
           <p><strong>Type:</strong> ${feedbackType}</p>
-          <p><strong>Rating:</strong> ${rating} Stars</p>
+          
           <div style="background: #f4f4f5; padding: 16px; border-radius: 8px; margin-top: 16px; white-space: pre-wrap;">
             ${feedbackText}
           </div>
@@ -275,7 +273,7 @@ const LandingPage: React.FC = () => {
             <FeatureCard 
               icon={<FileSignature size={32} className="text-purple-600 dark:text-purple-400" />}
               title="Beautiful Documents"
-              description="Create stunning invoices and quotes that reflect your brand. Add your logo, choose colors, and look professional."
+              description="Create stunning invoices and quotes that reflect your brand. Add your logo, choose from professional templates, and stand out."
             />
             <FeatureCard 
               icon={<RefreshCw size={32} className="text-amber-500" />}
@@ -285,7 +283,7 @@ const LandingPage: React.FC = () => {
             <FeatureCard 
               icon={<CreditCard size={32} className="text-green-500" />}
               title="Get Paid Faster"
-              description="Send secure payment links via Email or WhatsApp. Track views, signatures, and payments in real-time."
+              description="Send secure payment links via Email or copy them to WhatsApp. Let clients pay you online in real-time."
             />
             <FeatureCard 
               icon={<Globe2 size={32} className="text-blue-500" />}
@@ -295,7 +293,7 @@ const LandingPage: React.FC = () => {
             <FeatureCard 
               icon={<Palette size={32} className="text-pink-500" />}
               title="Custom Branding"
-              description="Make it yours. Deep customization options let you tailor the app's look and feel to match your unique brand identity."
+              description="Make it yours. Upload your business logo and choose from multiple layout themes to match your unique brand identity."
             />
             <FeatureCard 
               icon={<CheckCircle2 size={32} className="text-teal-500" />}
@@ -306,72 +304,12 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Testimonials & Feedback Section */}
+      {/* Feedback Section */}
       <section className="py-24 bg-slate-50 dark:bg-slate-900 border-y border-slate-200 dark:border-slate-800 relative overflow-hidden">
         <div className="absolute top-1/2 left-0 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-3xl -z-10 -translate-y-1/2" />
         <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-3xl -z-10 -translate-y-1/2" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 font-['Outfit']">Loved by businesses worldwide</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400">
-              See what our users have to say, or share your own thoughts with us!
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative">
-              <Quote className="absolute top-6 right-6 text-purple-100 dark:text-slate-700" size={40} />
-              <div className="flex items-center gap-1 text-amber-400 mb-4">
-                <Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" />
-              </div>
-              <p className="text-slate-700 dark:text-slate-300 mb-6 relative z-10 italic">
-                "BillReve's offline-first approach saved my business. I frequently travel to areas with spotty internet, and being able to generate quotes on the go is a game-changer."
-              </p>
-              <div className="flex items-center gap-3 mt-auto">
-                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold">SA</div>
-                <div>
-                  <p className="font-bold text-sm">Sarah Adams</p>
-                  <p className="text-xs text-slate-500">Freelance Consultant</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative">
-              <Quote className="absolute top-6 right-6 text-purple-100 dark:text-slate-700" size={40} />
-              <div className="flex items-center gap-1 text-amber-400 mb-4">
-                <Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" />
-              </div>
-              <p className="text-slate-700 dark:text-slate-300 mb-6 relative z-10 italic">
-                "The AI document drafting is absolutely incredible. It writes personalized, professional emails in seconds. Worth every penny of the Pro subscription."
-              </p>
-              <div className="flex items-center gap-3 mt-auto">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold">MD</div>
-                <div>
-                  <p className="font-bold text-sm">Marcus Davis</p>
-                  <p className="text-xs text-slate-500">Agency Owner</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative">
-              <Quote className="absolute top-6 right-6 text-purple-100 dark:text-slate-700" size={40} />
-              <div className="flex items-center gap-1 text-amber-400 mb-4">
-                <Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" /><Star size={16} className="fill-current" />
-              </div>
-              <p className="text-slate-700 dark:text-slate-300 mb-6 relative z-10 italic">
-                "I've tried a dozen invoicing tools, but the sheer speed of this app is unmatched. Everything syncs perfectly across my devices the moment I'm back online."
-              </p>
-              <div className="flex items-center gap-3 mt-auto">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold">JL</div>
-                <div>
-                  <p className="font-bold text-sm">Jessica Lee</p>
-                  <p className="text-xs text-slate-500">Small Business Owner</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg max-w-5xl mx-auto flex flex-col md:flex-row">
             <div className="md:w-5/12 bg-slate-50 dark:bg-slate-800/50 p-8 md:p-12 flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700">
               <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/50 rounded-2xl flex items-center justify-center text-purple-600 dark:text-purple-400 mb-6">
@@ -400,32 +338,9 @@ const LandingPage: React.FC = () => {
                   >
                     <option value="bug">Report a Bug</option>
                     <option value="feature">Feature Request</option>
-                    <option value="testimonial">Submit Testimonial</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
-
-                {feedbackType === 'testimonial' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Rating
-                    </label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setRating(star)}
-                          className={`p-1 transition-colors ${rating >= star ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-600'}`}
-                        >
-                          <svg className="w-6 h-6 fill-current" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div>
                   <label htmlFor="feedbackEmail" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -531,7 +446,7 @@ const LandingPage: React.FC = () => {
               <ul className="space-y-4 mb-10 flex-1">
                 <li className="flex items-start gap-3"><Bot size={20} className="text-purple-300 shrink-0 mt-0.5" /> <span>AI Document Drafting</span></li>
                 <li className="flex items-start gap-3"><FileSpreadsheet size={20} className="text-emerald-300 shrink-0 mt-0.5" /> <span>Advanced CSV & Excel Exports</span></li>
-                <li className="flex items-start gap-3"><Palette size={20} className="text-pink-300 shrink-0 mt-0.5" /> <span>Custom Brand Colors & Logos</span></li>
+                <li className="flex items-start gap-3"><Palette size={20} className="text-pink-300 shrink-0 mt-0.5" /> <span>Premium Templates & Logos</span></li>
                 <li className="flex items-start gap-3"><Zap size={20} className="text-amber-300 shrink-0 mt-0.5" /> <span>Unlimited Clients & Invoices</span></li>
                 <li className="flex items-start gap-3"><Send size={20} className="text-blue-300 shrink-0 mt-0.5" /> <span>Automated Email Reminders & Campaigns</span></li>
               </ul>

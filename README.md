@@ -8,7 +8,7 @@
 
 [![Live App](https://img.shields.io/badge/Live%20App-billreve.app-6d28d9?style=flat-square&logo=vercel&logoColor=white)](https://billreve.app)
 [![Documentation](https://img.shields.io/badge/Docs-billreve.app%2Fdocumentation-5b21b6?style=flat-square)](https://billreve.app/documentation)
-[![Version](https://img.shields.io/badge/version-1.4.1-a78bfa?style=flat-square)](https://github.com/Har-beeb/BillReve/releases)
+[![Version](https://img.shields.io/badge/version-1.5.0-a78bfa?style=flat-square)](https://github.com/Har-beeb/BillReve/releases)
 [![License](https://img.shields.io/badge/license-MIT-4c1d95?style=flat-square)](LICENSE)
 
 *Create, send, and get paid — even without internet.*
@@ -327,12 +327,15 @@ BillReve is designed to feel **premium and frictionless**:
 | **Aggressive Background Polling** | ✅ Fixed | The Sync Engine listens to `visibilitychange`, completely pausing its 10-second polling when the tab is hidden, and executing a single catch-up sync instantly upon return. |
 | **`logo_url` Base64 Crashes** | ✅ Fixed | A Postgres `CHECK` constraint (`chk_logo_url_no_base64`) physically blocks heavy base64 strings. Legacy strings are auto-uploaded to Supabase Storage on login. |
 | **Client Clock Drift (LWW)** | ✅ Fixed | `syncEngine.ts` fetches the `Date` header from the Supabase API on boot to calculate `serverTimeOffsetMs`, applied during Last-Write-Wins conflict resolution. |
+| **Money Precision Loss** | ✅ Fixed | Migrated PostgreSQL and Dexie schemas to strictly store all currency in integer minor units (cents). Fixed math propagation across 40+ UI files. |
+| **Multi-Tenant Foundation** | ✅ Fixed | Ripped out `profiles` table and migrated all schemas to `organizations` and `organization_members` for future team-account scaling. |
+| **DLQ (Dead Letter Queue)** | ✅ Fixed | Surfaced failed offline payload queues to the UI in `SyncSettings.tsx` to prevent silent desyncs on API schema mismatch. |
+| **React CPU Spikes** | ✅ Fixed | Handled O(N*M) sluggishness by implementing strict `useMemo` hooks on all inline `.filter()` arrays and dictionary caching across the frontend tabs. |
 
 ### Pending Tech Debt 🚧
 
 | Issue | Severity | Target Fix |
 | --- | --- | --- |
-| **Billing Bypass via `is_pro`** | High | The `profiles` table allows self-updating. A malicious user could send an API request setting `is_pro: true`. Needs a Postgres trigger to block modifications to billing columns by the `authenticated` role. |
 | **`AICfoReport` Payload Bloat** | Medium | `AICfoReport.tsx` sends raw invoice arrays to Gemini. Needs refactoring to use the Phase 4 `get_ai_context` server-side aggregation RPC to prevent payload limit crashes at scale. |
 
 ### Roadmap 🔜

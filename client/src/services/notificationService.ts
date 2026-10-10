@@ -77,8 +77,8 @@ class NotificationService {
     this.setAppBadge(0);
   }
 
-  setupRealtimeListeners(userId: string) {
-    if (!userId) return;
+  setupRealtimeListeners(orgId: string) {
+    if (!orgId) return;
     
     // Clean up previous channel if it exists
     if (this.realtimeChannel) {
@@ -89,21 +89,21 @@ class NotificationService {
     this.realtimeChannel = supabase.channel('client-interactions')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'invoices', filter: `user_id=eq.${userId}` },
+        { event: 'UPDATE', schema: 'public', table: 'invoices', filter: `organization_id=eq.${orgId}` },
         (payload) => {
           this.handleDocumentUpdate('Invoice', payload.old, payload.new);
         }
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'quotes', filter: `user_id=eq.${userId}` },
+        { event: 'UPDATE', schema: 'public', table: 'quotes', filter: `organization_id=eq.${orgId}` },
         (payload) => {
           this.handleDocumentUpdate('Quote', payload.old, payload.new);
         }
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'clients', filter: `user_id=eq.${userId}` },
+        { event: 'UPDATE', schema: 'public', table: 'clients', filter: `organization_id=eq.${orgId}` },
         (payload) => {
           this.handleDocumentUpdate('Client', payload.old, payload.new);
         }

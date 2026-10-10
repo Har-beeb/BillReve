@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bot, Copy, Check, FileText, Loader2, RefreshCw, Sparkles } from 'lucide-react';
-import { generateCfoReport } from '../../api/ai';
+import { generateCfoReport } from '../../services/ai';
 import { useAppStore } from '../../store/useAppStore';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';

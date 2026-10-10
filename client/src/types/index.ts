@@ -3,6 +3,23 @@ export type QuoteStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'DECLINED' | 'COUNTERE
 export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
 export type SyncStatus = 'synced' | 'pending' | 'failed' | 'syncing';
 
+export interface RecurringSchedule {
+  id?: string;
+  localId: string;
+  organizationId?: string;
+  clientId: string;
+  templateInvoiceId: string;
+  frequency: 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  nextRunDate: string;
+  endDate?: string;
+  status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+  createdAt?: string;
+  updatedAt?: string;
+  syncStatus?: SyncStatus;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+}
+
 export interface BankAccount {
   id: string;
   bankName: string;
@@ -54,7 +71,7 @@ export interface Client {
 export interface Quote {
   id?: string;
   localId: string;
-  userId?: string;
+  organizationId?: string;
   quoteNumber?: string; // e.g., QTE-001
   clientId: string;
   description?: string;
@@ -91,7 +108,7 @@ export interface QuoteItem {
 export interface Invoice {
   id?: string;
   localId: string;
-  userId?: string;
+  organizationId?: string;
   invoiceNumber?: string; // e.g., INV-001
   clientId: string;
   description?: string;
@@ -137,7 +154,7 @@ export interface InvoiceItem {
 export interface SyncQueueItem {
   id: string;
   action: 'CREATE' | 'UPDATE' | 'DELETE';
-  entity: 'CLIENT' | 'QUOTE' | 'INVOICE';
+  entity: 'CLIENT' | 'QUOTE' | 'INVOICE' | 'RECURRING_SCHEDULE';
   payload: Record<string, unknown>;
   createdAt: string;
   status: 'pending' | 'failed';

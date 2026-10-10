@@ -12,6 +12,7 @@ export function getThemeStyles(theme: DocumentTheme = 'standard') {
       tableStripe: 'bg-white border-b border-slate-50',
       totalRow: 'border-t-2 border-slate-800',
       accentText: 'text-slate-500',
+      descriptionWrapper: 'px-8 md:px-12 pt-6 mb-6',
     },
     professional: {
       docWrapper: 'bg-white border-t-8 border-blue-800 shadow-xl rounded-b-xl',
@@ -23,6 +24,7 @@ export function getThemeStyles(theme: DocumentTheme = 'standard') {
       tableStripe: 'bg-slate-50/40 border-b border-slate-100',
       totalRow: 'border-t-2 border-blue-800',
       accentText: 'text-blue-800',
+      descriptionWrapper: 'px-8 md:px-12 pt-6 mb-6',
     },
     modern: {
       docWrapper: 'bg-slate-50/50 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100',
@@ -34,6 +36,7 @@ export function getThemeStyles(theme: DocumentTheme = 'standard') {
       tableStripe: 'bg-white border-b border-slate-50',
       totalRow: 'border-t border-slate-100 bg-white',
       accentText: 'text-slate-900',
+      descriptionWrapper: 'px-6 md:px-10 pt-8 md:pt-10 mb-6 z-10 relative',
     },
     classic: {
       docWrapper: 'bg-[#fcfbf9] border border-[#e5e4e0] shadow-md p-4 md:p-6',
@@ -45,6 +48,7 @@ export function getThemeStyles(theme: DocumentTheme = 'standard') {
       tableStripe: 'bg-[#fcfbf9] border-b border-stone-100',
       totalRow: 'border-t-4 border-double border-stone-300',
       accentText: 'text-stone-600 font-serif italic',
+      descriptionWrapper: 'px-8 mb-6',
     },
     monochrome: {
       docWrapper: 'bg-white border-[6px] border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]',
@@ -56,6 +60,7 @@ export function getThemeStyles(theme: DocumentTheme = 'standard') {
       tableStripe: 'bg-white border-b-[3px] border-black',
       totalRow: 'border-t-[6px] border-black bg-white text-black',
       accentText: 'text-black font-black uppercase tracking-widest',
+      descriptionWrapper: 'px-8 md:px-12 pt-8 md:pt-10 mb-6',
     },
   };
   return themes[theme] || themes.standard;

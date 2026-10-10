@@ -20,6 +20,7 @@ const Upgrade: React.FC = () => {
   const componentProps: any = {
     email: user?.email || 'user@example.com',
     amount: PRO_PRICE * 100, // Amount in kobo
+    plan: paystackPlan, // Required for actual recurring subscriptions
     metadata: {
       custom_fields: [
          { display_name: "User ID", variable_name: "userId", value: user?.id || '' },

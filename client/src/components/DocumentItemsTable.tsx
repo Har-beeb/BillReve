@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Sparkles, Loader2 } from 'lucide-react';
-import { enhanceAiText } from '../api/ai';
+import { enhanceAiText } from '../services/ai';
 import { useAppStore } from '../store/useAppStore';
+import { CurrencyInput } from './ui/CurrencyInput';
 
 export interface LineItem {
   id: string;
@@ -97,20 +98,17 @@ export const DocumentItemsTable: React.FC<DocumentItemsTableProps> = ({
               
               <div className="md:col-span-2">
                 <label className="md:hidden text-xs font-medium text-slate-500 mb-1.5 block">Rate</label>
-                <input 
-                  type="number" 
-                  min="0"
-                  value={item.unitPrice === 0 ? '' : item.unitPrice}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => onItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                  className="w-full p-3.5 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all text-right font-medium text-sm shadow-sm md:shadow-none"
-                />
+                <CurrencyInput 
+                    valueInMinor={item.unitPrice}
+                    onChangeMinor={(val) => onItemChange(item.id, 'unitPrice', val)}
+                    className="w-full p-3.5 md:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white md:bg-slate-50 md:hover:bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all text-right font-medium text-sm shadow-sm md:shadow-none"
+                  />
               </div>
               
               <div className="col-span-2 md:col-span-3 flex justify-between md:justify-end items-center mt-2 md:mt-0 pt-3 md:pt-0 border-t border-slate-200 dark:border-slate-700 md:border-none">
                  <label className="md:hidden text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Amount</label>
                  <div className="text-right font-bold text-slate-900 dark:text-white text-base md:text-sm truncate">
-                   {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                   {(item.amount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                  </div>
               </div>
             </div>
