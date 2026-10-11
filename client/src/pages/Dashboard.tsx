@@ -8,7 +8,7 @@ import { AiDraftModal } from '../components/AiDraftModal';
 import { GettingStartedChecklist } from '../components/onboarding/GettingStartedChecklist';
 import { useQuota } from '../hooks/useQuota';
 import { RevenueChat } from '../components/RevenueChat';
-import { formatMoney } from '../utils/formatters';
+import { formatMoney, formatCompactMinor } from '../utils/formatters';
 import { useAppStore } from '../store/useAppStore';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -401,7 +401,7 @@ const Dashboard: React.FC = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} tickFormatter={(value: any) => value > 1000 ? `${(value/1000).toFixed(0)}k` : value.toString()} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} tickFormatter={(value: any) => formatCompactMinor(value as number)} />
                   <RechartsTooltip formatter={(value: any) => formatMoney(value as number)} labelFormatter={(label) => `Month: ${label}`} contentStyle={{ backgroundColor: '#1e293b', color: '#f8fafc', borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                   <Legend verticalAlign="top" height={36}/>
                   <Area type="monotone" dataKey="invoiced" name="Invoiced" stroke="#9333ea" strokeWidth={3} fillOpacity={1} fill="url(#colorInvoiced)" dot={false} activeDot={{ r: 6, strokeWidth: 2, fill: "#fff", stroke: "#9333ea" }} />
@@ -417,7 +417,7 @@ const Dashboard: React.FC = () => {
                   <ResponsiveContainer width="100%" height="90%">
                     <BarChart data={agedReceivablesData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.5} />
-                      <XAxis type="number" tickFormatter={(value: any) => value > 1000 ? `${(value/1000).toFixed(0)}k` : value.toString()} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <XAxis type="number" tickFormatter={(value: any) => formatCompactMinor(value as number)} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                       <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }} width={80} />
                       <RechartsTooltip formatter={(value: any) => formatMoney(value as number)} contentStyle={{ backgroundColor: '#1e293b', color: '#f8fafc', borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} cursor={{fill: 'transparent'}} />
                       <Bar dataKey="value" radius={[0, 4, 4, 0]}>

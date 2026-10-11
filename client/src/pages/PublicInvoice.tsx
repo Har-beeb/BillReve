@@ -7,6 +7,7 @@ import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { CheckCircle2, AlertCircle, Download, X, Building2, CreditCard } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { formatMoney } from '../utils/formatters';
+import { toGatewayAmount } from '../utils/money';
 import { db } from '../db/db';
 import { useAppStore } from '../store/useAppStore';
 import toast from 'react-hot-toast';
@@ -167,8 +168,7 @@ const PublicInvoice: React.FC = () => {
       // Actually we need to set a local state or refresh the invoice.
       const { error } = await supabase.rpc('update_invoice_status_public', {
         p_local_id: id,
-        p_status: 'PENDING',
-        p_amount_paid: invoice.amount_paid || 0
+        p_status: 'PENDING'
       });
       if (error) throw error;
       toast.success('We have notified the business that you have transferred the funds.');
@@ -183,10 +183,15 @@ const PublicInvoice: React.FC = () => {
       }
   };
 
+  // Outstanding balance, in MINOR units (kobo/cents) — the unit everything is
+  // stored in. Each gateway is handed this value through toGatewayAmount(),
+  // which applies that gateway's own convention. Never convert inline here.
+  const balanceDueMinor = Math.max(0, (invoice.total || 0) - (invoice.amount_paid || 0));
+
   // Paystack configuration
   const componentProps = profile?.paystack_public_key ? {
     email: client?.email || 'customer@example.com',
-    amount: Math.round((invoice.total - (invoice.amount_paid || 0)) * 100), // Paystack amount is in kobo
+    amount: toGatewayAmount(balanceDueMinor, 'paystack'),
     currency: invoice.currency || profile?.currency || 'NGN',
     metadata: {
       custom_fields: [
@@ -201,10 +206,13 @@ const PublicInvoice: React.FC = () => {
       console.log('Payment Success:', reference);
       setPaymentStatus('SUCCESS');
       try {
+        // Move the invoice out of DRAFT/SENT so the merchant sees activity, but
+        // do NOT assert an amount here. The browser is not a trusted source of
+        // payment truth — the gateway webhook verifies the amount against the
+        // invoice total and is the only thing that may set PAID or amount_paid.
         await supabase.rpc('update_invoice_status_public', {
           p_local_id: id,
-          p_status: 'PENDING',
-          p_amount_paid: invoice.total
+          p_status: 'PENDING'
         });
       } catch (err) {
         console.error('Failed to update invoice status in Supabase:', err);
@@ -219,7 +227,7 @@ const PublicInvoice: React.FC = () => {
   const flutterwaveConfig = profile?.flutterwave_public_key ? {
     public_key: profile.flutterwave_public_key,
     tx_ref: invoice.local_id || invoice.id,
-    amount: invoice.total - (invoice.amount_paid || 0),
+    amount: toGatewayAmount(balanceDueMinor, 'flutterwave'),
     currency: invoice.currency || profile.currency || 'USD',
     payment_options: 'card,mobilemoney,ussd',
     customer: {
@@ -535,10 +543,11 @@ const PublicInvoice: React.FC = () => {
                                                 if (response.status === 'successful') {
                                                   setPaymentStatus('SUCCESS');
                                                   try {
+                                                    // Status only — the webhook verifies the
+                                                    // amount and owns amount_paid / PAID.
                                                     await supabase.rpc('update_invoice_status_public', {
                                                       p_local_id: id,
-                                                      p_status: 'PENDING',
-                                                      p_amount_paid: invoice.total
+                                                      p_status: 'PENDING'
                                                     });
                                                   } catch (err) {
                                                     console.error('Failed to update invoice status in Supabase:', err);

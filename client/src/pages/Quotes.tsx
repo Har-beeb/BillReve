@@ -4,6 +4,7 @@ import { Search, Plus, Download, RefreshCw, FileText, MessageSquare, Link, Exter
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Badge, ProFeature } from '../components/ui';
 import { formatMoney, formatDate, roundMoney } from '../utils/formatters';
+import { toMajorString } from '../utils/money';
 import { Pagination } from '../components/Pagination';
 import { PreviewPanel } from '../components/PreviewPanel';
 import { db } from '../db/db';
@@ -193,9 +194,10 @@ const Quotes: React.FC = () => {
           quote.description || '',
           new Date(quote.issuedAt || quote.createdAt).toLocaleDateString(),
           quote.status,
-          quote.subtotal,
-          taxAmount,
-          quote.total
+          // Money is stored in MINOR units; a spreadsheet needs major units.
+          toMajorString(quote.subtotal),
+          toMajorString(taxAmount),
+          toMajorString(quote.total)
         ];
       });
       exportToCsv(`quotes-export-${new Date().toISOString().slice(0,10)}.csv`, headers, rows);

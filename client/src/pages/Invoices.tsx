@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams , useLocation } from 'react-router-dom';
 import { Search, Plus, Download, FileText, ReceiptText, MessageSquare, Link, ExternalLink } from 'lucide-react';
 import { Card, Badge, ProFeature, EmptyState } from '../components/ui';
 import { formatMoney, formatDate } from '../utils/formatters';
+import { toMajorString } from '../utils/money';
 import { Pagination } from '../components/Pagination';
 import { PreviewPanel } from '../components/PreviewPanel';
 import { db } from '../db/db';
@@ -235,11 +236,12 @@ const Invoices: React.FC = () => {
           new Date(invoice.issuedAt || invoice.createdAt).toLocaleDateString(),
           invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A',
           invoice.status,
-          invoice.subtotal,
-          taxAmount,
-          invoice.total,
-          invoice.amountPaid || 0,
-          invoice.total - (invoice.amountPaid || 0)
+          // Money is stored in MINOR units; a spreadsheet needs major units.
+          toMajorString(invoice.subtotal),
+          toMajorString(taxAmount),
+          toMajorString(invoice.total),
+          toMajorString(invoice.amountPaid || 0),
+          toMajorString(invoice.total - (invoice.amountPaid || 0))
         ];
       });
       exportToCsv(`invoices-export-${new Date().toISOString().slice(0,10)}.csv`, headers, rows);

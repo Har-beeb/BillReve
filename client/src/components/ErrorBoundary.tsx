@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
+import { captureError } from '../lib/monitoring';
 
 interface Props {
   children?: ReactNode;
@@ -22,6 +23,10 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
+    // Previously this only logged to a console nobody was watching, so every
+    // crash in production was invisible. captureError degrades to a console
+    // error when Sentry is not configured, so this is safe in development.
+    captureError(error, { componentStack: errorInfo.componentStack });
   }
 
   public render() {

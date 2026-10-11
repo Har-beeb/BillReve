@@ -12,6 +12,8 @@ import { useQuota } from '../hooks/useQuota';
 import { SendDocumentModal } from './SendDocumentModal';
 import { v4 as uuidv4 } from 'uuid';
 import { syncEngine } from '../services/syncEngine';
+import { toMinor } from '../utils/money';
+import { roundMoney } from '../utils/formatters';
 
 interface Action {
   type: string;
@@ -257,21 +259,28 @@ export const RevenueChat: React.FC = () => {
         }
         const formattedItems = (payload.items || []).map((item: any) => {
           const qty = item.quantity || 1;
-          const price = item.unitPrice || item.rate || item.amount || 0;
+          // The model answers in MAJOR units — it is told the business currency
+          // and echoes human figures ("3 hours at 150/hr" -> 150). Everything
+          // stored is MINOR units, so convert at this boundary.
+          const price = toMinor(item.unitPrice || item.rate || item.amount || 0);
           return {
             id: item.id || Date.now().toString() + Math.random().toString(),
             description: item.description || 'Item',
             quantity: qty,
             unitPrice: price,
-            amount: qty * price
+            amount: roundMoney(qty * price)
           };
         });
-        
-        const subtotal = formattedItems.reduce((sum: number, item: any) => sum + item.amount, 0) || (payload.amount || 0);
+
+        const subtotal = formattedItems.reduce((sum: number, item: any) => sum + item.amount, 0) || toMinor(payload.amount || 0);
         let total = subtotal;
         
         const formattedTaxes = (payload.taxes || []).map((t: any) => {
-          const taxAmt = t.type === 'PERCENTAGE' ? (subtotal * (t.rate / 100)) : t.rate;
+          // PERCENTAGE: subtotal is already MINOR, so the product is minor and
+          // only needs rounding. FIXED: the model gives a MAJOR figure, convert.
+          const taxAmt = t.type === 'PERCENTAGE'
+            ? roundMoney(subtotal * (t.rate / 100))
+            : toMinor(t.rate);
           return {
             id: t.id || Date.now().toString() + Math.random().toString(),
             name: t.name || 'Tax',

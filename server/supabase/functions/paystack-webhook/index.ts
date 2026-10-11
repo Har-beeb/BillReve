@@ -1,7 +1,16 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { Buffer } from "node:buffer";
+import { fromGatewayAmount, toMajorString } from "../_shared/money.ts";
+
+/** Constant-time string comparison, so signature checks do not leak via timing. */
+const secureEquals = (a: string, b: string): boolean => {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+};
 
 serve(async (req) => {
   try {
@@ -53,26 +62,30 @@ serve(async (req) => {
         .update(bodyText)
         .digest('hex');
 
-      if (hash !== signature) {
+      if (!secureEquals(hash, signature)) {
         console.error('Invalid Paystack signature for organization:', invoice.organization_id);
         return new Response('Invalid signature', { status: 401 });
       }
 
-      // 4. Verify Amount & Currency, then update invoice
-      const paidAmount = data.amount / 100; // Paystack amount is in kobo/cents
+      // 4. Verify Amount & Currency, then update invoice.
+      //
+      // UNITS: invoice.total is BIGINT MINOR units (kobo) as of migration
+      // 20261009010000. Paystack also reports in minor units. Both sides of the
+      // comparison below must therefore be minor — never divide here.
+      const paidAmountMinor = fromGatewayAmount(data.amount, 'paystack');
       const expectedCurrency = invoice.currency || 'NGN';
-      
+
       if (data.currency !== expectedCurrency) {
         throw new Error(`Currency mismatch: Expected ${expectedCurrency}, got ${data.currency}`);
       }
 
-      const newStatus = paidAmount >= invoice.total ? 'PAID' : 'PARTIAL';
+      const newStatus = paidAmountMinor >= invoice.total ? 'PAID' : 'PARTIAL';
 
       const { error } = await supabase
         .from('invoices')
-        .update({ 
-          status: newStatus, 
-          amount_paid: paidAmount 
+        .update({
+          status: newStatus,
+          amount_paid: paidAmountMinor
         })
         .eq('local_id', invoiceId);
 
@@ -80,8 +93,12 @@ serve(async (req) => {
         console.error('Failed to update invoice in DB:', error);
         throw error;
       }
-      
-      console.log(`Invoice ${invoiceId} successfully marked as ${newStatus} via Paystack. Paid: ${paidAmount}, Total: ${invoice.total}`);
+
+      console.log(
+        `Invoice ${invoiceId} marked ${newStatus} via Paystack. ` +
+        `Paid ${expectedCurrency} ${toMajorString(paidAmountMinor)} of ${toMajorString(invoice.total)} ` +
+        `(minor: ${paidAmountMinor}/${invoice.total}).`
+      );
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });

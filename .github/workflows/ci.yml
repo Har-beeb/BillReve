@@ -9,29 +9,38 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     defaults:
       run:
         working-directory: ./client
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Use Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20.x'
+        # Vite 8 requires Node >=20.19 or >=22.12. Pinning the 22 line keeps CI
+        # aligned with local development and avoids a 20.x minor that is too old.
+        node-version: '22.x'
         cache: 'npm'
         cache-dependency-path: './client/package-lock.json'
-        
+
     - name: Install Dependencies
       run: npm ci
-      
-    - name: Run Linter
-      run: npm run lint
-      
+
+    # Correctness gates first. Lint runs last on purpose: a style regression
+    # should not prevent the type check, the tests and the build from reporting,
+    # which is what happened while `no-explicit-any` was an error — the job died
+    # on the lint step and the three steps that actually matter never ran.
+    - name: Type Check
+      run: npx tsc -b
+
     - name: Run Tests
-      run: npm run test -- --run
-      
+      run: npm test
+
     - name: Build Project
       run: npm run build
+
+    - name: Run Linter
+      run: npm run lint

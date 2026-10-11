@@ -110,16 +110,17 @@ ALTER TYPE "public"."SubscriptionPlan" OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."assign_invoice_number"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 DECLARE
     v_seq INT;
 BEGIN
     -- If it's a DRAFT or missing, assign an official number
     IF NEW.invoice_number IS NULL OR NEW.invoice_number LIKE 'DRAFT-%' THEN
-        INSERT INTO public.user_sequences (user_id, entity, next_value)
-        VALUES (NEW.user_id, 'invoice', 2)
-        ON CONFLICT (user_id, entity)
-        DO UPDATE SET next_value = user_sequences.next_value + 1
+        INSERT INTO public.user_sequences (organization_id, entity, next_value)
+        VALUES (NEW.organization_id, 'invoice', 2)
+        ON CONFLICT (organization_id, entity)
+        DO UPDATE SET next_value = public.user_sequences.next_value + 1
         RETURNING next_value - 1 INTO v_seq;
 
         NEW.invoice_number := 'INV-' || LPAD(v_seq::TEXT, 4, '0');
@@ -134,15 +135,16 @@ ALTER FUNCTION "public"."assign_invoice_number"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."assign_quote_number"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 DECLARE
     v_seq INT;
 BEGIN
     IF NEW.quote_number IS NULL OR NEW.quote_number LIKE 'DRAFT-%' THEN
-        INSERT INTO public.user_sequences (user_id, entity, next_value)
-        VALUES (NEW.user_id, 'quote', 2)
-        ON CONFLICT (user_id, entity)
-        DO UPDATE SET next_value = user_sequences.next_value + 1
+        INSERT INTO public.user_sequences (organization_id, entity, next_value)
+        VALUES (NEW.organization_id, 'quote', 2)
+        ON CONFLICT (organization_id, entity)
+        DO UPDATE SET next_value = public.user_sequences.next_value + 1
         RETURNING next_value - 1 INTO v_seq;
 
         NEW.quote_number := 'QTE-' || LPAD(v_seq::TEXT, 4, '0');
@@ -157,21 +159,35 @@ ALTER FUNCTION "public"."assign_quote_number"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."check_and_log_rate_limit"("p_user_id" "uuid", "p_endpoint" "text", "p_limit" integer, "p_window_minutes" integer) RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 DECLARE
-    v_count INT;
+    v_count  INT;
+    v_org_id uuid;
 BEGIN
+    SELECT organization_id INTO v_org_id
+    FROM public.organization_members
+    WHERE user_id = p_user_id
+    LIMIT 1;
+
+    -- Fail CLOSED. Previously the no-membership path fell through and granted
+    -- the request without recording it.
+    IF v_org_id IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
     SELECT COUNT(*) INTO v_count
     FROM public.api_logs
-    WHERE user_id = p_user_id 
+    WHERE organization_id = v_org_id
       AND endpoint = p_endpoint
-      AND created_at >= NOW() - (p_window_minutes || ' minutes')::INTERVAL;
-      
+      AND created_at >= now() - (p_window_minutes || ' minutes')::INTERVAL;
+
     IF v_count < p_limit THEN
-        INSERT INTO public.api_logs (user_id, endpoint) VALUES (p_user_id, p_endpoint);
+        INSERT INTO public.api_logs (organization_id, endpoint)
+        VALUES (v_org_id, p_endpoint);
         RETURN TRUE;
     END IF;
-    
+
     RETURN FALSE;
 END;
 $$;
@@ -202,40 +218,54 @@ ALTER FUNCTION "public"."check_email_exists"("p_email" "text") OWNER TO "postgre
 
 CREATE OR REPLACE FUNCTION "public"."check_rate_limit"("p_identifier" "text", "p_action" "text", "p_max_attempts" integer DEFAULT 5, "p_window_minutes" integer DEFAULT 10) RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 DECLARE
-  attempt_count INT;
-  v_client_ip TEXT;
-  v_rate_limit_key TEXT;
+  v_attempts        INT;
+  v_doc_attempts    INT;
+  v_client_ip       TEXT;
+  v_key             TEXT;
+  -- Per-document ceiling. A real client clicks a handful of times; this only
+  -- trips under automated abuse across many rotated source addresses.
+  c_doc_ceiling     CONSTANT INT := 60;
+  c_doc_window_mins CONSTANT INT := 60;
 BEGIN
-  -- Get client IP via Supabase PostgREST header fallback to inet_client_addr
-  v_client_ip := COALESCE(current_setting('request.headers', true)::json->>'x-forwarded-for', inet_client_addr()::text, 'unknown');
-  
-  -- Combine IP and identifier for the true rate limit key to prevent targeted DoS
-  v_rate_limit_key := v_client_ip || ':' || p_identifier;
+  -- Leftmost XFF entry is the originating client. Anything further right is a
+  -- proxy hop. btrim because the header is comma-space separated.
+  v_client_ip := NULLIF(btrim(split_part(
+      COALESCE(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ''),
+      ',', 1)), '');
+  v_client_ip := COALESCE(v_client_ip, inet_client_addr()::text, 'unknown');
 
-  -- Clean old entries opportunistically (1% chance per call)
+  v_key := v_client_ip || ':' || p_identifier;
+
   IF random() < 0.01 THEN
     PERFORM public.clean_old_rate_limits();
   END IF;
 
-  -- Count recent attempts for this IP + Document combination
-  SELECT COUNT(*) INTO attempt_count
+  -- (a) tight per-source-per-document limit
+  SELECT COUNT(*) INTO v_attempts
   FROM public.rate_limits
-  WHERE identifier = v_rate_limit_key
+  WHERE identifier = v_key
     AND action = p_action
     AND attempted_at > now() - (p_window_minutes || ' minutes')::interval;
 
-  -- If over limit, reject
-  IF attempt_count >= p_max_attempts THEN
+  IF v_attempts >= p_max_attempts THEN
     RETURN FALSE;
   END IF;
 
-  -- Log this attempt
-  INSERT INTO public.rate_limits (identifier, action)
-  VALUES (v_rate_limit_key, p_action);
+  -- (b) generous per-document ceiling, independent of source address
+  SELECT COUNT(*) INTO v_doc_attempts
+  FROM public.rate_limits
+  WHERE identifier LIKE '%:' || p_identifier
+    AND action = p_action
+    AND attempted_at > now() - (c_doc_window_mins || ' minutes')::interval;
 
+  IF v_doc_attempts >= c_doc_ceiling THEN
+    RETURN FALSE;
+  END IF;
+
+  INSERT INTO public.rate_limits (identifier, action) VALUES (v_key, p_action);
   RETURN TRUE;
 END;
 $$;
@@ -246,29 +276,73 @@ ALTER FUNCTION "public"."check_rate_limit"("p_identifier" "text", "p_action" "te
 
 CREATE OR REPLACE FUNCTION "public"."check_user_quota"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 DECLARE
-  v_is_pro BOOLEAN;
-  v_doc_count INT;
+    v_is_pro       boolean;
+    v_pro_expires  timestamptz;
+    v_count        INT;
+    v_limit        INT;
+    v_month_start  timestamptz := date_trunc('month', now());
 BEGIN
-  -- Get user profile
-  SELECT is_pro INTO v_is_pro FROM public.profiles WHERE id = NEW.user_id;
-  
-  IF NOT v_is_pro THEN
-    IF TG_TABLE_NAME = 'invoices' THEN
-      -- Count active invoices
-      SELECT COUNT(*) INTO v_doc_count FROM public.invoices WHERE user_id = NEW.user_id AND deleted_at IS NULL;
+    IF NEW.organization_id IS NULL THEN
+        RAISE EXCEPTION 'Cannot create records without an organization';
+    END IF;
+
+    SELECT is_pro, pro_expires_at
+      INTO v_is_pro, v_pro_expires
+      FROM public.organizations
+     WHERE id = NEW.organization_id;
+
+    -- Fail CLOSED on a missing organization rather than falling through.
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Organization not found';
+    END IF;
+
+    -- An expired Pro subscription is not Pro.
+    IF COALESCE(v_is_pro, false)
+       AND (v_pro_expires IS NULL OR v_pro_expires > now()) THEN
+        RETURN NEW;
+    END IF;
+
+    IF TG_TABLE_NAME = 'clients' THEN
+        -- Clients are a standing total, not a monthly flow.
+        SELECT COUNT(*) INTO v_count
+          FROM public.clients
+         WHERE organization_id = NEW.organization_id
+           AND deleted_at IS NULL;
+        v_limit := 5;
+
+        IF v_count >= v_limit THEN
+            RAISE EXCEPTION 'Free tier limit reached (% clients). Upgrade to Pro for unlimited clients.', v_limit;
+        END IF;
+
+    ELSIF TG_TABLE_NAME = 'invoices' THEN
+        SELECT COUNT(*) INTO v_count
+          FROM public.invoices
+         WHERE organization_id = NEW.organization_id
+           AND deleted_at IS NULL
+           AND created_at >= v_month_start;
+        v_limit := 10;
+
+        IF v_count >= v_limit THEN
+            RAISE EXCEPTION 'Free tier limit reached (% invoices this month). Upgrade to Pro for unlimited invoices.', v_limit;
+        END IF;
+
     ELSIF TG_TABLE_NAME = 'quotes' THEN
-      -- Count active quotes
-      SELECT COUNT(*) INTO v_doc_count FROM public.quotes WHERE user_id = NEW.user_id AND deleted_at IS NULL;
+        SELECT COUNT(*) INTO v_count
+          FROM public.quotes
+         WHERE organization_id = NEW.organization_id
+           AND deleted_at IS NULL
+           AND created_at >= v_month_start;
+        v_limit := 10;
+
+        IF v_count >= v_limit THEN
+            RAISE EXCEPTION 'Free tier limit reached (% quotes this month). Upgrade to Pro for unlimited quotes.', v_limit;
+        END IF;
     END IF;
-    
-    IF v_doc_count >= 10 THEN
-      RAISE EXCEPTION 'Free tier limit reached. You can only have up to 10 active %.', TG_TABLE_NAME;
-    END IF;
-  END IF;
-  
-  RETURN NEW;
+
+    RETURN NEW;
 END;
 $$;
 
@@ -278,7 +352,7 @@ ALTER FUNCTION "public"."check_user_quota"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."clean_old_rate_limits"() RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 BEGIN
   DELETE FROM public.rate_limits WHERE attempted_at < now() - interval '1 hour';
@@ -291,37 +365,30 @@ ALTER FUNCTION "public"."clean_old_rate_limits"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."empty_trash_based_on_plan"() RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 BEGIN
-  -- Delete old invoices
-  DELETE FROM public.invoices i
-  USING public.profiles p
-  WHERE i.user_id = p.id 
-  AND i.deleted_at IS NOT NULL 
-  AND (
-    (p.is_pro = false AND i.deleted_at < NOW() - INTERVAL '7 days') OR
-    (p.is_pro = true AND i.deleted_at < NOW() - INTERVAL '30 days')
-  );
+    -- Pro organizations keep deleted items for 30 days, free ones for 7.
+    DELETE FROM public.invoices i
+    USING public.organizations o
+    WHERE i.organization_id = o.id
+      AND i.deleted_at IS NOT NULL
+      AND i.deleted_at < now() - (CASE WHEN COALESCE(o.is_pro, false) THEN interval '30 days'
+                                                                      ELSE interval '7 days' END);
 
-  -- Delete old quotes
-  DELETE FROM public.quotes q
-  USING public.profiles p
-  WHERE q.user_id = p.id 
-  AND q.deleted_at IS NOT NULL 
-  AND (
-    (p.is_pro = false AND q.deleted_at < NOW() - INTERVAL '7 days') OR
-    (p.is_pro = true AND q.deleted_at < NOW() - INTERVAL '30 days')
-  );
+    DELETE FROM public.quotes q
+    USING public.organizations o
+    WHERE q.organization_id = o.id
+      AND q.deleted_at IS NOT NULL
+      AND q.deleted_at < now() - (CASE WHEN COALESCE(o.is_pro, false) THEN interval '30 days'
+                                                                      ELSE interval '7 days' END);
 
-  -- Delete old clients
-  DELETE FROM public.clients c
-  USING public.profiles p
-  WHERE c.user_id = p.id 
-  AND c.deleted_at IS NOT NULL 
-  AND (
-    (p.is_pro = false AND c.deleted_at < NOW() - INTERVAL '7 days') OR
-    (p.is_pro = true AND c.deleted_at < NOW() - INTERVAL '30 days')
-  );
+    DELETE FROM public.clients c
+    USING public.organizations o
+    WHERE c.organization_id = o.id
+      AND c.deleted_at IS NOT NULL
+      AND c.deleted_at < now() - (CASE WHEN COALESCE(o.is_pro, false) THEN interval '30 days'
+                                                                      ELSE interval '7 days' END);
 END;
 $$;
 
@@ -330,41 +397,64 @@ ALTER FUNCTION "public"."empty_trash_based_on_plan"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_ai_context"() RETURNS "jsonb"
-    LANGUAGE "sql" SECURITY DEFINER
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-  SELECT jsonb_build_object(
-    'totalRevenue', COALESCE(SUM(total) FILTER (WHERE status = 'PAID'), 0),
-    'outstanding', COALESCE(SUM(total - amount_paid) FILTER (WHERE status IN ('SENT','PENDING','PARTIAL','OVERDUE')), 0),
-    'overdueCount', COUNT(*) FILTER (WHERE status = 'OVERDUE'),
-    'clientCount', (SELECT COUNT(*) FROM clients WHERE user_id = auth.uid() AND deleted_at IS NULL),
-    'recentInvoices', (
-      SELECT jsonb_agg(row_to_json(i))
-      FROM (
-        SELECT
-          inv.invoice_number,
-          inv.description,
-          inv.status,
-          inv.total,
-          inv.amount_paid,
-          inv.due_date,
-          inv.created_at,
-          c.name AS client_name
-        FROM invoices inv
-        LEFT JOIN clients c ON c.local_id = inv.client_id AND c.user_id = auth.uid()
-        WHERE inv.user_id = auth.uid()
-        ORDER BY inv.created_at DESC
-        LIMIT 25
-      ) i
-    )
-  )
-  FROM invoices WHERE user_id = auth.uid();
+DECLARE
+    v_org_id uuid;
+BEGIN
+    -- Get the user's active organization
+    SELECT organization_id INTO v_org_id 
+    FROM public.organization_members 
+    WHERE user_id = auth.uid() 
+    LIMIT 1;
+
+    IF v_org_id IS NULL THEN
+        RETURN jsonb_build_object(
+            'totalRevenue', 0,
+            'outstanding', 0,
+            'overdueCount', 0,
+            'clientCount', 0,
+            'recentInvoices', '[]'::jsonb
+        );
+    END IF;
+
+    RETURN (
+        SELECT jsonb_build_object(
+            'totalRevenue', COALESCE(SUM(total) FILTER (WHERE status = 'PAID'), 0),
+            'outstanding', COALESCE(SUM(total - amount_paid) FILTER (WHERE status IN ('SENT','PENDING','PARTIAL','OVERDUE')), 0),
+            'overdueCount', COUNT(*) FILTER (WHERE status = 'OVERDUE'),
+            'clientCount', (SELECT COUNT(*) FROM public.clients WHERE organization_id = v_org_id AND deleted_at IS NULL),
+            'recentInvoices', COALESCE((
+            SELECT jsonb_agg(row_to_json(i))
+            FROM (
+                SELECT
+                inv.invoice_number,
+                inv.description,
+                inv.status,
+                inv.total,
+                inv.amount_paid,
+                inv.due_date,
+                inv.created_at,
+                c.name AS client_name
+                FROM public.invoices inv
+                LEFT JOIN public.clients c ON c.local_id = inv.client_id AND c.organization_id = v_org_id
+                WHERE inv.organization_id = v_org_id
+                ORDER BY inv.created_at DESC
+                LIMIT 25
+            ) i
+            ), '[]'::jsonb)
+        )
+        FROM public.invoices WHERE organization_id = v_org_id
+    );
+END;
 $$;
 
 
 ALTER FUNCTION "public"."get_ai_context"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_merchant_secret"("p_user_id" "uuid", "p_gateway" "text") RETURNS "text"
+CREATE OR REPLACE FUNCTION "public"."get_merchant_secret"("p_org_id" "uuid", "p_gateway" "text") RETURNS "text"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -378,12 +468,12 @@ BEGIN
         SELECT CASE WHEN paystack_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(paystack_key_encrypted, v_encryption_key) END
         INTO v_secret
         FROM public.user_secrets
-        WHERE user_id = p_user_id;
+        WHERE organization_id = p_org_id;
     ELSIF p_gateway = 'flutterwave' THEN
         SELECT CASE WHEN flutterwave_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(flutterwave_key_encrypted, v_encryption_key) END
         INTO v_secret
         FROM public.user_secrets
-        WHERE user_id = p_user_id;
+        WHERE organization_id = p_org_id;
     ELSE
         RAISE EXCEPTION 'Unknown gateway';
     END IF;
@@ -393,7 +483,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."get_merchant_secret"("p_user_id" "uuid", "p_gateway" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."get_merchant_secret"("p_org_id" "uuid", "p_gateway" "text") OWNER TO "postgres";
 
 SET default_tablespace = '';
 
@@ -402,7 +492,6 @@ SET default_table_access_method = "heap";
 
 CREATE TABLE IF NOT EXISTS "public"."clients" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "local_id" "text" NOT NULL,
     "name" "text" NOT NULL,
     "email" "text",
@@ -412,7 +501,8 @@ CREATE TABLE IF NOT EXISTS "public"."clients" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "sync_status" "text" DEFAULT 'synced'::"text",
     "deleted_at" timestamp with time zone,
-    "is_purged" boolean DEFAULT false
+    "is_purged" boolean DEFAULT false,
+    "organization_id" "uuid" NOT NULL
 );
 
 ALTER TABLE ONLY "public"."clients" REPLICA IDENTITY FULL;
@@ -436,14 +526,13 @@ ALTER FUNCTION "public"."get_public_client"("p_local_id" "text") OWNER TO "postg
 
 CREATE TABLE IF NOT EXISTS "public"."invoices" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "local_id" "text" NOT NULL,
     "client_id" "text" NOT NULL,
     "status" "text" NOT NULL,
     "currency" "text" NOT NULL,
-    "subtotal" numeric NOT NULL,
-    "total" numeric NOT NULL,
-    "amount_paid" numeric DEFAULT 0 NOT NULL,
+    "subtotal" bigint NOT NULL,
+    "total" bigint NOT NULL,
+    "amount_paid" bigint DEFAULT 0 NOT NULL,
     "is_recurring" boolean DEFAULT false NOT NULL,
     "taxes" "jsonb" DEFAULT '[]'::"jsonb",
     "items" "jsonb" DEFAULT '[]'::"jsonb",
@@ -457,7 +546,7 @@ CREATE TABLE IF NOT EXISTS "public"."invoices" (
     "invoice_number" "text",
     "description" "text",
     "bank_account_id" "text",
-    "counter_amount" numeric(15,2),
+    "counter_amount" bigint,
     "client_message" "text",
     "allow_counter_offer" boolean DEFAULT false,
     "notes" "text",
@@ -465,7 +554,8 @@ CREATE TABLE IF NOT EXISTS "public"."invoices" (
     "is_purged" boolean DEFAULT false,
     "last_reminded_at" timestamp with time zone,
     "theme" "text" DEFAULT 'standard'::"text",
-    "bank_account_snapshot" "jsonb"
+    "bank_account_snapshot" "jsonb",
+    "organization_id" "uuid" NOT NULL
 );
 
 ALTER TABLE ONLY "public"."invoices" REPLICA IDENTITY FULL;
@@ -487,39 +577,23 @@ $$;
 ALTER FUNCTION "public"."get_public_invoice"("p_local_id" "text") OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."profiles" (
-    "id" "uuid" NOT NULL,
-    "name" "text",
-    "email" "text",
-    "phone" "text",
-    "address" "text",
-    "logo_url" "text",
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"(),
-    "paystack_public_key" "text",
-    "email_flags" "jsonb" DEFAULT '{}'::"jsonb",
-    "is_pro" boolean DEFAULT false,
-    "flutterwave_public_key" "text",
-    "country" "text",
-    "currency" "text",
-    "pro_expires_at" timestamp with time zone,
-    "industry" "text",
-    "business_description" "text",
-    "bank_accounts" "jsonb" DEFAULT '[]'::"jsonb",
-    CONSTRAINT "chk_logo_url_no_base64" CHECK ((("logo_url" IS NULL) OR ("logo_url" !~~ 'data:image%'::"text")))
-);
-
-
-ALTER TABLE "public"."profiles" OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_public_profile"("p_id" "uuid") RETURNS SETOF "public"."profiles"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
+CREATE OR REPLACE FUNCTION "public"."get_public_profile"("p_id" "uuid") RETURNS TABLE("id" "uuid", "name" "text", "address" "text", "logo_url" "text", "country" "text", "currency" "text", "bank_accounts" "jsonb", "paystack_public_key" "text", "flutterwave_public_key" "text", "is_pro" boolean)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
-BEGIN
-  RETURN QUERY SELECT * FROM public.profiles WHERE id = p_id LIMIT 1;
-END;
+    SELECT o.id,
+           o.name,
+           o.address,
+           o.logo_url,
+           o.country,
+           o.currency,
+           o.bank_accounts,
+           o.paystack_public_key,
+           o.flutterwave_public_key,
+           COALESCE(o.is_pro, false)
+      FROM public.organizations o
+     WHERE o.id = p_id
+     LIMIT 1;
 $$;
 
 
@@ -528,13 +602,12 @@ ALTER FUNCTION "public"."get_public_profile"("p_id" "uuid") OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."quotes" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "local_id" "text" NOT NULL,
     "client_id" "text" NOT NULL,
     "status" "text" NOT NULL,
     "currency" "text" NOT NULL,
-    "subtotal" numeric NOT NULL,
-    "total" numeric NOT NULL,
+    "subtotal" bigint NOT NULL,
+    "total" bigint NOT NULL,
     "taxes" "jsonb" DEFAULT '[]'::"jsonb",
     "items" "jsonb" DEFAULT '[]'::"jsonb",
     "invoice_id" "text",
@@ -546,15 +619,16 @@ CREATE TABLE IF NOT EXISTS "public"."quotes" (
     "quote_number" "text",
     "description" "text",
     "bank_account_id" "text",
-    "counter_amount" numeric(15,2),
+    "counter_amount" bigint,
     "client_message" "text",
     "allow_counter_offer" boolean DEFAULT false,
     "notes" "text",
     "deleted_at" timestamp with time zone,
     "is_purged" boolean DEFAULT false,
-    "minimum_counter_amount" numeric,
+    "minimum_counter_amount" bigint,
     "theme" "text" DEFAULT 'standard'::"text",
-    "bank_account_snapshot" "jsonb"
+    "bank_account_snapshot" "jsonb",
+    "organization_id" "uuid" NOT NULL
 );
 
 ALTER TABLE ONLY "public"."quotes" REPLICA IDENTITY FULL;
@@ -582,7 +656,17 @@ CREATE OR REPLACE FUNCTION "public"."get_user_secrets"() RETURNS TABLE("paystack
     AS $$
 DECLARE
     v_encryption_key TEXT;
+    v_org_id UUID;
 BEGIN
+    SELECT organization_id INTO v_org_id 
+    FROM public.organization_members 
+    WHERE user_id = auth.uid() 
+    LIMIT 1;
+
+    IF v_org_id IS NULL THEN
+        RETURN;
+    END IF;
+
     v_encryption_key := COALESCE(current_setting('app.settings.encryption_key', true), 'billreve_fallback_secret_99');
 
     RETURN QUERY 
@@ -590,7 +674,7 @@ BEGIN
         CASE WHEN paystack_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(paystack_key_encrypted, v_encryption_key) END,
         CASE WHEN flutterwave_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(flutterwave_key_encrypted, v_encryption_key) END
     FROM public.user_secrets
-    WHERE user_id = auth.uid();
+    WHERE organization_id = v_org_id;
 END;
 $$;
 
@@ -600,28 +684,28 @@ ALTER FUNCTION "public"."get_user_secrets"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."handle_invoice_status_change"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 BEGIN
     -- Only trigger if the status actually changed
     IF NEW.status IS DISTINCT FROM OLD.status THEN
         
-        -- Avoid self-notifications: if the authenticated user is the owner, do not notify.
-        IF auth.uid() IS NOT DISTINCT FROM NEW.user_id THEN
+        -- Avoid self-notifications: if the authenticated user is the one making the change, don't spam them.
+        -- We check if they are in the org to skip? Actually, just check if they are auth.uid().
+        IF auth.uid() IS NOT NULL THEN
+            -- Since it's a tenant model, anyone making the change skips the notification for now.
             RETURN NEW;
         END IF;
         
         IF NEW.status = 'PAID' THEN
-            INSERT INTO public.notifications (user_id, title, message, type, entity_id)
-            VALUES (NEW.user_id, 'Invoice Paid', 'Invoice #' || COALESCE(NEW.invoice_number, substr(NEW.local_id, 1, 8)) || ' was paid in full.', 'INVOICE_PAID', NEW.local_id);
-            
+            INSERT INTO public.notifications (organization_id, title, message, type, entity_id)
+            VALUES (NEW.organization_id, 'Invoice Paid', 'Invoice #' || COALESCE(NEW.invoice_number, substr(NEW.local_id, 1, 8)) || ' was paid in full.', 'INVOICE_PAID', NEW.local_id);
         ELSIF NEW.status = 'PARTIAL' THEN
-            INSERT INTO public.notifications (user_id, title, message, type, entity_id)
-            VALUES (NEW.user_id, 'Partial Payment', 'A partial payment was made on Invoice #' || COALESCE(NEW.invoice_number, substr(NEW.local_id, 1, 8)), 'INVOICE_PARTIAL', NEW.local_id);
-            
+            INSERT INTO public.notifications (organization_id, title, message, type, entity_id)
+            VALUES (NEW.organization_id, 'Partial Payment', 'A partial payment was made on Invoice #' || COALESCE(NEW.invoice_number, substr(NEW.local_id, 1, 8)), 'INVOICE_PARTIAL', NEW.local_id);
         ELSIF NEW.status = 'PENDING' THEN
-            INSERT INTO public.notifications (user_id, title, message, type, entity_id)
-            VALUES (NEW.user_id, 'Payment Transferred', 'A client reported transferring funds for Invoice #' || COALESCE(NEW.invoice_number, substr(NEW.local_id, 1, 8)), 'INVOICE_PAID', NEW.local_id);
-            
+            INSERT INTO public.notifications (organization_id, title, message, type, entity_id)
+            VALUES (NEW.organization_id, 'Payment Transferred', 'A client reported transferring funds for Invoice #' || COALESCE(NEW.invoice_number, substr(NEW.local_id, 1, 8)), 'INVOICE_PAID', NEW.local_id);
         END IF;
         
     END IF;
@@ -635,11 +719,24 @@ ALTER FUNCTION "public"."handle_invoice_status_change"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+DECLARE
+    v_org_id uuid;
 BEGIN
-  INSERT INTO public.profiles (id, email, name)
-  VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
-  RETURN new;
+    -- Create the new organization
+    INSERT INTO public.organizations (name, email)
+    VALUES (
+        COALESCE(new.raw_user_meta_data->>'full_name', 'My Business'), 
+        new.email
+    )
+    RETURNING id INTO v_org_id;
+
+    -- Add the user as the owner of the new organization
+    INSERT INTO public.organization_members (organization_id, user_id, role)
+    VALUES (v_org_id, new.id, 'owner');
+
+    RETURN new;
 END;
 $$;
 
@@ -649,33 +746,29 @@ ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."handle_quote_status_change"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 DECLARE
     v_client_name TEXT;
 BEGIN
-    -- Only trigger if the status actually changed
     IF NEW.status IS DISTINCT FROM OLD.status THEN
         
-        -- Avoid self-notifications: if the authenticated user is the owner, do not notify
-        IF auth.uid() IS NOT DISTINCT FROM NEW.user_id THEN
+        IF auth.uid() IS NOT NULL THEN
             RETURN NEW;
         END IF;
 
         -- Fetch the client's name
-        SELECT name INTO v_client_name FROM public.clients WHERE local_id = NEW.client_id LIMIT 1;
-        v_client_name := COALESCE(v_client_name, 'A client');
+        SELECT name INTO v_client_name FROM public.clients WHERE local_id = NEW.client_id AND organization_id = NEW.organization_id LIMIT 1;
         
         IF NEW.status = 'ACCEPTED' THEN
-            INSERT INTO public.notifications (user_id, title, message, type, entity_id)
-            VALUES (NEW.user_id, 'Quote Accepted', v_client_name || ' accepted quote #' || COALESCE(NEW.quote_number, substr(NEW.local_id, 1, 8)), 'QUOTE_ACCEPTED', NEW.local_id);
-            
+            INSERT INTO public.notifications (organization_id, title, message, type, entity_id)
+            VALUES (NEW.organization_id, 'Quote Accepted', COALESCE(v_client_name, 'A client') || ' accepted Quote #' || COALESCE(NEW.quote_number, substr(NEW.local_id, 1, 8)), 'QUOTE_ACCEPTED', NEW.local_id);
         ELSIF NEW.status = 'DECLINED' THEN
-            INSERT INTO public.notifications (user_id, title, message, type, entity_id)
-            VALUES (NEW.user_id, 'Quote Declined', v_client_name || ' declined quote #' || COALESCE(NEW.quote_number, substr(NEW.local_id, 1, 8)), 'QUOTE_DECLINED', NEW.local_id);
-            
+            INSERT INTO public.notifications (organization_id, title, message, type, entity_id)
+            VALUES (NEW.organization_id, 'Quote Declined', COALESCE(v_client_name, 'A client') || ' declined Quote #' || COALESCE(NEW.quote_number, substr(NEW.local_id, 1, 8)), 'QUOTE_DECLINED', NEW.local_id);
         ELSIF NEW.status = 'COUNTERED' THEN
-            INSERT INTO public.notifications (user_id, title, message, type, entity_id)
-            VALUES (NEW.user_id, 'Counter Offer Received', v_client_name || ' made a counter offer of ' || NEW.counter_amount || ' on quote #' || COALESCE(NEW.quote_number, substr(NEW.local_id, 1, 8)), 'QUOTE_COUNTERED', NEW.local_id);
+            INSERT INTO public.notifications (organization_id, title, message, type, entity_id)
+            VALUES (NEW.organization_id, 'Counter Offer Received', COALESCE(v_client_name, 'A client') || ' made a counter offer of ' || NEW.counter_amount || ' on quote #' || COALESCE(NEW.quote_number, substr(NEW.local_id, 1, 8)), 'QUOTE_COUNTERED', NEW.local_id);
         END IF;
         
     END IF;
@@ -687,23 +780,69 @@ $$;
 ALTER FUNCTION "public"."handle_quote_status_change"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."is_member_of"("_org_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.organization_members
+        WHERE organization_id = _org_id AND user_id = auth.uid()
+    );
+$$;
+
+
+ALTER FUNCTION "public"."is_member_of"("_org_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."is_org_owner"("_org_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.organization_members
+        WHERE organization_id = _org_id
+          AND user_id = auth.uid()
+          AND role = 'owner'
+    );
+$$;
+
+
+ALTER FUNCTION "public"."is_org_owner"("_org_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."protect_pro_status"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 BEGIN
-  -- Only restrict changes if the user is calling this via the client API (authenticated role)
-  -- Service role (used by our webhooks) can still update these fields.
-  IF auth.role() = 'authenticated' THEN
-    NEW.is_pro = OLD.is_pro;
-    NEW.pro_expires_at = OLD.pro_expires_at;
-  END IF;
-  
-  RETURN NEW;
+    -- Prevent users from modifying their own Pro status via the API
+    IF (auth.role() = 'authenticated') THEN
+        NEW.is_pro = OLD.is_pro;
+        NEW.pro_expires_at = OLD.pro_expires_at;
+    END IF;
+    RETURN NEW;
 END;
 $$;
 
 
 ALTER FUNCTION "public"."protect_pro_status"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."protect_pro_status_insert"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+    IF (auth.role() = 'authenticated') THEN
+        NEW.is_pro = false;
+        NEW.pro_expires_at = null;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."protect_pro_status_insert"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text") RETURNS "void"
@@ -713,22 +852,32 @@ CREATE OR REPLACE FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_f
 DECLARE
     v_encryption_key TEXT;
     v_uid UUID;
+    v_org_id UUID;
 BEGIN
     v_uid := auth.uid();
     IF v_uid IS NULL THEN
         RAISE EXCEPTION 'Not authenticated';
     END IF;
 
+    SELECT organization_id INTO v_org_id 
+    FROM public.organization_members 
+    WHERE user_id = v_uid 
+    LIMIT 1;
+
+    IF v_org_id IS NULL THEN
+        RAISE EXCEPTION 'No organization found';
+    END IF;
+
     v_encryption_key := COALESCE(current_setting('app.settings.encryption_key', true), 'billreve_fallback_secret_99');
 
-    INSERT INTO public.user_secrets (user_id, paystack_key_encrypted, flutterwave_key_encrypted, updated_at)
+    INSERT INTO public.user_secrets (organization_id, paystack_key_encrypted, flutterwave_key_encrypted, updated_at)
     VALUES (
-        v_uid,
+        v_org_id,
         CASE WHEN p_paystack IS NULL THEN NULL ELSE extensions.pgp_sym_encrypt(p_paystack, v_encryption_key) END,
         CASE WHEN p_flutterwave IS NULL THEN NULL ELSE extensions.pgp_sym_encrypt(p_flutterwave, v_encryption_key) END,
         now()
     )
-    ON CONFLICT (user_id) DO UPDATE SET
+    ON CONFLICT (organization_id) DO UPDATE SET
         paystack_key_encrypted = EXCLUDED.paystack_key_encrypted,
         flutterwave_key_encrypted = EXCLUDED.flutterwave_key_encrypted,
         updated_at = now();
@@ -739,72 +888,50 @@ $$;
 ALTER FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" numeric DEFAULT NULL::numeric) RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" bigint DEFAULT NULL::bigint) RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 DECLARE
     v_target_invoice record;
 BEGIN
-    SELECT * INTO v_target_invoice 
-    FROM public.invoices 
-    WHERE local_id = p_local_id;
-
-    IF v_target_invoice IS NULL THEN
-        RAISE EXCEPTION 'Invoice not found';
-    END IF;
-
-    UPDATE public.invoices 
-    SET 
-        status = COALESCE(p_status, status),
-        amount_paid = COALESCE(amount_paid, 0) + COALESCE(p_amount_paid, 0),
-        updated_at = now()
-    WHERE local_id = p_local_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" numeric) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" numeric DEFAULT NULL::numeric, "p_counter_amount" numeric DEFAULT NULL::numeric, "p_client_message" "text" DEFAULT NULL::"text") RETURNS "void"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-DECLARE
-    v_target_invoice record;
-BEGIN
-    -- Validate Status Allow-list for PUBLIC access
-    -- A public user cannot set an invoice to PAID directly. That must come from the webhook or the merchant.
+    -- A public, unauthenticated caller may only move an invoice into a state
+    -- that asserts intent, never one that asserts settlement. PAID and PARTIAL
+    -- are both excluded: they are the webhook's to set, after it has verified
+    -- the amount against the invoice total.
     IF p_status NOT IN ('PENDING', 'DECLINED', 'COUNTERED', 'DRAFT', 'SENT') THEN
-        RAISE EXCEPTION 'Invalid public invoice status transition';
+        RAISE EXCEPTION 'Invalid public invoice status transition: %', p_status;
     END IF;
 
     IF NOT public.check_rate_limit(p_local_id, 'invoice_status', 5, 10) THEN
         RAISE EXCEPTION 'Rate limit exceeded. Please try again later.';
     END IF;
 
-    SELECT * INTO v_target_invoice 
-    FROM public.invoices 
+    SELECT * INTO v_target_invoice
+    FROM public.invoices
     WHERE local_id = p_local_id;
 
     IF v_target_invoice IS NULL THEN
         RAISE EXCEPTION 'Invoice not found';
     END IF;
 
-    UPDATE public.invoices 
-    SET 
-        status = COALESCE(p_status, status),
-        -- Make amount_paid idempotent! Do not allow double counting via additive logic.
+    -- Never move a settled invoice backwards from a public link.
+    IF v_target_invoice.status = 'PAID' THEN
+        RAISE EXCEPTION 'This invoice is already settled';
+    END IF;
+
+    UPDATE public.invoices
+    SET
+        status      = COALESCE(p_status, status),
+        -- IDEMPOTENT: set, never increment. Replaying this call is a no-op.
         amount_paid = COALESCE(p_amount_paid, amount_paid),
-        counter_amount = COALESCE(p_counter_amount, counter_amount),
-        client_message = COALESCE(p_client_message, client_message),
-        updated_at = now()
+        updated_at  = now()
     WHERE local_id = p_local_id;
 END;
 $$;
 
 
-ALTER FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" numeric, "p_counter_amount" numeric, "p_client_message" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" bigint) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_modified_column"() RETURNS "trigger"
@@ -820,59 +947,34 @@ $$;
 ALTER FUNCTION "public"."update_modified_column"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" numeric DEFAULT NULL::numeric, "p_client_message" "text" DEFAULT NULL::"text") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" bigint DEFAULT NULL::bigint, "p_client_message" "text" DEFAULT NULL::"text") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-DECLARE
-    v_target_quote record;
 BEGIN
-    -- Validate Status Allow-list
-    IF p_status NOT IN ('ACCEPTED', 'DECLINED', 'COUNTERED', 'DRAFT', 'SENT') THEN
-        RAISE EXCEPTION 'Invalid quote status transition';
-    END IF;
+  IF "p_status" NOT IN ('VIEWED', 'ACCEPTED', 'DECLINED', 'COUNTERED') THEN
+    RAISE EXCEPTION 'Invalid status';
+  END IF;
 
-    IF NOT public.check_rate_limit(p_local_id, 'quote_status', 5, 10) THEN
-        RAISE EXCEPTION 'Rate limit exceeded. Please try again later.';
-    END IF;
-
-    SELECT * INTO v_target_quote 
-    FROM public.quotes 
-    WHERE local_id = p_local_id;
-
-    IF v_target_quote IS NULL THEN
-        RAISE EXCEPTION 'Quote not found';
-    END IF;
-
-    -- Enforce minimum counter amount based on the database record, not client trust
-    IF p_status = 'COUNTERED' AND p_counter_amount IS NOT NULL THEN
-        IF v_target_quote.allow_counter_offer = false THEN
-            RAISE EXCEPTION 'Counter offers are not allowed for this quote';
-        END IF;
-        IF p_counter_amount < v_target_quote.minimum_counter_amount THEN
-            RAISE EXCEPTION 'Counter offer is below the minimum allowed amount';
-        END IF;
-    END IF;
-
-    UPDATE public.quotes 
-    SET 
-        status = COALESCE(p_status, status),
-        counter_amount = COALESCE(p_counter_amount, counter_amount),
-        client_message = COALESCE(p_client_message, client_message),
-        updated_at = now()
-    WHERE local_id = p_local_id;
+  UPDATE quotes
+  SET 
+    status = "p_status",
+    counter_amount = COALESCE("p_counter_amount", counter_amount),
+    client_message = COALESCE("p_client_message", client_message),
+    updated_at = NOW()
+  WHERE local_id = "p_local_id";
 END;
 $$;
 
 
-ALTER FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" numeric, "p_client_message" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" bigint, "p_client_message" "text") OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."api_logs" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid",
     "endpoint" "text",
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "organization_id" "uuid" NOT NULL
 );
 
 
@@ -881,17 +983,56 @@ ALTER TABLE "public"."api_logs" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."notifications" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
     "title" "text" NOT NULL,
     "message" "text" NOT NULL,
     "type" "text" NOT NULL,
     "entity_id" "text",
     "is_read" boolean DEFAULT false NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "organization_id" "uuid" NOT NULL
 );
 
 
 ALTER TABLE "public"."notifications" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."organization_members" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "role" "text" DEFAULT 'owner'::"text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "organization_members_role_check" CHECK (("role" = ANY (ARRAY['owner'::"text", 'admin'::"text", 'member'::"text"])))
+);
+
+
+ALTER TABLE "public"."organization_members" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."organizations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text",
+    "email" "text",
+    "phone" "text",
+    "address" "text",
+    "logo_url" "text",
+    "paystack_public_key" "text",
+    "flutterwave_public_key" "text",
+    "country" "text",
+    "currency" "text",
+    "industry" "text",
+    "business_description" "text",
+    "bank_accounts" "jsonb" DEFAULT '[]'::"jsonb",
+    "email_flags" "jsonb" DEFAULT '{}'::"jsonb",
+    "is_pro" boolean DEFAULT false,
+    "pro_expires_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "chk_logo_url_no_base64" CHECK ((("logo_url" IS NULL) OR ("logo_url" !~~ 'data:image%'::"text")))
+);
+
+
+ALTER TABLE "public"."organizations" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."rate_limits" (
@@ -905,12 +1046,35 @@ CREATE TABLE IF NOT EXISTS "public"."rate_limits" (
 ALTER TABLE "public"."rate_limits" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."recurring_schedules" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" "uuid" NOT NULL,
+    "client_id" "text" NOT NULL,
+    "template_invoice_id" "text" NOT NULL,
+    "frequency" "text" NOT NULL,
+    "next_run_date" "date" NOT NULL,
+    "end_date" "date",
+    "status" "text" DEFAULT 'ACTIVE'::"text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "local_id" "text" NOT NULL,
+    "sync_status" "text" DEFAULT 'synced'::"text",
+    "deleted_at" timestamp with time zone,
+    "is_purged" boolean DEFAULT false,
+    CONSTRAINT "recurring_schedules_frequency_check" CHECK (("frequency" = ANY (ARRAY['WEEKLY'::"text", 'MONTHLY'::"text", 'YEARLY'::"text"]))),
+    CONSTRAINT "recurring_schedules_status_check" CHECK (("status" = ANY (ARRAY['ACTIVE'::"text", 'PAUSED'::"text", 'COMPLETED'::"text"])))
+);
+
+
+ALTER TABLE "public"."recurring_schedules" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."user_secrets" (
-    "user_id" "uuid" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "paystack_key_encrypted" "bytea",
-    "flutterwave_key_encrypted" "bytea"
+    "flutterwave_key_encrypted" "bytea",
+    "organization_id" "uuid" NOT NULL
 );
 
 
@@ -918,9 +1082,9 @@ ALTER TABLE "public"."user_secrets" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."user_sequences" (
-    "user_id" "uuid" NOT NULL,
     "entity" "text" NOT NULL,
-    "next_value" integer DEFAULT 1
+    "next_value" integer DEFAULT 1,
+    "organization_id" "uuid" NOT NULL
 );
 
 
@@ -947,12 +1111,17 @@ ALTER TABLE ONLY "public"."api_logs"
 
 
 ALTER TABLE ONLY "public"."clients"
-    ADD CONSTRAINT "clients_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "clients_org_id_local_id_key" UNIQUE ("organization_id", "local_id");
 
 
 
 ALTER TABLE ONLY "public"."clients"
-    ADD CONSTRAINT "clients_user_id_local_id_key" UNIQUE ("user_id", "local_id");
+    ADD CONSTRAINT "clients_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."invoices"
+    ADD CONSTRAINT "invoices_org_id_local_id_key" UNIQUE ("organization_id", "local_id");
 
 
 
@@ -961,18 +1130,28 @@ ALTER TABLE ONLY "public"."invoices"
 
 
 
-ALTER TABLE ONLY "public"."invoices"
-    ADD CONSTRAINT "invoices_user_id_local_id_key" UNIQUE ("user_id", "local_id");
-
-
-
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."profiles"
-    ADD CONSTRAINT "profiles_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."organization_members"
+    ADD CONSTRAINT "organization_members_organization_id_user_id_key" UNIQUE ("organization_id", "user_id");
+
+
+
+ALTER TABLE ONLY "public"."organization_members"
+    ADD CONSTRAINT "organization_members_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."organizations"
+    ADD CONSTRAINT "organizations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quotes"
+    ADD CONSTRAINT "quotes_org_id_local_id_key" UNIQUE ("organization_id", "local_id");
 
 
 
@@ -981,23 +1160,28 @@ ALTER TABLE ONLY "public"."quotes"
 
 
 
-ALTER TABLE ONLY "public"."quotes"
-    ADD CONSTRAINT "quotes_user_id_local_id_key" UNIQUE ("user_id", "local_id");
-
-
-
 ALTER TABLE ONLY "public"."rate_limits"
     ADD CONSTRAINT "rate_limits_pkey" PRIMARY KEY ("id");
 
 
 
+ALTER TABLE ONLY "public"."recurring_schedules"
+    ADD CONSTRAINT "recurring_schedules_org_id_local_id_key" UNIQUE ("organization_id", "local_id");
+
+
+
+ALTER TABLE ONLY "public"."recurring_schedules"
+    ADD CONSTRAINT "recurring_schedules_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."user_secrets"
-    ADD CONSTRAINT "user_secrets_pkey" PRIMARY KEY ("user_id");
+    ADD CONSTRAINT "user_secrets_pkey" PRIMARY KEY ("organization_id");
 
 
 
 ALTER TABLE ONLY "public"."user_sequences"
-    ADD CONSTRAINT "user_sequences_pkey" PRIMARY KEY ("user_id", "entity");
+    ADD CONSTRAINT "user_sequences_pkey" PRIMARY KEY ("organization_id", "entity");
 
 
 
@@ -1006,7 +1190,11 @@ ALTER TABLE ONLY "public"."webhook_logs"
 
 
 
-CREATE INDEX "idx_api_logs_rate_limit" ON "public"."api_logs" USING "btree" ("user_id", "endpoint", "created_at");
+CREATE INDEX "idx_api_logs_org_endpoint_created" ON "public"."api_logs" USING "btree" ("organization_id", "endpoint", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_api_logs_rate_limit" ON "public"."api_logs" USING "btree" ("organization_id", "endpoint", "created_at");
 
 
 
@@ -1018,11 +1206,27 @@ CREATE INDEX "idx_invoices_deleted_at" ON "public"."invoices" USING "btree" ("de
 
 
 
+CREATE INDEX "idx_invoices_org_created" ON "public"."invoices" USING "btree" ("organization_id", "created_at" DESC) WHERE ("deleted_at" IS NULL);
+
+
+
 CREATE INDEX "idx_quotes_deleted_at" ON "public"."quotes" USING "btree" ("deleted_at");
 
 
 
+CREATE INDEX "idx_quotes_org_created" ON "public"."quotes" USING "btree" ("organization_id", "created_at" DESC) WHERE ("deleted_at" IS NULL);
+
+
+
 CREATE INDEX "idx_rate_limits_lookup" ON "public"."rate_limits" USING "btree" ("identifier", "action", "attempted_at" DESC);
+
+
+
+CREATE INDEX "idx_recurring_schedules_org_id" ON "public"."recurring_schedules" USING "btree" ("organization_id");
+
+
+
+CREATE INDEX "idx_recurring_schedules_run_date" ON "public"."recurring_schedules" USING "btree" ("next_run_date", "status");
 
 
 
@@ -1034,11 +1238,19 @@ CREATE OR REPLACE TRIGGER "before_insert_quote_number" BEFORE INSERT ON "public"
 
 
 
+CREATE OR REPLACE TRIGGER "enforce_client_quota" BEFORE INSERT ON "public"."clients" FOR EACH ROW EXECUTE FUNCTION "public"."check_user_quota"();
+
+
+
 CREATE OR REPLACE TRIGGER "enforce_invoice_quota" BEFORE INSERT ON "public"."invoices" FOR EACH ROW EXECUTE FUNCTION "public"."check_user_quota"();
 
 
 
-CREATE OR REPLACE TRIGGER "enforce_pro_status_protection" BEFORE UPDATE ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."protect_pro_status"();
+CREATE OR REPLACE TRIGGER "enforce_pro_status_protection" BEFORE UPDATE ON "public"."organizations" FOR EACH ROW EXECUTE FUNCTION "public"."protect_pro_status"();
+
+
+
+CREATE OR REPLACE TRIGGER "enforce_pro_status_protection_insert" BEFORE INSERT ON "public"."organizations" FOR EACH ROW EXECUTE FUNCTION "public"."protect_pro_status_insert"();
 
 
 
@@ -1054,150 +1266,191 @@ CREATE OR REPLACE TRIGGER "on_quote_status_change" AFTER UPDATE ON "public"."quo
 
 
 
+CREATE OR REPLACE TRIGGER "update_recurring_schedules_modtime" BEFORE UPDATE ON "public"."recurring_schedules" FOR EACH ROW EXECUTE FUNCTION "public"."update_modified_column"();
+
+
+
 ALTER TABLE ONLY "public"."api_logs"
-    ADD CONSTRAINT "api_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id");
+    ADD CONSTRAINT "api_logs_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."clients"
-    ADD CONSTRAINT "clients_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "clients_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."invoices"
-    ADD CONSTRAINT "invoices_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "invoices_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."notifications"
-    ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "notifications_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."organization_members"
+    ADD CONSTRAINT "organization_members_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."organization_members"
+    ADD CONSTRAINT "organization_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."quotes"
-    ADD CONSTRAINT "quotes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "quotes_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."recurring_schedules"
+    ADD CONSTRAINT "recurring_schedules_client_local_id_fkey" FOREIGN KEY ("organization_id", "client_id") REFERENCES "public"."clients"("organization_id", "local_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."recurring_schedules"
+    ADD CONSTRAINT "recurring_schedules_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."recurring_schedules"
+    ADD CONSTRAINT "recurring_schedules_template_local_id_fkey" FOREIGN KEY ("organization_id", "template_invoice_id") REFERENCES "public"."invoices"("organization_id", "local_id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."user_secrets"
-    ADD CONSTRAINT "user_secrets_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "user_secrets_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."user_sequences"
-    ADD CONSTRAINT "user_sequences_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "user_sequences_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
 
 
 
-CREATE POLICY "Anyone can view client by local_id" ON "public"."clients" FOR SELECT USING (true);
+CREATE POLICY "Members can delete clients" ON "public"."clients" FOR DELETE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Block old clients app versions" ON "public"."clients" AS RESTRICTIVE FOR SELECT USING ((((("current_setting"('request.headers'::"text", true))::json ->> 'x-app-version'::"text") = '1.3.1'::"text") OR (CURRENT_USER = 'postgres'::"name")));
+CREATE POLICY "Members can delete invoices" ON "public"."invoices" FOR DELETE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Block old invoices app versions" ON "public"."invoices" AS RESTRICTIVE FOR SELECT USING ((((("current_setting"('request.headers'::"text", true))::json ->> 'x-app-version'::"text") = '1.3.1'::"text") OR (CURRENT_USER = 'postgres'::"name")));
+CREATE POLICY "Members can delete notifications" ON "public"."notifications" FOR DELETE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Block old quotes app versions" ON "public"."quotes" AS RESTRICTIVE FOR SELECT USING ((((("current_setting"('request.headers'::"text", true))::json ->> 'x-app-version'::"text") = '1.3.1'::"text") OR (CURRENT_USER = 'postgres'::"name")));
+CREATE POLICY "Members can delete quotes" ON "public"."quotes" FOR DELETE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can delete own clients" ON "public"."clients" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can insert clients" ON "public"."clients" FOR INSERT WITH CHECK ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can delete own invoices" ON "public"."invoices" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can insert invoices" ON "public"."invoices" FOR INSERT WITH CHECK ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can delete own notifications" ON "public"."notifications" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can insert notifications" ON "public"."notifications" FOR INSERT WITH CHECK ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can delete own quotes" ON "public"."quotes" FOR DELETE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can insert quotes" ON "public"."quotes" FOR INSERT WITH CHECK ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can insert own clients" ON "public"."clients" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can insert secrets" ON "public"."user_secrets" FOR INSERT WITH CHECK ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can insert own invoices" ON "public"."invoices" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can update clients" ON "public"."clients" FOR UPDATE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can insert own quotes" ON "public"."quotes" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can update invoices" ON "public"."invoices" FOR UPDATE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can insert own secrets" ON "public"."user_secrets" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can update notifications" ON "public"."notifications" FOR UPDATE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can insert their own secrets" ON "public"."user_secrets" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can update quotes" ON "public"."quotes" FOR UPDATE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can read their own secrets" ON "public"."user_secrets" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can update secrets" ON "public"."user_secrets" FOR UPDATE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can update own clients" ON "public"."clients" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can view clients" ON "public"."clients" FOR SELECT USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can update own invoices" ON "public"."invoices" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can view invoices" ON "public"."invoices" FOR SELECT USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can update own notifications" ON "public"."notifications" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can view notifications" ON "public"."notifications" FOR SELECT USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can update own profile" ON "public"."profiles" FOR UPDATE USING (("auth"."uid"() = "id"));
+CREATE POLICY "Members can view quotes" ON "public"."quotes" FOR SELECT USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can update own quotes" ON "public"."quotes" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can view secrets" ON "public"."user_secrets" FOR SELECT USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can update own secrets" ON "public"."user_secrets" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Members can view sequences" ON "public"."user_sequences" FOR SELECT USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can update their own secrets" ON "public"."user_secrets" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Owners can add members" ON "public"."organization_members" FOR INSERT WITH CHECK ("public"."is_org_owner"("organization_id"));
 
 
 
-CREATE POLICY "Users can view own clients" ON "public"."clients" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Owners can delete secrets" ON "public"."user_secrets" FOR DELETE USING ("public"."is_org_owner"("organization_id"));
 
 
 
-CREATE POLICY "Users can view own invoices" ON "public"."invoices" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Owners can remove members" ON "public"."organization_members" FOR DELETE USING ("public"."is_org_owner"("organization_id"));
 
 
 
-CREATE POLICY "Users can view own notifications" ON "public"."notifications" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Owners can update members" ON "public"."organization_members" FOR UPDATE USING ("public"."is_org_owner"("organization_id"));
 
 
 
-CREATE POLICY "Users can view own profile" ON "public"."profiles" FOR SELECT USING (("auth"."uid"() = "id"));
+CREATE POLICY "Users can create recurring schedules in their organization" ON "public"."recurring_schedules" FOR INSERT WITH CHECK ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can view own quotes" ON "public"."quotes" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can delete recurring schedules in their organization" ON "public"."recurring_schedules" FOR DELETE USING ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can view own secrets" ON "public"."user_secrets" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update recurring schedules in their organization" ON "public"."recurring_schedules" FOR UPDATE USING ("public"."is_member_of"("organization_id")) WITH CHECK ("public"."is_member_of"("organization_id"));
 
 
 
-CREATE POLICY "Users can view own sequences" ON "public"."user_sequences" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update their organizations" ON "public"."organizations" FOR UPDATE USING ("public"."is_member_of"("id"));
+
+
+
+CREATE POLICY "Users can view members of their organizations" ON "public"."organization_members" FOR SELECT USING ("public"."is_member_of"("organization_id"));
+
+
+
+CREATE POLICY "Users can view recurring schedules in their organization" ON "public"."recurring_schedules" FOR SELECT USING ("public"."is_member_of"("organization_id"));
+
+
+
+CREATE POLICY "Users can view their organizations" ON "public"."organizations" FOR SELECT USING ("public"."is_member_of"("id"));
 
 
 
@@ -1213,13 +1466,19 @@ ALTER TABLE "public"."invoices" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."organization_members" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."organizations" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."quotes" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."rate_limits" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."recurring_schedules" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."user_secrets" ENABLE ROW LEVEL SECURITY;
@@ -1253,6 +1512,10 @@ ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."notifications";
 
 
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."quotes";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."recurring_schedules";
 
 
 
@@ -1482,8 +1745,8 @@ GRANT ALL ON FUNCTION "public"."get_ai_context"() TO "authenticated";
 
 
 
-REVOKE ALL ON FUNCTION "public"."get_merchant_secret"("p_user_id" "uuid", "p_gateway" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."get_merchant_secret"("p_user_id" "uuid", "p_gateway" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."get_merchant_secret"("p_org_id" "uuid", "p_gateway" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_merchant_secret"("p_org_id" "uuid", "p_gateway" "text") TO "service_role";
 
 
 
@@ -1509,12 +1772,7 @@ GRANT ALL ON FUNCTION "public"."get_public_invoice"("p_local_id" "text") TO "aut
 
 
 
-GRANT ALL ON TABLE "public"."profiles" TO "anon";
-GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
-GRANT ALL ON TABLE "public"."profiles" TO "service_role";
-
-
-
+REVOKE ALL ON FUNCTION "public"."get_public_profile"("p_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."get_public_profile"("p_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_public_profile"("p_id" "uuid") TO "authenticated";
 
@@ -1531,18 +1789,24 @@ GRANT ALL ON FUNCTION "public"."get_public_quote"("p_local_id" "text") TO "authe
 
 
 
-GRANT ALL ON FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" numeric) TO "anon";
-GRANT ALL ON FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" numeric) TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."is_member_of"("_org_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."is_member_of"("_org_id" "uuid") TO "authenticated";
 
 
 
-GRANT ALL ON FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" numeric, "p_counter_amount" numeric, "p_client_message" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" numeric, "p_counter_amount" numeric, "p_client_message" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."is_org_owner"("_org_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."is_org_owner"("_org_id" "uuid") TO "authenticated";
 
 
 
-GRANT ALL ON FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" numeric, "p_client_message" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" numeric, "p_client_message" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" bigint) TO "anon";
+GRANT ALL ON FUNCTION "public"."update_invoice_status_public"("p_local_id" "text", "p_status" "text", "p_amount_paid" bigint) TO "authenticated";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" bigint, "p_client_message" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" bigint, "p_client_message" "text") TO "authenticated";
 
 
 
@@ -1585,9 +1849,27 @@ GRANT ALL ON TABLE "public"."notifications" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."organization_members" TO "anon";
+GRANT ALL ON TABLE "public"."organization_members" TO "authenticated";
+GRANT ALL ON TABLE "public"."organization_members" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."organizations" TO "anon";
+GRANT ALL ON TABLE "public"."organizations" TO "authenticated";
+GRANT ALL ON TABLE "public"."organizations" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."rate_limits" TO "anon";
 GRANT ALL ON TABLE "public"."rate_limits" TO "authenticated";
 GRANT ALL ON TABLE "public"."rate_limits" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."recurring_schedules" TO "anon";
+GRANT ALL ON TABLE "public"."recurring_schedules" TO "authenticated";
+GRANT ALL ON TABLE "public"."recurring_schedules" TO "service_role";
 
 
 

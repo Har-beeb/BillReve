@@ -296,7 +296,7 @@ class SyncEngine {
         if (item.action === 'CREATE') {
           const { error } = await supabase
             .from(tableName)
-            .upsert({ ...payloadSnakeCase, organization_id: orgId }, { onConflict: 'organization_id, local_id' });
+            .upsert({ ...payloadSnakeCase, organization_id: orgId }, { onConflict: 'organization_id,local_id' });
             
           if (error) throw error;
           

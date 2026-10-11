@@ -8,7 +8,10 @@ import { useLocation } from 'react-router-dom';
 import { UpdatePrompt } from './components/ui/UpdatePrompt';
 import { initMonitoring } from './lib/monitoring';
 
-initMonitoring();
+// Fire-and-forget: initMonitoring is async because both SDKs are dynamically
+// imported so they stay out of the main bundle. It handles its own failures
+// internally; the catch here only guards against an unhandled rejection.
+initMonitoring().catch(() => { /* telemetry must never block app startup */ });
 
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Recurring = React.lazy(() => import('./pages/Recurring'));

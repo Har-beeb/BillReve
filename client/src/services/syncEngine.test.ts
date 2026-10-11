@@ -16,6 +16,7 @@ vi.mock('../db/db', () => ({
     clients: { update: vi.fn(), get: vi.fn(), bulkDelete: vi.fn(), bulkPut: vi.fn() },
     invoices: { update: vi.fn(), get: vi.fn(), bulkDelete: vi.fn(), bulkPut: vi.fn() },
     quotes: { update: vi.fn(), get: vi.fn(), bulkDelete: vi.fn(), bulkPut: vi.fn() },
+    recurringSchedules: { update: vi.fn(), get: vi.fn(), bulkDelete: vi.fn(), bulkPut: vi.fn() },
   }
 }));
 
@@ -24,10 +25,17 @@ const mockSupabaseQuery = {
   eq: vi.fn().mockReturnThis(),
   order: vi.fn().mockReturnThis(),
   gt: vi.fn().mockReturnThis(),
+  limit: vi.fn().mockReturnThis(),
   range: vi.fn(),
   upsert: vi.fn(),
   update: vi.fn().mockReturnThis(),
   delete: vi.fn().mockReturnThis(),
+  // The sync engine resolves the caller's tenant via
+  // from('organization_members').select('organization_id').eq(...).limit(1).single()
+  // before every push and pull, so the mock must satisfy that chain or the
+  // engine throws before it reaches the code under test.
+  single: vi.fn().mockResolvedValue({ data: { organization_id: 'org-1' }, error: null }),
+  maybeSingle: vi.fn().mockResolvedValue({ data: { organization_id: 'org-1' }, error: null }),
 } as any;
 // Use Promise-like resolution explicitly rather than trying to assign .then
 mockSupabaseQuery.then = (resolve: any) => resolve({ data: [], error: null });
@@ -68,7 +76,7 @@ describe('syncEngine', () => {
   });
 
   describe('pushLocalChanges', () => {
-    it('pushes CREATED items using upsert with onConflict local_id', async () => {
+    it('pushes CREATED items using upsert keyed on the real composite unique index', async () => {
       const mockItems = [
         { id: 1, action: 'CREATE', entity: 'CLIENT', status: 'pending', payload: { localId: 'client-1', name: 'Test Client' } }
       ];
@@ -78,15 +86,19 @@ describe('syncEngine', () => {
       await (syncEngine as any).pushLocalChanges();
 
       expect(supabase.from).toHaveBeenCalledWith('clients');
+      // The unique constraint is UNIQUE (organization_id, local_id). PostgREST
+      // requires the column list comma-separated with NO whitespace — a space
+      // makes it look for a column literally named " local_id" and every
+      // CREATE push fails into the dead-letter queue.
       expect(mockSupabaseQuery.upsert).toHaveBeenCalledWith(
-        { local_id: 'client-1', name: 'Test Client', organization_id: 'user-1' },
-        { onConflict: 'local_id' }
+        { local_id: 'client-1', name: 'Test Client', organization_id: 'org-1' },
+        { onConflict: 'organization_id,local_id' }
       );
       expect(db.syncQueue.delete).toHaveBeenCalledWith(1);
       expect(db.clients.update).toHaveBeenCalledWith('client-1', { syncStatus: 'synced' });
     });
 
-    it('pushes UPDATED items and sets updated_at', async () => {
+    it('pushes UPDATED items, sets updated_at, and scopes to the organization', async () => {
       const mockItems = [
         { id: 2, action: 'UPDATE', entity: 'INVOICE', status: 'pending', payload: { localId: 'inv-1', total: 100 } }
       ];
@@ -101,9 +113,11 @@ describe('syncEngine', () => {
       expect(updateArgs.total).toBe(100);
       expect(updateArgs.updated_at).toBeDefined(); // updated_at is appended
       expect(mockSupabaseQuery.eq).toHaveBeenCalledWith('local_id', 'inv-1');
+      // Defence in depth: never rely on RLS alone for a cross-tenant write.
+      expect(mockSupabaseQuery.eq).toHaveBeenCalledWith('organization_id', 'org-1');
     });
 
-    it('pushes DELETED items', async () => {
+    it('pushes DELETED items scoped to the organization', async () => {
       const mockItems = [
         { id: 3, action: 'DELETE', entity: 'QUOTE', status: 'pending', payload: { localId: 'quote-1' } }
       ];
@@ -114,6 +128,7 @@ describe('syncEngine', () => {
       expect(supabase.from).toHaveBeenCalledWith('quotes');
       expect(mockSupabaseQuery.delete).toHaveBeenCalled();
       expect(mockSupabaseQuery.eq).toHaveBeenCalledWith('local_id', 'quote-1');
+      expect(mockSupabaseQuery.eq).toHaveBeenCalledWith('organization_id', 'org-1');
     });
   });
 

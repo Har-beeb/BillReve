@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { AlertCircle, CheckCircle2, Download, MessageSquare } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { formatMoney } from '../utils/formatters';
+import { toMinor } from '../utils/money';
 import { db } from '../db/db';
 import { useAppStore } from '../store/useAppStore';
 import toast from 'react-hot-toast';
@@ -185,11 +186,15 @@ const PublicQuote: React.FC = () => {
     
     setIsSubmittingCounter(true);
     try {
-      const amount = Number(counterAmount);
-      
+      // The client types a MAJOR-unit figure (the input is step="0.01" and the
+      // field is prefixed with a currency symbol). Everything stored and
+      // compared below is MINOR units, so convert at this boundary — the
+      // minimum-counter guard and counter_amount column are both minor.
+      const amount = toMinor(counterAmount);
+
       const minAmount = quote.minimum_counter_amount ?? quote.minimumCounterAmount;
       if (minAmount !== undefined && minAmount !== null && amount < minAmount) {
-        setStatusMessage({ type: 'error', text: `The business has set a minimum acceptable limit of ${minAmount} for counter offers on this quote. Please enter a valid amount.` });
+        setStatusMessage({ type: 'error', text: `The business has set a minimum acceptable limit of ${formatMoney(minAmount, quote.currency)} for counter offers on this quote. Please enter a valid amount.` });
         setIsSubmittingCounter(false);
         return;
       }

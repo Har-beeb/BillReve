@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenAI, Type } from "npm:@google/genai";
 import { z } from "npm:zod";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { convertMoneyFieldsToMajor } from "../_shared/money.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,29 +48,98 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // ---------------------------------------------------------------------
     // AI Quota Enforcement (C9)
+    //
+    // This block previously read `profiles.is_pro` and counted
+    // `api_logs.user_id`. Migration 20261009020000 dropped BOTH the `profiles`
+    // table and the `user_id` column, so the lookup returned null, every user
+    // (including Pro) fell into the free branch, the count query errored, and
+    // `count` came back null — which made the limit check false and the quota
+    // FAIL OPEN. Tenancy now resolves through organization_members ->
+    // organizations, which is where is_pro actually lives.
+    // ---------------------------------------------------------------------
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('is_pro')
-      .eq('id', user.id)
-      .single();
+    const { data: membership, error: membershipError } = await supabaseAdmin
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
 
-    if (!profile?.is_pro) {
-      const { count } = await supabaseAdmin
+    if (membershipError || !membership?.organization_id) {
+      // Fail CLOSED. A user with no resolvable organization must not reach a
+      // metered third-party API.
+      console.error('AI quota: could not resolve organization for user', user.id, membershipError);
+      return new Response(JSON.stringify({
+        error: 'Organization not found',
+        message: 'We could not resolve your workspace. Please sign out and back in, then try again.'
+      }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const organizationId = membership.organization_id;
+
+    const { data: org, error: orgError } = await supabaseAdmin
+      .from('organizations')
+      .select('is_pro, pro_expires_at')
+      .eq('id', organizationId)
+      .maybeSingle();
+
+    if (orgError) {
+      console.error('AI quota: organization lookup failed', orgError);
+      return new Response(JSON.stringify({
+        error: 'Quota check failed',
+        message: 'We could not verify your plan. Please try again shortly.'
+      }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Respect the expiry, not just the flag — a lapsed subscription that still
+    // has is_pro set must not keep consuming paid features.
+    const proExpiry = org?.pro_expires_at ? new Date(org.pro_expires_at).getTime() : 0;
+    const isPro = Boolean(org?.is_pro) && (proExpiry === 0 || proExpiry > Date.now());
+
+    const FREE_AI_PROMPTS_PER_MONTH = 10;
+    const PRO_ONLY_ENDPOINTS = new Set(['cfo-report']);
+
+    if (!isPro) {
+      // cfo-report is a paid feature and was previously reachable for free.
+      if (PRO_ONLY_ENDPOINTS.has(path ?? '')) {
+        return new Response(JSON.stringify({
+          error: 'Pro feature',
+          message: 'The AI CFO Report is available on the Pro plan. Upgrade to unlock it.'
+        }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Monthly window, matching the rest of the free tier. Counting from the
+      // first of the current month rather than lifetime.
+      const now = new Date();
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+
+      const { count, error: countError } = await supabaseAdmin
         .from('api_logs')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .like('endpoint', 'ai/%');
-        
-      if (count !== null && count >= 10) {
-        return new Response(JSON.stringify({ 
-          error: 'AI Quota Exceeded', 
-          message: 'You have reached the free tier limit of 10 AI requests. Please upgrade to Pro to continue using AI.' 
+        .eq('organization_id', organizationId)
+        .like('endpoint', 'ai/%')
+        .gte('created_at', monthStart);
+
+      if (countError) {
+        // Fail CLOSED on an unreadable counter. Previously this path silently
+        // granted unlimited access to a metered API.
+        console.error('AI quota: usage count failed', countError);
+        return new Response(JSON.stringify({
+          error: 'Quota check failed',
+          message: 'We could not verify your AI usage. Please try again shortly.'
+        }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      if ((count ?? 0) >= FREE_AI_PROMPTS_PER_MONTH) {
+        return new Response(JSON.stringify({
+          error: 'AI Quota Exceeded',
+          message: `You have reached the free tier limit of ${FREE_AI_PROMPTS_PER_MONTH} AI requests this month. Upgrade to Pro for unlimited AI.`
         }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
@@ -83,7 +153,15 @@ serve(async (req) => {
     });
 
     if (rateLimitError) {
+      // Fail CLOSED. This previously only logged and fell through, so while
+      // check_and_log_rate_limit was broken by the multi-tenant migration the
+      // rate limit was not merely absent — it was silently bypassed on a
+      // metered third-party API.
       console.error('Rate Limit Error:', rateLimitError);
+      return new Response(JSON.stringify({
+        error: 'Rate limit check failed',
+        message: 'We could not verify your request allowance. Please try again shortly.'
+      }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (!isAllowed) {
       return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -369,7 +447,9 @@ async function handleInsights(aiClient: GoogleGenAI, body: any) {
   });
 
   const validatedData = schema.parse(body);
-  const businessDataStr = JSON.stringify(validatedData.data, null, 2);
+  // Money is stored in MINOR units; convert before the model sees it, so it
+  // reports "1,500.50" rather than "150050".
+  const businessDataStr = JSON.stringify(convertMoneyFieldsToMajor(validatedData.data), null, 2);
   const defaultCurrency = validatedData.businessProfile?.currency || 'USD';
 
   const systemPrompt = `You are an expert financial analyst, accountant, and business advisor.
@@ -473,10 +553,11 @@ async function handleCfoReport(aiClient: GoogleGenAI, body: any) {
   });
 
   const validatedData = schema.parse(body);
-  const businessDataStr = JSON.stringify({
+  // Money is stored in MINOR units; convert before the model sees it.
+  const businessDataStr = JSON.stringify(convertMoneyFieldsToMajor({
     metrics: validatedData.metrics,
     aggregatedSummary: validatedData.data.aggregatedSummary
-  }, null, 2);
+  }), null, 2);
   const defaultCurrency = validatedData.businessProfile?.currency || 'USD';
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });

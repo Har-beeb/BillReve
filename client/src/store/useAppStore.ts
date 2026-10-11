@@ -274,13 +274,23 @@ export const useAppStore = create<AppState>()(
             db.clients.clear(),
             db.quotes.clear(),
             db.invoices.clear(),
+            db.recurringSchedules.clear(),
             db.syncQueue.clear()
           ]);
-          
-          localStorage.removeItem('last_sync_time');
-          
+
+          // Clear EVERY sync watermark, not just the pre-2026-10 single key.
+          // The sync engine now keeps one watermark per table
+          // (`last_sync_time_invoices` and friends). Removing only the legacy
+          // `last_sync_time` left the real watermarks behind, so the next user
+          // to sign in on this browser resumed from the previous user's
+          // high-water mark and silently never pulled anything older than it.
+          // Enumerating by prefix means new tables are covered automatically.
+          Object.keys(localStorage)
+            .filter((key) => key.startsWith('last_sync_time'))
+            .forEach((key) => localStorage.removeItem(key));
+
           setTimeout(() => {
-             window.location.reload(); 
+             window.location.reload();
           }, 100);
         } catch (e) {
           console.error("Failed to clear local DB on logout:", e);

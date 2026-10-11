@@ -11,13 +11,46 @@ const FREE_TIER_LIMITS = {
   ai_prompts: 10
 };
 
+/**
+ * Start of the current calendar month in UTC.
+ *
+ * Must match the server, which uses `date_trunc('month', now())` in
+ * `check_user_quota()` and `Date.UTC(...)` in the `ai` edge function. Using
+ * local time here would disagree with the server for a few hours either side
+ * of a month boundary.
+ */
+const monthStartUtc = (): string => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+};
+
 export const useQuota = () => {
   const { isProUser } = useAppStore();
   const navigate = useNavigate();
 
-  const invoiceCount = useLiveQuery(() => db.invoices.count()) || 0;
-  const quoteCount = useLiveQuery(() => db.quotes.count()) || 0;
-  const clientCount = useLiveQuery(() => db.clients.count()) || 0;
+  // Invoices and quotes are a MONTHLY flow; clients are a standing total.
+  // Both must exclude soft-deleted rows, because the server-side
+  // check_user_quota() trigger filters on `deleted_at IS NULL`. Counting
+  // lifetime rows here meant a free user was blocked in the UI forever after
+  // 10 invoices, even though the server would have allowed 10 more next month.
+  const invoiceCount = useLiveQuery(() => {
+    const since = monthStartUtc();
+    return db.invoices
+      .filter(i => !i.deletedAt && (i.createdAt ?? '') >= since)
+      .count();
+  }) || 0;
+
+  const quoteCount = useLiveQuery(() => {
+    const since = monthStartUtc();
+    return db.quotes
+      .filter(q => !q.deletedAt && (q.createdAt ?? '') >= since)
+      .count();
+  }) || 0;
+
+  const clientCount = useLiveQuery(
+    () => db.clients.filter(c => !c.deletedAt).count()
+  ) || 0;
+
   const aiPromptsCount = useAppStore(state => state.aiPromptsUsed) || 0;
 
   const checkQuota = (type: 'invoice' | 'quote' | 'client' | 'ai_prompt'): boolean => {
@@ -46,10 +79,10 @@ export const useQuota = () => {
     }
 
     const displayNames = {
-      invoice: 'invoices',
-      quote: 'quotes',
+      invoice: 'invoices this month',
+      quote: 'quotes this month',
       client: 'clients',
-      ai_prompt: 'AI assistant requests'
+      ai_prompt: 'AI assistant requests this month'
     };
 
     if (current >= limit) {

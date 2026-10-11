@@ -3,7 +3,7 @@ import { Card } from '../components/ui';
 import { BarChart3, TrendingUp, Download, PieChart as PieChartIcon } from 'lucide-react';
 import { db } from '../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { formatMoney } from '../utils/formatters';
+import { formatMoney, formatCompactMinor } from '../utils/formatters';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format, subMonths, subDays, isSameMonth, isSameDay, parseISO, isAfter, isBefore, startOfDay, endOfDay, subWeeks, subYears, differenceInDays } from 'date-fns';
 import { generateTaxReportCsv } from '../utils/csvGenerator';
@@ -314,10 +314,7 @@ const Reports: React.FC = () => {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{ fill: '#64748b', fontSize: 12 }} 
-                  tickFormatter={(value: any) => {
-                    const major = value / 100;
-                    return major >= 1000 ? `${(major/1000).toFixed(1)}k` : major.toString();
-                  }}
+                  tickFormatter={(value: any) => formatCompactMinor(value as number)}
                 />
                 <Tooltip 
                   cursor={{ fill: 'rgba(0,0,0,0.05)' }}

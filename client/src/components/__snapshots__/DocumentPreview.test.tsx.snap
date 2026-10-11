@@ -99,7 +99,7 @@ Test City, TC 12345
         </div>
       </div>
       <div
-        class="px-8 mb-6"
+        class="px-8 md:px-12 pt-6 mb-6"
       >
         <p
           class="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-500"
@@ -212,7 +212,7 @@ Test City, TC 12345
                 Subtotal
               </span>
               <span>
-                US$3.00
+                $3.00
               </span>
             </div>
             <div
@@ -236,7 +236,7 @@ Test City, TC 12345
               <span
                 class="font-bold text-sm break-all text-right text-slate-500"
               >
-                US$3.30
+                $3.30
               </span>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { toMajorString } from "../_shared/money.ts";
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') as string;
 
@@ -55,7 +56,7 @@ serve(async (req) => {
         emailSubject = `Upcoming Reminder: Invoice ${invoice.invoice_number} is due in 3 days`;
         emailBody = `
           <p>Hi ${invoice.client.name},</p>
-          <p>This is a polite reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${invoice.total}</strong> is due on ${dueDate.toDateString()}.</p>
+          <p>This is a polite reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${toMajorString(invoice.total)}</strong> is due on ${dueDate.toDateString()}.</p>
           <p>Thank you for your business!</p>
         `;
       } else if (diffDays === 0 && invoice.status === 'SENT') {
@@ -63,7 +64,7 @@ serve(async (req) => {
         emailSubject = `Due Today: Invoice ${invoice.invoice_number}`;
         emailBody = `
           <p>Hi ${invoice.client.name},</p>
-          <p>This is a reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${invoice.total}</strong> is due today.</p>
+          <p>This is a reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${toMajorString(invoice.total)}</strong> is due today.</p>
           <p>Please arrange payment at your earliest convenience.</p>
         `;
       } else if ((diffDays === 3 || diffDays === 7 || diffDays === 14) && invoice.status === 'OVERDUE') {
@@ -71,7 +72,7 @@ serve(async (req) => {
         emailSubject = `Overdue Reminder: Invoice ${invoice.invoice_number}`;
         emailBody = `
           <p>Hi ${invoice.client.name},</p>
-          <p>This is a friendly reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${invoice.total}</strong> was due on ${dueDate.toDateString()} and is now overdue.</p>
+          <p>This is a friendly reminder that your invoice <strong>${invoice.invoice_number}</strong> for <strong>${invoice.currency} ${toMajorString(invoice.total)}</strong> was due on ${dueDate.toDateString()} and is now overdue.</p>
           <p>Please arrange payment as soon as possible.</p>
         `;
       }

@@ -1,7 +1,9 @@
 # BillReve — Technical Working Document
-*Last updated: 2026-10-10 | Version: 1.5.0*
+*Last updated: 2026-10-11 | Version: 1.5.0*
 
 > This document is the **authoritative internal reference** for BillReve. It is written for developers, AI agents, and collaborators continuing work on this project. It must be kept up-to-date after every significant change.
+>
+> **Reliability note:** this file was substantially rewritten on 2026-10-11 after two audits found it contradicted the source in several places — it still described the `profiles` table (dropped), invented `payments` and `campaigns` tables (never existed), and listed resolved risks as open. Where this document and the code disagree, **the code wins**. Migration files, not `schema.sql`, are the source of truth for the database.
 
 ---
 
@@ -13,17 +15,22 @@ BillReve is an **offline-first, AI-powered invoicing and billing SaaS** for free
 
 | Layer | Technology |
 |---|---|
-| Frontend Framework | React 18 + TypeScript |
-| Build Tool | Vite |
+| Frontend Framework | React 19.2 + TypeScript 6 (strict) |
+| Build Tool | Vite 8 (Rolldown bundler) |
 | Styling | Tailwind CSS v4 + custom CSS variable theme engine |
 | Animations | Framer Motion |
-| State Management | Zustand (`useAppStore.ts`) |
-| Local Database | Dexie.js (IndexedDB wrapper) |
+| State Management | Zustand 5 (`useAppStore.ts`) |
+| Local Database | Dexie.js 4 (IndexedDB wrapper), schema v4 |
 | Cloud Database & Auth | Supabase (PostgreSQL + Row Level Security) |
 | Serverless Functions | Supabase Edge Functions (Deno) |
 | PWA | `vite-plugin-pwa` + Workbox |
-| PDF Generation | Client-side custom renderer (`pdfGenerator.tsx`) |
+| PDF Generation | Client-side `html2pdf.js` renderer (`pdfGenerator.tsx`), lazy-loaded |
 | AI | Google Gemini via Supabase Edge Function proxy |
+| Testing | Vitest 5 + Testing Library + jsdom |
+| CI | GitHub Actions (`.github/workflows/ci.yml`) |
+| Observability | Sentry (`@sentry/react`) + PostHog, both key-gated |
+
+**Node requirement:** ≥ 20.19 or ≥ 22.12. Vite 8 will refuse older versions.
 
 ---
 
@@ -31,75 +38,122 @@ BillReve is an **offline-first, AI-powered invoicing and billing SaaS** for free
 
 ### Core Business Features
 - **Invoicing Engine** — Full lifecycle: `DRAFT → SENT → PENDING → PARTIAL → PAID → OVERDUE → VOID`
-- **Quotes & Negotiation Loop** — Lifecycle: `DRAFT → SENT → ACCEPTED / DECLINED / COUNTERED`. Clients can counter-offer via public link; admin can accept counter, decline, or redraft a new version
+- **Quotes & Negotiation Loop** — Lifecycle: `DRAFT → SENT → ACCEPTED / DECLINED / COUNTERED`. Clients can counter-offer via public link; admin can accept counter, decline, or redraft a new version. Minimum counter amount is enforced **server-side** in the RPC, not just in the browser
 - **Quote → Invoice Conversion** — One-click conversion preserves all line items
+- **Recurring Invoices** — `recurring_schedules` table + `process-recurring-invoices` edge function on `pg_cron`
 - **Client Directory** — Full CRUD, soft-delete, CSV import via wizard
-- **Payments Tab** — Manual bank transfer accounts (free), Paystack / Flutterwave / Stripe gateway (Pro)
-- **Trash & Auto-Purge** — Soft-deleted records are recoverable for 7 days (Free) or 30 days (Pro), then auto-purged
-- **Email Campaigns** — Promotional emails sent to client directory
+- **Payments Tab** — Manual bank transfer accounts (free), Paystack / Flutterwave gateways (Pro). **Stripe is not implemented**
+- **Trash & Auto-Purge** — Soft-deleted records recoverable for 7 days (Free) or 30 days (Pro), then purged by `empty_trash_based_on_plan()` on a daily cron
+- **Email Campaigns** — Promotional emails sent to client directory (send-only; no campaign history table exists)
 - **Reports & CFO Insights** — Financial summaries, revenue/outstanding/overdue charts, AI CFO report generation
-- **PDF Export** — 5 distinct themes (Standard, Professional, Modern, Classic, Monochrome) with live logo and branding
+- **PDF Export** — 5 themes (Standard, Professional, Modern, Classic, Monochrome) with live logo and branding
+- **Sequential Document Numbers** — gapless per-organization numbering via Postgres sequences in `user_sequences`; offline-created documents carry a `DRAFT-INV-xxxx` placeholder until synced
 
 ### SaaS / Platform Features
-- **Subscription Tiers** — Free vs. Pro with feature gating via `isPro` boolean
-- **Quota System** — Limits on invoices, clients, and AI prompts per tier
-- **Automated Payment Webhooks** — Paystack, Flutterwave, SaaS subscription webhooks
-- **Automated Email Reminders** — Scheduled cron at -3, 0, +3, +7, +14 days from due date
+- **Subscription Tiers** — Free vs. Pro, gated on `organizations.is_pro` + `pro_expires_at`
+- **Quota System** — Free tier: **5 clients, 10 invoices/month, 10 quotes/month, 10 AI prompts/month.** Enforced by the `check_user_quota()` trigger and inside the `ai` edge function
+- **Automated Payment Webhooks** — Paystack, Flutterwave, SaaS subscription
+- **Automated Email Reminders** — Cron at -3, 0, +3, +7, +14 days from due date
 
 ### AI Features
-- **RevenueChat** — Persistent conversational assistant embedded on the dashboard. Can answer financial questions and issue Action Cards (draft invoice, create quote)
+- **RevenueChat** — Persistent conversational assistant on the dashboard. Answers financial questions and issues Action Cards (draft invoice, create quote)
 - **AI Draft Modal (`AiDraftModal.tsx`)** — Drag-and-drop/voice/text invoice/quote generation with line-item parsing
+- **AI CFO Report** (Pro only, enforced server-side)
 
 ### UX & App Features
 - **Offline-First Sync** — All writes go to IndexedDB first; cloud sync happens in background
 - **PWA Support** — Installable on mobile and desktop. Works fully offline after first load
-- **Multi-Theme Engine** — 7 preset themes + custom hex color picker
-- **Dark Mode** — Full dark mode with persistence
-- **Font Preferences** — Multiple font options with size controls
-- **Getting Started Checklist** — Onboarding wizard guides new users through first setup steps
+- **Multi-Theme Engine** — 8 preset themes + custom hex color picker
+- **Dark Mode**, **Font Preferences**, **Getting Started Checklist**
 - **Notification System** — In-app notifications for invoice paid, counter offer received, payment pending
-- **Public Invoice Links** — `/pay/:id` — client-facing view with payment flow
-- **Public Quote Links** — `/quote/:id` — client-facing view with accept/decline/counter flow
+- **Dead Letter Queue UI** — failed sync payloads listed in `SyncSettings.tsx` with a retry action
+- **Public Invoice Links** — `/pay/:id`; **Public Quote Links** — `/quote/:id`
 
 ---
 
-## 3. Database Schema (Supabase PostgreSQL + Dexie.js Parity)
+## 3. Money Representation ⚠️ READ THIS FIRST
 
-> Both databases mirror each other. The Dexie schema is the source of truth for local structure; Supabase mirrors it with additional server-only columns.
+**Every monetary value in BillReve is an integer in MINOR units** (kobo, cents, pesewas). Postgres columns are `BIGINT`, Dexie mirrors them (schema v2 migration), and every calculation and comparison happens in minor units. Floating-point currency is never stored.
 
-### `profiles`
+Conversion happens in exactly **one** place per runtime:
+
+| Runtime | File |
+|---|---|
+| Client | `client/src/utils/money.ts` |
+| Edge Functions (Deno) | `server/supabase/functions/_shared/money.ts` |
+
+Edge functions cannot import the client bundle, so the duplication is deliberate. **Change both or neither.**
+
+### The gateway trap
+
+The two payment gateways disagree with each other, and this is the single most expensive thing to get wrong in this codebase:
+
+| Gateway | Unit it sends and expects |
+|---|---|
+| Paystack | **Minor** (kobo) — same as our storage, so pass-through |
+| Flutterwave | **Major** (naira) — must convert |
+
+Always use `toGatewayAmount(minor, gateway)` when sending and `fromGatewayAmount(amount, gateway)` when receiving. Never convert inline.
+
+**History:** in October 2026 the minor-units migration landed *after* the payment fixes it invalidated. Four independent places kept treating stored values as major units. For several days checkout charged customers **100×**, both webhooks compared major against minor so no invoice could ever be marked `PAID`, and accepting a quote counter-offer rewrote the quote to ~1% of its value. `money.test.ts` exists specifically to make that class of bug impossible to reintroduce — each test names the bug and the `file:line` it came from.
+
+If you are writing `* 100` or `/ 100` outside those two files, stop.
+
+---
+
+## 4. Database Schema
+
+> Dexie and Supabase mirror each other for synced entities. Dexie uses camelCase, Supabase snake_case; `syncEngine.ts` converts between them.
+>
+> **There is no `profiles` table, no `payments` table, no `campaigns` table and no `bank_accounts` table.** Earlier revisions of this document described all four. Bank accounts are a JSONB array on `organizations`.
+
+### Real tables
+
+`organizations`, `organization_members`, `clients`, `invoices`, `quotes`, `recurring_schedules`, `notifications`, `user_secrets`, `user_sequences`, `api_logs`, `rate_limits`, `webhook_logs`.
+
+### `organizations` (the tenant — replaced `profiles`)
 ```
-id (uuid, FK → auth.users)
+id (uuid, PK)
 name, email, phone, address
-logo_url (text — currently stores base64 ⚠️ See Risks)
+logo_url (text — base64 blocked by CHECK constraint chk_logo_url_no_base64)
 country, currency
 industry, business_description
 bank_accounts (JSONB array of {id, bankName, accountName, accountNumber, isDefault})
-is_pro (boolean)
-pro_expires_at (timestamptz)
-ai_prompts_used (integer)
-getting_started_completed (boolean)
+email_flags (JSONB)
+paystack_public_key, flutterwave_public_key
+is_pro (boolean), pro_expires_at (timestamptz)
+created_at, updated_at
+```
+
+### `organization_members`
+```
+id (uuid, PK)
+organization_id (uuid, NOT NULL, FK → organizations)
+user_id (uuid, NOT NULL, FK → auth.users)
+role (text, CHECK IN ('owner','admin','member'), default 'owner')
+UNIQUE (organization_id, user_id)
 ```
 
 ### `clients`
 ```
-localId, userId, name, email, phone, address
-syncStatus ('PENDING' | 'SYNCED' | 'ERROR')
-updatedAt, createdAt
+localId, organizationId, name, email, phone, address
+syncStatus, updatedAt, createdAt
 deletedAt (soft delete), isPurged (boolean)
+UNIQUE (organization_id, local_id)
 ```
 
 ### `invoices`
 ```
-localId, userId, clientId
+localId, organizationId, clientId
 invoiceNumber, status, description
-items (JSONB — array of line items)
-taxes (JSONB — array of tax rules)
-subtotal, total, amountPaid
-currency, dueDate, createdAt, updatedAt
-bankAccountId (references bank_accounts[].id in profiles)
-counterAmount, clientMessage
+items (JSONB — line items; unitPrice and amount are MINOR units)
+taxes (JSONB — amount is MINOR units, rate is a percentage)
+subtotal, total, amountPaid, counterAmount   ← ALL BIGINT MINOR UNITS
+currency, dueDate, issuedAt, createdAt, updatedAt
+bankAccountId + bank_account_snapshot (JSONB, frozen at creation)
+clientMessage, documentTheme
 syncStatus, deletedAt, isPurged
+UNIQUE (organization_id, local_id)
 ```
 
 ### `quotes`
@@ -107,171 +161,188 @@ syncStatus, deletedAt, isPurged
 (Same base as invoices, plus:)
 quoteNumber, expiresAt
 allowCounterOffer (boolean)
-minimumCounterAmount
+minimumCounterAmount   ← BIGINT MINOR UNITS
 ```
 
-### `payments`
+### `recurring_schedules`
 ```
-localId, userId, invoiceId
-amount, method, paidAt
-reference, notes
-syncStatus
-```
-
-### `campaigns`
-```
-localId, userId, subject, body
-sentAt, recipientCount
-syncStatus
+localId, organizationId, clientId
+templateInvoiceId, frequency, nextRunDate, status
+FK (organization_id, client_id) → clients(organization_id, local_id)
+FK (organization_id, template_invoice_id) → invoices(organization_id, local_id)
 ```
 
-### `notifications` (Supabase only, not synced locally)
+### `user_secrets`
 ```
-id, organization_id, title, message, type, entity_id
-is_read (boolean), created_at
+organization_id (PK)
+paystack_secret_key_enc, flutterwave_secret_key_enc (BYTEA, pgcrypto)
 ```
+Readable only through the `get_merchant_secret(p_org_id, p_gateway)` SECURITY DEFINER RPC. Never select these columns directly.
 
-### `syncQueue` (Dexie/local only — never synced to Supabase)
+### `api_logs`
 ```
-id, table, localId, operation ('CREATE' | 'UPDATE' | 'DELETE')
-payload (JSONB), createdAt, attempts
+organization_id, endpoint, created_at
 ```
+Backs both API rate limiting and the monthly AI quota count. Indexed on `(organization_id, endpoint, created_at DESC)`.
 
----
+### `syncQueue` (Dexie only — never synced)
+```
+id, entity ('CLIENT' | 'INVOICE' | 'QUOTE' | 'RECURRING')
+action ('CREATE' | 'UPDATE' | 'DELETE')
+status ('pending' | 'failed')
+payload, createdAt, error
+```
+Note the real field names: `entity`/`action`/`status`, not `table`/`operation`/`attempts`.
 
-## 4. Migration History (Supabase)
-
-Migrations are in `server/supabase/migrations/`. Key milestones:
-
-| File | Purpose |
+### Dexie version history (`client/src/db/db.ts`)
+| Version | Change |
 |---|---|
-| Early migrations | Initial schema: profiles, clients, invoices, quotes |
-| `*_add_payments_table*` | Added `payments` table |
-| `*_add_bank_accounts_jsonb*` | Migrated bank details from flat columns to `bank_accounts` JSON array |
-| `*_add_notifications*` | Added `notifications` table with type/entity_id fields |
-| `*_add_campaigns*` | Added `campaigns` table |
-| `*_public_read_policies*` | Added RLS policies for public invoice/quote read access |
-| `*_revert_notifications_to_triggers*` | Moved notification logic from RPCs into Postgres triggers |
-| `*_create_logos_bucket*` | Created Supabase Storage bucket for logo uploads (partially implemented) |
-| `*_fix_public_status_rpc*` | Fixed the `update_invoice_status_public` overload conflict (PGRST203 bug) |
+| 1 | Initial: clients, quotes, invoices, syncQueue |
+| 2 | **Data migration** — convert all money fields to integer minor units |
+| 3 | Index `deletedAt` for Trash queries |
+| 4 | Add `recurringSchedules` table |
+
+⚠️ The IndexedDB database is still named **`BillFlowDatabase`** (pre-rebrand). This is deliberate — renaming it would orphan every returning user's local data. The class is `BillReveDatabase`; only the string passed to `super()` is legacy.
 
 ---
 
 ## 5. API / RPC & Edge Function Catalogue
 
-### Supabase RPCs (Postgres Functions)
+### Supabase RPCs
 
 | Function | Caller | Purpose |
 |---|---|---|
-| `update_invoice_status_public(p_local_id, p_status, p_amount_paid)` | `PublicInvoice.tsx` | Allows unauthenticated clients to set invoice to PENDING |
-| `update_quote_status_public(p_local_id, p_status, p_counter_amount, p_client_message)` | `PublicQuote.tsx` | Allows clients to accept/decline/counter a quote |
-| `auto_empty_trash` | Cron / Trigger | Purges soft-deleted rows past retention period |
+| `update_invoice_status_public(p_local_id, p_status, p_amount_paid)` | `PublicInvoice.tsx` | Unauthenticated status change. Allow-list: `PENDING, DECLINED, COUNTERED, DRAFT, SENT`. **Cannot set `PAID` or `PARTIAL`.** `amount_paid` is idempotent (set, never increment). Refuses to touch an already-`PAID` invoice |
+| `update_quote_status_public(p_local_id, p_status, p_counter_amount, p_client_message)` | `PublicQuote.tsx` | Accept/decline/counter. Enforces `allow_counter_offer` and `minimum_counter_amount` from the DB row, not client trust |
+| `get_public_invoice` / `get_public_quote` / `get_public_client` | public pages | Definer reads for unauthenticated document views |
+| `get_public_profile(p_id)` | public pages | Returns an **explicit nine-column** subset of `organizations`. Never `SELECT *` here — the table holds email, phone and `pro_expires_at` |
+| `get_ai_context()` | `RevenueChat`, `AICfoReport` | Server-side aggregation so raw arrays never ship to Gemini |
+| `get_merchant_secret(p_org_id, p_gateway)` | payment webhooks | Decrypts a gateway secret |
+| `check_rate_limit(identifier, action, max, window)` | public RPCs | Per-source-address **and** per-document throttling |
+| `check_and_log_rate_limit(p_user_id, p_endpoint, p_limit, p_window_minutes)` | `ai`, `send-email` | Per-organization API rate limit |
+| `is_member_of(_org_id)` / `is_org_owner(_org_id)` | RLS policies | Membership and ownership predicates |
+| `empty_trash_based_on_plan()` | daily cron | Purges soft-deleted rows past retention |
 
 ### Postgres Triggers
 
-| Trigger | Table | Function | Purpose |
-|---|---|---|---|
-| `on_invoice_status_change` | `invoices` | `handle_invoice_status_change()` | Creates notifications for PAID, PARTIAL, PENDING status changes |
-| `on_quote_status_change` | `quotes` | `handle_quote_status_change()` | Creates notifications for ACCEPTED, DECLINED, COUNTERED |
+| Trigger | Table | Purpose |
+|---|---|---|
+| `on_invoice_status_change` | `invoices` | Notifications for PAID/PARTIAL/PENDING |
+| `on_quote_status_change` | `quotes` | Notifications for ACCEPTED/DECLINED/COUNTERED |
+| `check_user_quota` | `invoices`, `quotes`, `clients` | Free-tier limits. Fails closed on a missing organization |
+| `enforce_pro_status_protection` | `organizations` | Silently discards client-side `is_pro` / `pro_expires_at` writes |
+| `user_sequences` number assignment | `invoices`, `quotes` | Assigns the real document number on insert |
 
-> **Important:** Both trigger functions check `auth.uid() IS NOT DISTINCT FROM NEW.organization_id` to prevent self-notifications when the admin changes their own records. Notifications only fire when the change originates from a public (unauthenticated) link.
+> **Known issue — notification suppression.** The status-change triggers currently do `IF auth.uid() IS NOT NULL THEN RETURN NEW`, which was meant to prevent self-notification. In a tenant model it suppresses the notification for **any** authenticated actor, including a *different* member of the same organization. Notifications therefore only fire for `anon` public-link actions. Needs narrowing to "the actor is the only member" or an actor-vs-recipient comparison before team accounts ship.
 
 ### Supabase Edge Functions
 
 | Function | Trigger | Purpose |
 |---|---|---|
-| `ai` | HTTP POST from client | Proxies requests to Gemini API with business context |
-| `email-cron` | Daily cron schedule | Scans invoices for upcoming/overdue dates; dispatches reminder emails |
-| `email-worker` | HTTP (internal) | Sends transactional emails via email provider |
-| `send-email` | HTTP | Generic email dispatch endpoint |
-| `saas-webhook` | Paystack/Flutterwave webhook | Handles Pro subscription upgrades, renewals, cancellations, and failed charges |
-| `paystack-webhook` | Paystack POST | Payment confirmation for invoice payments |
-| `flutterwave-webhook` | Flutterwave POST | Payment confirmation for invoice payments |
+| `ai` | HTTP POST | Gemini proxy. Verifies JWT → resolves org → checks `is_pro` + expiry → gates Pro-only endpoints → counts monthly AI usage → rate limits. **Every failure path fails closed.** Converts money to major units before prompting |
+| `email-cron` | Daily cron | Reminder emails; also sweeps expired Pro subscriptions |
+| `email-worker` | HTTP (internal) | Sends transactional emails |
+| `send-email` | HTTP | Generic email dispatch |
+| `process-recurring-invoices` | `pg_cron` | Generates invoices from `recurring_schedules` |
+| `saas-webhook` | Paystack | Pro subscription. HMAC verified **before** any DB logging; enforces a minimum amount of 350000 kobo before granting Pro; does **not** downgrade on `charge.failed` — `pro_expires_at` expires naturally |
+| `paystack-webhook` | Paystack POST | Verifies HMAC (constant-time), currency, and amount against the invoice total, then sets `PAID` or `PARTIAL` |
+| `flutterwave-webhook` | Flutterwave POST | Same, with major→minor conversion on the incoming amount |
 
 ---
 
 ## 6. State Management Architecture
 
 ### Zustand (`useAppStore.ts`)
-Manages non-volatile UI state only. Persisted to `localStorage`.
+Manages non-volatile UI state only. Persisted to `localStorage` under key `billreve-storage`.
 
-**Stores:**
-- `user` — Supabase auth session object
-- `businessProfile` — lightweight mirror of `profiles` row (name, currency, is_pro, etc.)
-- `theme` — active theme class string
-- `customColor` — hex string for custom theme
-- `fontSize` — user font size preference
-- `mobileNavStyle` — bottom bar vs. slide-out sidebar preference
-- `isDarkMode`
-- `isOnline` — connectivity flag
-- `lastSyncTime` — cursor timestamp used by sync engine
+**Holds:** `session`, `businessProfile` (mirror of the `organizations` row), `theme`, `customColor`, `fontSize`, `mobileNavStyle`, `isDarkMode`, `isOnline`, `aiPromptsUsed`, `isProUser`.
 
-**Pattern:** Use the Zustand hook reactively inside components: `const { isPro } = useAppStore()`. Do NOT use `useAppStore.getState()` in JSX — this is non-reactive and will not trigger re-renders.
+> `isProUser` and `aiPromptsUsed` are persisted to localStorage and are therefore **UX hints only** — a user can edit them. All real gating happens in Postgres triggers and the `ai` edge function. Never treat them as authoritative.
+
+Sync watermarks are **not** in Zustand. They live in `localStorage` as `last_sync_time_<table>` and are owned by the sync engine.
+
+**Pattern:** use the hook reactively inside components — `const { isProUser } = useAppStore()`. Do NOT use `useAppStore.getState()` in JSX; it is non-reactive and will not re-render.
 
 ### Dexie.js (IndexedDB)
-Source of truth for all heavy entities. Accessed via `dexie-react-hooks` (`useLiveQuery`) for reactive real-time UI updates without needing Zustand subscription.
+Source of truth for all heavy entities. Accessed via `dexie-react-hooks` (`useLiveQuery`) for reactive UI without Zustand subscriptions.
 
 ---
 
 ## 7. Sync Engine Deep Dive (`client/src/services/syncEngine.ts`)
 
-The sync engine is the most critical service. It maintains the offline-first guarantee.
+The most critical service in the codebase. ~470 lines holding every customer's financial data.
 
 ### Flow
 ```
 User Action
   → Write to Dexie (immediate, offline-safe)
-  → Add to syncQueue (localId, table, operation, payload)
+  → Append to syncQueue (entity, action, payload)
   → UI updates instantly via useLiveQuery
 
-Background (every 10 seconds OR on reconnect):
-  → Push: Read syncQueue → Upsert to Supabase → Mark as SYNCED
-  → Pull: Fetch Supabase rows where updated_at > lastSyncTime → Merge to Dexie
-  → Realtime subscription: Supabase Postgres Changes → instant pull on remote update
+Background, triggered by any of:
+  10s interval  |  Realtime event  |  syncQueue Dexie hook (500ms debounce)  |  window 'online'
+  → Resolve organization_id from organization_members
+  → PUSH: drain pending syncQueue
+      CREATE: upsert, onConflict 'organization_id,local_id'
+      UPDATE/DELETE: .eq('local_id', …).eq('organization_id', orgId)
+  → PULL: per table, rows where updated_at > last_sync_time_<table>, paginated 500
+  → Merge into Dexie under LWW
 ```
 
-### Conflict Resolution (Last-Write-Wins)
-- Compares local `updatedAt` vs. remote `updatedAt`
-- Remote wins if remote timestamp is newer
-- **Priority override:** Statuses like `PAID`, `ACCEPTED` always win regardless of timestamp to prevent accidentally reverting confirmed payments
+> ⚠️ **`onConflict` must be `'organization_id,local_id'` with NO whitespace.** PostgREST parses it as a literal column list; a space makes it look for a column named `" local_id"` and every CREATE push fails into the dead-letter queue. The real constraint is `UNIQUE (organization_id, local_id)` on clients, invoices, quotes and recurring_schedules. `syncEngine.test.ts` asserts this.
 
-### Known Weakness ⚠️
-Client clock drift. If a user's local device clock is wrong, the LWW logic will favour the wrong record. See Section 15 for the recommendation.
+### Conflict Resolution (Last-Write-Wins)
+- Compares local `updatedAt` vs. remote `updated_at`, with `serverTimeOffsetMs` applied to the local side to correct device clock drift
+- Remote wins if the remote timestamp is newer
+- **Priority override:** `PAID`, `ACCEPTED`, `COUNTERED`, `DECLINED` always win regardless of timestamp, so a confirmed client action can never be reverted by a stale local edit
+
+### Watermarks
+One watermark **per table** (`last_sync_time_clients`, `_invoices`, `_quotes`). A single shared watermark previously allowed a newer timestamp in one table to advance past un-pulled rows in another — silent, unrecoverable partial data loss. All `last_sync_time*` keys are cleared on logout, so a second user on the same browser does not resume from the previous user's position.
+
+### Dead letter queue
+Failed pushes are marked `status: 'failed'` and are **not** auto-retried. They surface in `SyncSettings.tsx` with a retry button that resets them to `pending`. Logout is never blocked by them — the user gets an explicit confirmation instead.
+
+### Remaining weakness 🟢
+No automatic exponential backoff on retry. Manual retry only.
 
 ---
 
 ## 8. Auth & Subscription Logic
 
 ### Authentication
-- Handled entirely by Supabase Auth (email/password + Google OAuth)
-- Session is stored in Zustand after `supabase.auth.getSession()`
-- `App.tsx` sets up the `onAuthStateChange` listener to keep Zustand in sync
+- Supabase Auth (email/password + Google OAuth)
+- Session stored in Zustand after `supabase.auth.getSession()`
+- `App.tsx` sets up `onAuthStateChange` to keep Zustand in sync, and resolves `organization_id` from `organization_members`
 
 ### isPro Check
 ```typescript
 // Correct pattern — always read from Zustand reactively:
 const { businessProfile } = useAppStore();
-const isPro = businessProfile?.is_pro && 
+const isPro = businessProfile?.is_pro &&
   (!businessProfile?.pro_expires_at || new Date(businessProfile.pro_expires_at) > new Date());
 ```
 
-> **Note:** `is_pro` being `true` in the DB while `pro_expires_at` is past means the user is **downgraded** even though the boolean says true. The app frontend correctly handles this, but agents should be aware: `is_pro = true` alone is NOT sufficient.
+> `is_pro = true` with a past `pro_expires_at` means the user is **downgraded**. Both the frontend and the server-side checks handle this. `is_pro` alone is NOT sufficient.
 
 ### Subscription Webhook Flow (`saas-webhook/index.ts`)
 ```
 Paystack sends webhook event
-  → charge.success: Sets is_pro = true, sets pro_expires_at
-  → subscription.disable / charge.failed: Sets is_pro = false, clears pro_expires_at
+  → verify HMAC FIRST (before any DB write)
+  → charge.success + metadata type=saas_subscription + amount >= 350000 kobo
+        → is_pro = true, pro_expires_at = now + 30 days
+  → subscription.disable / charge.failed / subscription.not_renew
+        → log only. Do NOT downgrade; let pro_expires_at lapse naturally
 ```
+A daily sweep in `email-cron` sets `is_pro = false` where `pro_expires_at < now()`.
 
 ---
 
 ## 9. Theming System (`client/src/index.css`)
 
 ### Preset Themes
-Applied as a class on `<html>` element (e.g., `class="theme-ocean dark"`):
+Applied as a class on `<html>` (e.g. `class="theme-ocean dark"`):
 
-| Class | Accent Color Palette |
+| Class | Accent Palette |
 |---|---|
 | (default) | Deep Premium Purple |
 | `theme-wine` | Glossy Wine Red + Silver |
@@ -283,73 +354,74 @@ Applied as a class on `<html>` element (e.g., `class="theme-ocean dark"`):
 | `theme-cherry` | Cherry Red |
 
 ### Custom Color
-When the user picks a custom hex (`#RRGGBB`), `MainLayout.tsx` uses the `generatePalette()` function to produce a 10-shade scale from black to white and injects it as inline CSS variables directly on `<html>`.
+When the user picks a custom hex, `MainLayout.tsx` uses `generatePalette()` to produce a 10-shade scale and injects it as inline CSS variables on `<html>`.
 
 ### Critical Rule ⚠️
-The global `index.css` maps **all Tailwind `blue-*` classes** to the app's purple palette. This means `bg-blue-600` renders as dark purple in BillReve. **Never use `bg-blue-*` or `text-blue-*` for accent colors** — use `bg-purple-*` instead. This was the root cause of the Ocean theme appearing purple.
+`index.css` maps **all Tailwind `blue-*` classes** to the purple palette, so `bg-blue-600` renders as dark purple. **Never use `bg-blue-*` or `text-blue-*` for accents** — use `bg-purple-*`. This was the root cause of the Ocean theme appearing purple.
 
 ---
 
 ## 10. AI Integration
 
 ### RevenueChat (`components/RevenueChat.tsx`)
-- Floating button on dashboard, expands to full chat panel
-- Sends business context (aggregated invoice/client data) to the Gemini edge function
-- Can issue **Action Cards** — structured JSON responses that spawn UI actions (e.g., open invoice editor with prefilled data)
-- AI prompt usage is tracked in `profiles.ai_prompts_used` and enforced server-side
+- Floating dashboard button, expands to a full chat panel
+- Context comes from the `get_ai_context()` RPC — **pre-aggregated server-side**. Raw invoice/client arrays are no longer sent
+- Issues **Action Cards** — structured JSON that spawns UI actions
+- LLM-returned prices are **major units** and are converted with `toMinor()` before being written to Dexie
 
 ### AiDraftModal (`components/AiDraftModal.tsx`)
-- Accessible from Dashboard Quick Actions and Document Editor
-- Supports three input modes: **text description**, **voice dictation**, and **file upload** (image/PDF parse)
-- Returns structured JSON matching the Invoice/Quote schema, pre-filling the DocumentEditor
+- Three input modes: text description, voice dictation, file upload (image/PDF parse)
+- Returns structured JSON matching the Invoice/Quote schema
 
-### ⚠️ Risk: AI Context Size
-RevenueChat currently sends **all invoices, quotes, and clients** to the LLM on every request. For large datasets this will:
-1. Exceed token limits and truncate context
-2. Increase latency and API cost significantly
-3. Potentially expose more data than necessary
+### Quota & gating
+Enforced entirely in `server/supabase/functions/ai/index.ts`: JWT verification → organization resolution → `is_pro` + `pro_expires_at` → Pro-only endpoint gate (`cfo-report`) → monthly count of `api_logs` rows matching `endpoint LIKE 'ai/%'` → per-minute rate limit. **All failure paths fail closed.** The client-side `aiPromptsUsed` counter is a display hint only.
+
+### Money in prompts
+`convertMoneyFieldsToMajor()` in `_shared/money.ts` walks the context JSON and converts money keys to major units before prompting. LLMs are unreliable at arithmetic, so this is done deterministically rather than by instruction. The `rate` key is deliberately excluded — it is a percentage, not an amount.
 
 ---
 
 ## 11. PDF Generation (`utils/pdfGenerator.tsx`)
 
-- Renders entirely client-side — no server required
+- Renders entirely client-side via `html2pdf.js`; lazily loaded by dynamic import (~900KB, kept out of the main bundle)
 - Five themes: Standard, Professional, Modern, Classic, Monochrome
-- Uses inline HTML/CSS rendered to canvas via browser APIs
-- Embeds business logo (base64) directly into the PDF
+- Logo is a **Supabase Storage URL**, not base64 — a `CHECK` constraint blocks base64 in `logo_url`
 - Supports multi-page documents with automatic pagination
+- A `getComputedStyle` monkey-patch hides `oklch` colours from html2canvas, which cannot parse them
+
+> **Signature:** `generateDocumentPdf({ document, client, profile, type, download })` takes a **named options object**. It used to be positional, and `PublicInvoice.tsx` / `PublicQuote.tsx` passed `client` and `profile` swapped — so every PDF the paying customer downloaded had sender and recipient reversed and an empty bank-details block, while the merchant's own downloads looked fine. Keep it named.
 
 ---
 
 ## 12. Email System
 
 ### Automated Reminders (`email-cron`)
-- Runs on a daily cron schedule via Supabase
-- Scans `invoices` table for records where `dueDate` matches the reminder windows: -3, 0, +3, +7, +14 days
-- Checks `last_reminded_at` to ensure idempotency — no duplicate sends for the same threshold
-- Sends via `send-email` edge function
+- Daily cron via Supabase
+- Scans `invoices` for due dates matching -3, 0, +3, +7, +14 days
+- Checks `last_reminded_at` for idempotency
+- Amounts rendered with `toMajorString()` — raw minor units previously leaked into client-facing email bodies
+- Also sweeps expired Pro subscriptions
 
-### Campaigns (`campaigns` table + `Campaigns.tsx`)
-- Admin composes subject + body
-- Sent to all clients in directory
-- Tracked with `sentAt` and `recipientCount`
+### Campaigns (`Campaigns.tsx`)
+Admin composes subject + body, sent to all clients in the directory. **There is no `campaigns` table** — sends are not persisted server-side. Earlier revisions of this document claimed otherwise.
 
 ---
 
 ## 13. Public-Facing Pages
 
 ### `/pay/:id` (`PublicInvoice.tsx`)
-- Unauthenticated. Uses `update_invoice_status_public` RPC (SECURITY DEFINER)
-- Shows invoice details, payment options based on admin's configured payment methods
-- **Manual transfer:** Client clicks "I've transferred the funds" → invoice transitions to `PENDING`
-- **Paystack/Flutterwave:** Payment gateway iframe embedded (Pro feature)
-- After payment confirmation, Paystack/Flutterwave webhook fires and updates the invoice to `PAID`
+- Unauthenticated. Uses `update_invoice_status_public` (SECURITY DEFINER)
+- **Manual transfer:** client clicks "I've transferred the funds" → status moves to `PENDING`. No amount is sent
+- **Paystack/Flutterwave:** gateway modal embedded (Pro). Amount passed through `toGatewayAmount()`
+- On gateway success the client sends **status only**. The webhook verifies the amount and currency and is the only thing that may set `PAID` or write `amount_paid`
+
+> **Trust boundary:** the browser may never assert that money arrived. Any code path where the client supplies `p_amount_paid` is a bug.
 
 ### `/quote/:id` (`PublicQuote.tsx`)
-- Unauthenticated. Uses `update_quote_status_public` RPC
+- Unauthenticated. Uses `update_quote_status_public`
 - Client can Accept, Decline, or Counter-offer
-- Counter-offer stores `counterAmount` and `clientMessage` on the quote row
-- Admin is notified via Postgres trigger → `notifications` table
+- The typed counter amount is **major units** and is converted with `toMinor()` before submission
+- `minimum_counter_amount` and `allow_counter_offer` are validated in the RPC against the stored row
 
 ---
 
@@ -357,83 +429,86 @@ RevenueChat currently sends **all invoices, quotes, and clients** to the LLM on 
 
 > **Priority:** 🔴 Critical | 🟡 Medium | 🟢 Low
 
-### 🔴 1. AI Context Window Overflow
-RevenueChat sends the entire user database to Gemini on every message. For users with 500+ invoices, this will fail silently or produce degraded results.
-- **Fix:** Pre-aggregate: send only summary stats (total revenue, top 10 clients, last 20 invoices) rather than raw arrays.
+### 🔴 1. Automated Pro checkout is disabled
+`Upgrade.tsx` is locked to manual bank transfer pending payment-processor business verification. Conversion requires the user to leave the app, transfer, email a receipt, and wait for a manual upgrade. No funnel survives this, and it gates all self-serve revenue.
+- **Fix:** complete verification, then re-enable the `PaystackButton` path. The `plan` payload parameter is already wired.
 
-### 🟡 3. Bank Account Referential Integrity
-Invoices store `bankAccountId` (a reference to a UUID inside `profiles.bank_accounts` JSON array). If the user deletes or edits that bank account, old invoices point to a ghost ID and won't render the correct bank details on PDFs or public pages.
-- **Fix:** Snapshot the full bank details object (name, number, bank) into the invoice at creation time. The `bankAccountId` should remain for reference but the snapshot ensures immutability.
+### 🟡 2. `schema.sql` is stale
+The committed dump predates the multi-tenant migration — it still shows `user_id NOT NULL` and `clients_user_id_local_id_key`. The migration files are correct; the dump is not.
+- **Fix:** re-dump after applying migrations, and do it as part of the release checklist.
 
-### 🟡 4. Client-Side Clock Drift in Sync Engine
-LWW conflict resolution uses `new Date().toISOString()` — a client-generated timestamp. A device with a wrong clock will always "win" conflicts incorrectly.
-- **Fix:** Use Supabase's `now()` server timestamp for `updated_at` when syncing. Compare server timestamps only.
+### 🟡 3. Flutterwave webhook trusts its own payload
+It reads `data.status` and `data.amount` from the request body rather than re-fetching from `GET /v3/transactions/:id/verify`, which Flutterwave's docs recommend.
+- **Blocker:** that call needs the merchant's Flutterwave **API secret**, which is a different credential from the `verif-hash` currently stored in `user_secrets`. Needs a new column first.
 
-### 🟡 5. `is_pro` vs. `pro_expires_at` Desync
-The `is_pro` boolean can remain `true` even after `pro_expires_at` has passed. The frontend correctly reads both, but the database is technically in an inconsistent state. The SaaS webhook doesn't always fire on-time.
-- **Fix:** Add a Postgres scheduled function or the `email-cron` function to sweep `profiles` daily and set `is_pro = false` where `pro_expires_at < now()`.
+### 🟡 4. No webhook idempotency key
+Both handlers set absolute values rather than incrementing, so replay is not a double-count risk. But the gateway transaction reference is not stored, so reconciliation against the gateway dashboard is manual.
+- **Fix:** add a `payment_reference` column and treat it as an idempotency key.
 
-### 🟡 6. Paystack SaaS Subscription Commented Out
-`Upgrade.tsx` has the automated Paystack Pro subscription commented out, reverting to a manual verification flow. This means Pro upgrades are not fully automated.
-- **Fix:** Re-enable when business verification is complete.
+### 🟡 5. Notification triggers suppress teammate notifications
+See the note in Section 5. `auth.uid() IS NOT NULL` is too broad for a tenant model.
 
-### 🟢 7. No Rate Limiting on Public RPCs (FIXED)
-`update_invoice_status_public` and `update_quote_status_public` are callable by anyone who knows the `localId`. While Row Level Security restricts *reading* data, There is no rate limiting on status mutations. Fixed by adding a PostgreSQL rate_limits table and check_rate_limit function.
-- **Fix:** Add IP-based rate limiting in the Supabase Edge Function layer or add a CAPTCHA challenge on the public pages before allowing status changes.
+### 🟡 6. Team accounts not reachable from the UI
+`organizations`, `organization_members`, owner-gated RLS policies and `is_org_owner()` all exist. There is no invite flow and the UI does not enforce `role`. Every member is effectively an owner.
 
-### 🟢 8. `syncQueue` Retry Logic
-Failed sync attempts (`syncStatus: 'ERROR'`) are retried but there is no exponential backoff. A persistent failure will create tight retry loops.
-- **Fix:** Implement exponential backoff with a max retry cap of 5 attempts per queue item.
+### 🟢 7. ~250 `any` usages
+`@typescript-eslint/no-explicit-any` is set to `warn` so CI stays useful. Worth paying down incrementally, not in one pass.
 
-### 🟢 9. PDF Image Rendering
-PDFs are rendered client-side. On very slow devices or large invoices with high-res logos, the PDF generation can freeze the browser tab.
-- **Fix:** Move PDF generation to a Web Worker to prevent main thread blocking.
+### 🟢 8. No sync retry backoff
+Failed items are retryable from the DLQ UI but there is no automatic exponential backoff.
+
+### 🟢 9. PDF rendering on the main thread
+On slow devices, generating a large PDF can freeze the tab.
+- **Fix:** move generation to a Web Worker.
+
+### 🟢 10. Code duplication
+`Quotes.tsx` / `Invoices.tsx` and `PublicQuote.tsx` / `PublicInvoice.tsx` remain near-duplicates (~2,800 lines expressing two behaviours). This is how the PDF argument swap and the Paystack currency bug reached production in one path but not the other.
+
+### Resolved (do not re-report)
+AI context overflow · bank-account referential integrity · client clock drift · `is_pro`/`pro_expires_at` desync · public RPC rate limiting · plaintext gateway secrets · duplicate invoice numbers · shared sync watermark · logout trap · PDF sender/recipient swap · client-side-only quotas · 100× gateway billing · webhook amount verification · zero tests/CI/telemetry.
 
 ---
 
-## 15. Recent Hotfixes (Reverse Chronological)
+## 15. Recent Work (Reverse Chronological)
 
-1. **AI Chat Memory & History Persistence (2026-09-28):** Increased RevenueChat memory from 20 to 50 messages. Added `localStorage` tracking for chat history with a "View previous chats" toggle button to satisfy the UI requirement of not losing past context between reloads.
-2. **AI Context Size Overflow Fix (2026-09-28):** Re-engineered `RevenueChat.tsx` to time-box `invoices` and `quotes` sent to Gemini to the last 90 days. Older documents are aggregated into a `historicalSummary` block, saving massive token counts and preventing context overflow on heavy accounts.
-3. **Clock Drift LWW Resolution Fix (2026-09-28):** Fixed the bug where local clock drifts caused incorrect "Last-Write-Wins" outcomes. `syncEngine.ts` now fetches a `Date` header from the Supabase REST API on sync to compute `serverTimeOffsetMs`. This offset is dynamically added to `localTime` during conflict resolution to ensure absolute chronological accuracy.
-4. **Base64 Logo Migration Script (2026-09-28):** Added a silent, auto-migrating script to `App.tsx` which detects legacy base64 `logoUrl` instances in `profiles`, converts them to Blobs, uploads them to the `logos` storage bucket, and updates the profile with the public URL. This drastically reduces row bloat and JSON parsing overhead.
-5. **Subscription Expiry Sweeper & Reference Error (2026-09-28):** Added a failsafe cron sweep to `email-cron/index.ts` to actively downgrade `is_pro` to `false` for any profile where `pro_expires_at` is in the past, solving missed SaaS webhook un-subscriptions. Also fixed an undeclared `overdueInvoices` variable reference that would have caused the function to crash.
-6. **Documentation Page — Full Redesign (2026-09-21):** Completely rewrote `Documentation.tsx` with a professional two-column layout — sticky sidebar with 20-section Table of Contents, `IntersectionObserver`-based scroll-spy (active section auto-highlights), smooth scroll-to-anchor, mobile hamburger nav sheet, and a complete Tailwind `prose` typography system. Added `rehype-slug` for anchor IDs and `remark-gfm` for tables. Fixed a build-breaking syntax issue caused by raw backticks/curly braces in the markdown template literal — resolved by serializing content via `JSON.stringify()`.
-2. **Full Codebase Audit & working.md Rewrite (2026-09-20):** Performed a comprehensive audit of every file in the project. Completely rewrote `working.md` from ~110 lines to 550+ lines covering the full tech stack, database schema (all 7 tables), RPC/edge function catalogue, sync engine architecture, auth/subscription logic, theming rules, risk matrix (9 items), 16 historical hotfixes, and developer DO/DON'T rules.
-3. **Mobile Horizontal Overflow (2026-09-13):** Added `overflow-x-hidden w-full` to Dashboard root div to prevent mobile horizontal drag.
-
-2. **Notification Loop Animation (2026-09-13):** Replaced aggressive 1s infinite shake with a gentle 4s looping keyframe (0.6s shake + 3.4s rest).
-3. **Pending Invoice Quick Actions (2026-09-13):** Added `Confirm & Mark as Paid` button to PreviewPanel for PENDING invoices.
-4. **RPC Overload Fix (2026-09-13):** Fixed `PGRST203` error on `update_invoice_status_public` by dropping the duplicate overloaded function with extra parameters.
-5. **PENDING DB Trigger (2026-09-13):** Updated `handle_invoice_status_change()` trigger to dispatch a notification when status transitions to `PENDING`.
-6. **Dynamic Dashboard Greeting (2026-09-13):** Enhanced header to show "Good morning/afternoon/evening, {Company Name}!" across two styled paragraphs.
-7. **Legacy Bank Columns Cleanup (2026-09-13):** Removed stale `bank_name`, `account_name`, `account_number` column references from `App.tsx`, `ProfileSettings.tsx`, and `PublicInvoice.tsx`. This was causing a `400 Bad Request` on app load, blocking `isPro` detection.
-8. **Dashboard PENDING Invoice Filter (2026-09-12):** Added `PENDING` to filter tabs in `Invoices.tsx`.
-9. **SaaS Downgrade Webhook (2026-09-12):** Fixed `saas-webhook/index.ts` to properly catch `subscription.disable` and `charge.failed` events, setting `is_pro = false`.
-10. **Theme Engine Color Bleed Fix (2026-09-12):** Fixed Ocean theme rendering as purple. Root cause: `bg-blue-*` maps to purple globally. Fixed by using `bg-purple-*` everywhere and strict inline hex for previews.
-11. **Footer Theme Reactivity (2026-09-12):** Changed `useAppStore.getState().theme` to reactive `useAppStore()` hook in Footer.tsx.
-12. **Payments & Bank Accounts Refactor (2026-09-08):** Moved bank account management from Business Profile tab to its own Payments tab. Converted flat columns to `bank_accounts` JSONB array.
-13. **PWA SVG Caching (2026-09-08):** Added `billreve.svg`, `billreve-white.svg`, `revenuechat-icon.svg` to `vite-plugin-pwa` `includeAssets` array.
-14. **Quote Public Link Copy Button (2026-09-08):** Added "Copy Public Link" quick action for SENT quotes.
-15. **Settings Modularization (2026-09-06):** Broke `Settings.tsx` into `AccountSettings`, `ProfileSettings`, `TaxSettings`, `SyncSettings`, and `PreferencesSettings` components.
-16. **DocumentEditor Modularization (2026-09-05):** Broke `DocumentEditor.tsx` into `EditorHeader`, `EditorLineItems`, and `EditorSummary` components.
+- **2026-10-11 — Audit remediation.** Introduced `money.ts` / `_shared/money.ts` as the single unit boundary and fixed all four 100× payment bugs (Paystack checkout, Flutterwave checkout, both webhooks) plus the quote counter-offer unit mismatch. Repaired `check_and_log_rate_limit` and `empty_trash_based_on_plan`, which still referenced the dropped `profiles` table and `user_id` column — AI, transactional email and the nightly trash purge had all been failing. Rewrote the AI quota to resolve tenancy through `organization_members` and fail closed. Restored idempotent `amount_paid` and removed `PARTIAL` from the public allow-list. Fixed logout leaving per-table watermarks behind, and the whitespace in `onConflict`. Un-stubbed Sentry and PostHog (every `init` had been commented out). Made `formatMoney` deterministic by deriving locale from currency. Added `money.test.ts`; suite now 33 tests, all passing. Migration: `20261011000000_fix_audit_regressions.sql`.
+- **2026-10-10 (Phase 7 & 8).** Deployed Recurring Invoices full-stack. Refactored Dashboard charts. Fixed offline localStorage fallbacks by routing to Zustand state. Rewrote list filters with `useMemo`.
+- **2026-10-09 (Phase 6).** Built the Sync Settings DLQ UI. Removed legacy API interceptors and consolidated `services/`.
+- **2026-10-08 (Phase 4 & 5).** Re-architected money to integer minor units. Migrated `profiles` → `organizations` to lay groundwork for team accounts.
+- **2026-10-03 (Phase 3).** Code-split the ~1MB PDF generator. Added the `logo_url` base64 `CHECK` constraint.
+- **2026-10-02 (Phase 2).** Bank account snapshots on document creation, `Upgrade.tsx` feature flags, Edge middleware for dynamic OG tags, document themes across preview/PDF/public pages.
+- **2026-10-02 (Phase 1).** Server-side rate limiting for public RPCs.
+- **2026-09-28.** RevenueChat memory 20→50 messages with history persistence. AI context time-boxed to 90 days with a historical summary. Clock-drift LWW fix via the Supabase `Date` header. Base64 logo migration to Storage. Subscription expiry sweeper.
+- **2026-09-21.** Documentation page redesign — two-column layout, 20-section TOC, `IntersectionObserver` scroll-spy, `rehype-slug` + `remark-gfm`.
+- **2026-09-13.** Mobile overflow fix · notification loop animation · pending-invoice quick actions · `PGRST203` RPC overload fix · PENDING notification trigger · dynamic dashboard greeting · legacy bank column cleanup.
+- **2026-09-12.** Dashboard PENDING filter · SaaS downgrade webhook · theme colour bleed fix · footer theme reactivity.
+- **2026-09-08.** Payments & bank accounts refactor to JSONB · PWA SVG caching · quote public link copy button.
+- **2026-09-05/06.** Settings and DocumentEditor modularization.
 
 ---
 
 ## 16. Key Developer Patterns & Rules
 
 ### DO
+- Convert money **only** through `utils/money.ts` or `_shared/money.ts`
 - Always write to Dexie first, then let the sync engine handle Supabase
-- Use `useLiveQuery` from `dexie-react-hooks` for reactive data in components
-- Use `const { isPro } = useAppStore()` reactively — never `useAppStore.getState()` in JSX
-- Use `bg-purple-*` for all accent colors (the theme engine remaps these dynamically)
-- Build, then commit: always run `npm run build` from `client/` before `git push`
-- Check `is_pro && (!pro_expires_at || pro_expires_at > now)` for proper Pro gating
+- Use `useLiveQuery` from `dexie-react-hooks` for reactive data
+- Use `const { x } = useAppStore()` reactively — never `useAppStore.getState()` in JSX
+- Use `bg-purple-*` for all accent colors
+- Add an explicit `.eq('organization_id', orgId)` on every write — do not rely on RLS alone
+- Check `is_pro && (!pro_expires_at || pro_expires_at > now)` for Pro gating
+- Run `npm test` and `npm run build` from `client/` before `git push`
+- Apply migrations **before** deploying edge functions — functions fail closed when their RPCs are missing
 
 ### DON'T
+- Don't write a bare `* 100` or `/ 100` anywhere outside the two money files
+- Don't let the client assert `PAID` or supply `amount_paid` — that is the webhook's job
+- Don't trust `isProUser` or `aiPromptsUsed` from localStorage for anything that costs money
 - Don't use `bg-blue-*` for accent colors — they render as purple globally
-- Don't query Supabase directly from components for CRUD — go through Dexie + sync engine
-- Don't store bank account changes without migrating historical invoice snapshots
+- Don't query Supabase directly from components for CRUD
+- Don't rename the Dexie database string — it would orphan returning users' local data
+- Don't put a secret in a `VITE_*` variable; it ships in the public bundle
+- Don't set `isolate: false` in `vitest.config.ts` for speed — mocks leak across files
 - Don't push to master without building first
 
 ---
@@ -441,29 +516,25 @@ PDFs are rendered client-side. On very slow devices or large invoices with high-
 ## 17. Environment Variables
 
 ```env
-# client/.env
+# client/.env.local  — ALL of these ship in the public bundle
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_APP_VERSION=1.4.1
-VITE_PAYSTACK_PUBLIC_KEY=
-VITE_FLUTTERWAVE_PUBLIC_KEY=
+VITE_APP_VERSION=1.5.0
+VITE_SENTRY_DSN=            # optional; errors are invisible without it
+VITE_POSTHOG_KEY=           # optional
+VITE_POSTHOG_HOST=          # optional, defaults to https://us.i.posthog.com
+VITE_ENABLE_CSV_IMPORT=false
 
-# server/supabase/.env (for edge functions)
+# Supabase Edge Function secrets — set via `supabase secrets set`, NEVER VITE_*
 SUPABASE_SERVICE_ROLE_KEY=
 GEMINI_API_KEY=
-PAYSTACK_SECRET_KEY=
-FLUTTERWAVE_SECRET_KEY=
-EMAIL_PROVIDER_API_KEY=
+RESEND_API_KEY=
+SAAS_PAYSTACK_SECRET_KEY=
+CRON_SECRET=
 ```
+
+Merchant Paystack/Flutterwave **secret** keys are not environment variables — they are stored per-organization, encrypted, in `user_secrets`, and read only via `get_merchant_secret`.
 
 ---
 
 **End of Document**
-
-
-- **2026-10-02 (Phase 1):** Implemented server-side rate limiting for public RPCs.
-- **2026-10-02 (Phase 2):** Implemented bank account snapshots on document creation, cleaned up Upgrade.tsx with feature flags, added Edge middleware for dynamic OG tags, and fully integrated document themes across preview, PDF generation, and public pages.
-- **2026-10-03 (Phase 3):** Code-split the heavy 1MB PDF generator via dynamic imports to eliminate main bundle bloat, and added a strict PostgreSQL CHECK constraint to permanently block base64 strings in logo_url.
-- **2026-10-08 (Phase 4 & 5):** Re-architected money values to integer minor units (cents) to prevent precision loss. Migrated `profiles` to `organizations` to lay groundwork for team accounts.
-- **2026-10-09 (Phase 6):** Built Sync Settings DLQ (Dead Letter Queue) UI for failed background sync payloads. Removed legacy interceptors.
-- **2026-10-10 (Phase 7 & 8):** Deployed Recurring Invoices full-stack. Refactored Dashboard charts. Fixed offline LocalStorage fallbacks by routing directly to Zustand state. Rewrote list filters with `useMemo` for O(1) rendering performance.
