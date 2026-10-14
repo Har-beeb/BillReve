@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { supabase } from '../../lib/supabase';
+import { requireOrganizationId } from '../../lib/organization';
 import toast from 'react-hot-toast';
 import { Building2, Upload, Save } from 'lucide-react';
 import type { BusinessProfile } from '../../types';
@@ -45,7 +46,12 @@ export const ProfileSettings: React.FC = () => {
     
     if (user?.id) {
       try {
-        const { error } = await supabase
+        // Resolve tenancy via organization_members — `user.id` is an auth user
+        // id and never equals `organizations.id`, so the previous
+        // `.eq('id', user.id)` matched zero rows and saved nothing silently.
+        const orgId = await requireOrganizationId();
+
+        const { data: updated, error } = await supabase
           .from('organizations')
           .update({
             name: localProfile.name,
@@ -58,9 +64,13 @@ export const ProfileSettings: React.FC = () => {
             country: localProfile.country || null,
             currency: localProfile.currency || null,
           })
-          .eq('id', user.id);
-          
+          .eq('id', orgId)
+          .select('id');
+
         if (error) throw error;
+        if (!updated || updated.length === 0) {
+          throw new Error('No organization row was updated.');
+        }
         
         // Also update Auth metadata so the UI main layout syncs instantly
         await supabase.auth.updateUser({

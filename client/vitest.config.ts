@@ -4,37 +4,46 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    /*
+     * Default to the `node` environment, NOT jsdom.
+     *
+     * jsdom was the global default, and building it cost ~14s per test file on
+     * a Windows checkout — vitest reported 59% of total runtime in
+     * "environment" and two of five files timed out with
+     * "[vitest-pool-runner]: Timeout waiting for worker to respond", so whole
+     * files silently never ran while the summary still showed green.
+     *
+     * Only two suites actually need a DOM, and they opt in with a
+     * `@vitest-environment jsdom` docblock at the top of the file:
+     *   - components/DocumentPreview.test.tsx  (renders React)
+     *   - services/syncEngine.test.ts          (uses localStorage)
+     *
+     * Everything else is pure logic and runs far faster without a DOM.
+     */
+    environment: 'node',
     globals: true,
     setupFiles: './src/setupTests.ts',
 
-    // Worker pool configuration.
-    //
-    // The default `forks` pool spawns a child PROCESS per test file. On Windows
-    // that is expensive on its own, and worse here because the repo path
-    // contains a space ("My Document") and antivirus typically scans every
-    // spawned process. The observed symptom was
-    // "[vitest-pool-runner]: Timeout waiting for worker to respond" — two
-    // workers started and the next two timed out, so whole test FILES were
-    // skipped while the summary still reported the tests that did run as
-    // passing. That is the dangerous failure mode: green-looking output with
-    // coverage silently missing. Threads are far cheaper to start than
-    // processes. Run took 120s before this change and ~17s after.
+    /*
+     * Threads rather than the default `forks` pool: starting a process per file
+     * is expensive on Windows, and worse here because the repo path contains a
+     * space ("My Document") and antivirus typically scans each spawn.
+     */
     pool: 'threads',
-    // `poolOptions.threads.singleThread` was removed in Vitest 4 — these are
-    // top-level options now.
     maxWorkers: 1,
     fileParallelism: false,
 
-    // NOTE: vitest suggests `isolate: false` to reuse workers across files and
-    // save ~10s. Deliberately not taking it. Several suites use `vi.mock` on
-    // shared modules (useAppStore, db, supabase) and disabling isolation shares
-    // the module registry between files, so a mock from one file can leak into
-    // another. Ten seconds is not worth a class of cross-test contamination
-    // that would be very hard to diagnose.
+    /*
+     * NOTE: vitest suggests `isolate: false` to reuse workers across files.
+     * Deliberately not taking it. Several suites `vi.mock` shared modules
+     * (useAppStore, db, supabase) and disabling isolation shares the module
+     * registry between files, so a mock from one file can leak into another.
+     * Switching the default environment to `node` addresses the same startup
+     * cost without risking cross-test contamination.
+     */
 
     // A cold jsdom environment plus first-call Intl/ICU initialisation takes
-    // about a second here, so the defaults are tight rather than wrong.
+    // about a second, so the defaults are tight rather than wrong.
     testTimeout: 20000,
     hookTimeout: 30000,
   },

@@ -62,17 +62,26 @@ serve(async (req) => {
         return new Response('Invalid signature', { status: 401 });
       }
 
-      // 4. Verify Amount & Currency, then update invoice.
+      // 4. Verify currency, then record the payment through the ledger.
       //
-      // UNITS: invoice.total is BIGINT MINOR units (kobo/cents) as of migration
-      // 20261009010000, but Flutterwave reports `data.amount` in MAJOR units.
-      // fromGatewayAmount converts so both sides of the comparison are minor.
+      // UNITS: Flutterwave reports MAJOR units while invoice.total is BIGINT
+      // minor, so fromGatewayAmount converts.
       //
-      // TODO(hardening): Flutterwave's docs recommend re-fetching the
-      // transaction from GET /v3/transactions/:id/verify rather than trusting
-      // the webhook body. That call needs the merchant's Flutterwave API secret
-      // key, which is distinct from the verif-hash stored here, so it needs a
-      // separate credential in user_secrets before it can be implemented.
+      // Checkout charges the OUTSTANDING BALANCE, so this may be a partial
+      // installment. record_payment_event accumulates it and is replay-safe.
+      // Comparing one installment against the full total and overwriting
+      // amount_paid previously meant an invoice paid in instalments could never
+      // reach PAID, and only the last installment was recorded.
+      //
+      // IMPORTANT: the idempotency key is flw_ref / transaction id, NOT tx_ref.
+      // tx_ref is set to the invoice local_id and therefore repeats across
+      // installments, which would make a second genuine payment look like a
+      // duplicate and be silently dropped.
+      //
+      // TODO(hardening): Flutterwave recommend re-fetching from
+      // GET /v3/transactions/:id/verify rather than trusting this payload. That
+      // needs the merchant's Flutterwave API secret, a different credential
+      // from the verif-hash stored here.
       const paidAmountMinor = fromGatewayAmount(data.amount, 'flutterwave');
       const expectedCurrency = invoice.currency || 'USD';
 
@@ -80,26 +89,34 @@ serve(async (req) => {
         throw new Error(`Currency mismatch: Expected ${expectedCurrency}, got ${data.currency}`);
       }
 
-      const newStatus = paidAmountMinor >= invoice.total ? 'PAID' : 'PARTIAL';
+      const reference = data.flw_ref ?? data.id;
+      if (!reference) {
+        throw new Error('Flutterwave payload has no flw_ref or id — cannot guarantee idempotency');
+      }
 
-      const { error } = await supabase
-        .from('invoices')
-        .update({
-          status: newStatus,
-          amount_paid: paidAmountMinor
-        })
-        .eq('local_id', invoiceId);
+      const { data: newStatus, error } = await supabase.rpc('record_payment_event', {
+        p_org_id: invoice.organization_id,
+        p_invoice_local_id: invoiceId,
+        p_gateway: 'flutterwave',
+        p_reference: String(reference),
+        p_amount_minor: paidAmountMinor,
+        p_currency: expectedCurrency
+      });
 
       if (error) {
-        console.error('Failed to update invoice in DB:', error);
+        console.error('Failed to record payment event:', error);
         throw error;
       }
 
-      console.log(
-        `Invoice ${invoiceId} marked ${newStatus} via Flutterwave. ` +
-        `Paid ${expectedCurrency} ${toMajorString(paidAmountMinor)} of ${toMajorString(invoice.total)} ` +
-        `(minor: ${paidAmountMinor}/${invoice.total}).`
-      );
+      if (newStatus === 'DUPLICATE') {
+        console.log(`Flutterwave webhook replay ignored for invoice ${invoiceId} (ref ${reference}).`);
+      } else {
+        console.log(
+          `Invoice ${invoiceId} marked ${newStatus} via Flutterwave. ` +
+          `Captured ${expectedCurrency} ${toMajorString(paidAmountMinor)} ` +
+          `against a total of ${toMajorString(invoice.total)} (ref ${reference}).`
+        );
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });

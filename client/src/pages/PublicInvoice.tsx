@@ -130,7 +130,11 @@ const PublicInvoice: React.FC = () => {
           bankAccountSnapshot: invoice.bank_account_snapshot,
           amountPaid: invoice.amount_paid
       };
-      const profileData = { ...profile, bankAccounts: profile.bank_accounts };
+      // The remote RPC returns snake_case (`bank_accounts`) but the offline
+      // Zustand fallback supplies camelCase (`bankAccounts`). Reading only the
+      // snake_case key wiped the array to undefined on the offline path, so an
+      // invoice downloaded offline rendered with no payment details at all.
+      const profileData = { ...profile, bankAccounts: profile.bank_accounts || profile.bankAccounts || [] };
         await (await import('../utils/pdfGenerator')).generateDocumentPdf({ document: docData, client, profile: profileData, type: 'INVOICE', download: true });
     } catch (err) {
       console.error('Download failed:', err);
@@ -194,6 +198,11 @@ const PublicInvoice: React.FC = () => {
     amount: toGatewayAmount(balanceDueMinor, 'paystack'),
     currency: invoice.currency || profile?.currency || 'NGN',
     metadata: {
+      // Send the id both as a flat key and inside custom_fields. Paystack
+      // echoes arbitrary metadata back on the webhook, and the flat key is far
+      // less error-prone to read than digging through custom_fields.
+      invoice_id: invoice.local_id,
+      client_id: invoice.client_id,
       custom_fields: [
          { display_name: "Invoice ID", variable_name: "invoice_id", value: invoice.local_id },
          { display_name: "Client ID", variable_name: "client_id", value: invoice.client_id }

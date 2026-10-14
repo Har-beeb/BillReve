@@ -141,11 +141,35 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
       }
 
       // 1. Get the document and client from IndexedDB or Props
-      const document = unsavedDocument || (documentType === 'Invoice' 
+      let document = unsavedDocument || (documentType === 'Invoice'
         ? await db.invoices.get(documentId)
         : await db.quotes.get(documentId));
-      
+
       if (!document) throw new Error('Document not found');
+
+      // Document numbers are assigned by a Postgres sequence on insert.
+      // Locally-created documents carry a `DRAFT-INV-xxxx` / `DRAFT-QTE-xxxx`
+      // placeholder until the push round-trips. Sending immediately after
+      // creation therefore embedded the placeholder in the email, while a
+      // resend (or the WhatsApp link, which reads later) showed the real
+      // number — so the client received two different references for one
+      // document. Force a sync and re-read before composing.
+      const numberKey = documentType === 'Invoice' ? 'invoiceNumber' : 'quoteNumber';
+      const currentNumber = (document as any)[numberKey];
+      if (!unsavedDocument && typeof currentNumber === 'string' && currentNumber.startsWith('DRAFT-')) {
+        try {
+          const { syncEngine } = await import('../services/syncEngine');
+          await syncEngine.sync();
+          const refreshed = documentType === 'Invoice'
+            ? await db.invoices.get(documentId)
+            : await db.quotes.get(documentId);
+          if (refreshed) document = refreshed;
+        } catch (syncErr) {
+          // Offline, or the push failed. Proceed with the draft reference
+          // rather than blocking the send — this is an offline-first app.
+          console.warn('Could not finalise document number before sending:', syncErr);
+        }
+      }
       
       const client = unsavedClient || await db.clients.get(document.clientId);
 
@@ -196,6 +220,11 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
           to: finalEmail,
           subject,
           html: htmlContent,
+          // Send as the business the client actually hired. The edge function
+          // builds a safe From header from this and appends the standard
+          // "Powered by BillReve" footer.
+          fromName: businessProfile?.name || undefined,
+          replyTo: businessProfile?.email || undefined,
           attachments: pdfBase64 ? [
             {
               filename: `${documentType.toLowerCase()}-${(document as any).invoiceNumber || (document as any).quoteNumber || documentId.slice(0,8)}.pdf`,

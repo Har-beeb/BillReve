@@ -49,7 +49,7 @@ const sanitizeHistory = (messages: Message[]) => {
 };
 
 export const RevenueChat: React.FC = () => {
-  const { mobileNavStyle, businessProfile, clients: storeClients, incrementAiPrompts, colorTheme, customColor } = useAppStore();
+  const { mobileNavStyle, businessProfile, clients: storeClients, incrementAiPrompts, colorTheme, customColor, taxSettings } = useAppStore();
   const { checkQuota } = useQuota();
   const location = useLocation();
   const navigate = useNavigate();
@@ -168,17 +168,16 @@ export const RevenueChat: React.FC = () => {
   };
 
   const getAiContextData = async () => {
-    try {
-      const { data, error } = await supabase.rpc('get_ai_context');
-      if (error) {
-        console.error('RPC failed:', error);
-        return { aggregatedSummary: null };
-      }
-      return { aggregatedSummary: data };
-    } catch (err) {
-      console.error('Failed to fetch AI context:', err);
-      return { aggregatedSummary: null };
+    // Previously this swallowed the error and returned
+    // `{ aggregatedSummary: null }`, so a failing RPC produced a confident
+    // assistant with no data — it would claim the business had no clients or
+    // invoices rather than admitting something was wrong. Fail loudly instead.
+    const { data, error } = await supabase.rpc('get_ai_context');
+    if (error) {
+      console.error('get_ai_context failed:', error);
+      throw new Error('I could not load your business data just now. Please try again in a moment.');
     }
+    return { aggregatedSummary: data };
   };
 
   const handleSend = async () => {
@@ -233,7 +232,27 @@ export const RevenueChat: React.FC = () => {
         }
       ]);
     } catch (err: any) {
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: `I'm having trouble connecting right now. Please try again in a moment.`, timestamp: new Date() }]);
+      // Surface what actually went wrong. A single generic "trouble
+      // connecting" hid real, actionable server responses — an exhausted free
+      // AI quota, a Pro-only feature, or a rate limit all looked identical to
+      // a network blip, which is why the assistant seemed inexplicably broken.
+      const raw = err?.message || err?.error?.message || '';
+      let friendly = `I'm having trouble connecting right now. Please try again in a moment.`;
+
+      if (/quota/i.test(raw)) {
+        friendly = `You've used all of your free AI requests for this month. Upgrade to Pro for unlimited AI.`;
+      } else if (/pro feature/i.test(raw)) {
+        friendly = `That feature is available on the Pro plan.`;
+      } else if (/too many requests|rate limit/i.test(raw)) {
+        friendly = `That was a lot of requests at once — give me a few seconds and try again.`;
+      } else if (/business data/i.test(raw)) {
+        friendly = raw;
+      } else if (!navigator.onLine) {
+        friendly = `You're offline. The AI assistant needs a connection, but everything else in BillReve keeps working.`;
+      }
+
+      console.error('RevenueChat request failed:', err);
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: friendly, timestamp: new Date() }]);
     } finally {
       setIsTyping(false);
     }
@@ -286,12 +305,19 @@ export const RevenueChat: React.FC = () => {
             name: t.name || 'Tax',
             rate: t.rate || 0,
             type: t.type || 'PERCENTAGE',
+            // Deductions (e.g. WHT) must SUBTRACT. This flag was dropped
+            // entirely, so a withholding tax was added to the total instead of
+            // taken off it. Fall back to matching the business's own configured
+            // tax settings by name when the model omits the flag.
+            isDeduction: t.isDeduction ?? taxSettings.find(
+              (s: any) => s.name?.toLowerCase() === String(t.name || '').toLowerCase()
+            )?.isDeduction ?? false,
             amount: taxAmt
           };
         });
-        
+
         formattedTaxes.forEach((t: any) => {
-          total += t.amount || 0;
+          total += t.isDeduction ? -(t.amount || 0) : (t.amount || 0);
         });
         
 
@@ -301,6 +327,14 @@ export const RevenueChat: React.FC = () => {
           : `DRAFT-QTE-${randomSuffix}`;
         
         if (action.type === 'CREATE_INVOICE') {
+          // Freeze the business's default bank account onto the document, the
+          // same way DocumentEditor does. Without this an AI-created invoice
+          // reached the client's public payment page with no bank details at
+          // all, so there was no way to pay it by transfer.
+          const defaultBank = (businessProfile.bankAccounts || []).find((b: any) => b.isDefault)
+            || (businessProfile.bankAccounts || [])[0]
+            || null;
+
           const newInvoice = {
             localId: uuidv4(),
             clientId: payload.clientId,
@@ -316,6 +350,9 @@ export const RevenueChat: React.FC = () => {
             taxes: formattedTaxes,
             amountPaid: 0,
             isRecurring: false,
+            bankAccountId: defaultBank?.id || null,
+            bankAccountSnapshot: defaultBank,
+            issuedAt: now,
             syncStatus: 'pending' as const,
             createdAt: now,
             updatedAt: now
@@ -358,7 +395,10 @@ export const RevenueChat: React.FC = () => {
             currency: businessProfile.currency || 'USD',
             taxes: formattedTaxes,
             allowCounterOffer: payload.allowCounterOffer ?? false,
-            minimumCounterAmount: payload.minimumCounterAmount,
+            minimumCounterAmount: payload.minimumCounterAmount != null
+              ? toMinor(payload.minimumCounterAmount)
+              : undefined,
+            issuedAt: now,
             syncStatus: 'pending' as const,
             createdAt: now,
             updatedAt: now

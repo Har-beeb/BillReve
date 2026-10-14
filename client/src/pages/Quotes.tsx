@@ -306,6 +306,9 @@ const Quotes: React.FC = () => {
            to: client.email,
            subject: `Quote ${quote.quoteNumber || quote.localId.slice(0,8)} Counter Offer ${statusStr}`,
            html: htmlContent,
+           // Client-facing, so it sends as the business rather than BillReve.
+           fromName: businessProfile?.name || undefined,
+           replyTo: businessProfile?.email || undefined,
          }
        }).catch((err: any) => console.error("Failed to send notification email", err));
        toast.success(`Quote marked as ${statusStr} and email notification sent to client.`);

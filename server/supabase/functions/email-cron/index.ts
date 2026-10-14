@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { toMajorString } from "../_shared/money.ts";
+import { buildFrom, wrapEmailHtml } from "../_shared/email.ts";
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') as string;
 
@@ -20,7 +21,7 @@ serve(async (req) => {
     // For a real production app, we should also filter out 'PENDING' since they claim to have paid
     const { data: invoicesToCheck, error: invoiceError } = await supabase
       .from('invoices')
-      .select('*, client:clients(name, email), organization:organizations(business_name, email)')
+      .select('*, client:clients(name, email), organization:organizations(name, email)')
       .in('status', ['SENT', 'OVERDUE']);
 
     if (invoiceError) throw invoiceError;
@@ -78,14 +79,17 @@ serve(async (req) => {
       }
 
       if (emailType) {
+        const orgName = invoice.organization?.name || null;
         emailsToSend.push({
-          from: 'BillReve <noreply@billreve.app>',
+          // Send as the merchant's own business, not as BillReve — the client
+          // hired them, not us. buildFrom strips header-injection characters.
+          from: buildFrom(orgName),
           to: [invoice.client.email],
           subject: emailSubject,
-          html: `
+          html: wrapEmailHtml(`
             ${emailBody}
-            <p>Best regards,<br>${invoice.organization?.name || 'Your Provider'}</p>
-          `
+            <p>Best regards,<br>${orgName || 'Your Provider'}</p>
+          `, { orgName })
         });
         invoicesToUpdate.push(invoice.id);
       }

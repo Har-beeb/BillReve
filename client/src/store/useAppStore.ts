@@ -270,6 +270,8 @@ export const useAppStore = create<AppState>()(
         
         try {
           const { db } = await import('../db/db');
+          const { clearOrganizationCache } = await import('../lib/organization');
+          clearOrganizationCache();
           await Promise.all([
             db.clients.clear(),
             db.quotes.clear(),

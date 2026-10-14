@@ -12,6 +12,35 @@ const secureEquals = (a: string, b: string): boolean => {
   return timingSafeEqual(bufA, bufB);
 };
 
+/**
+ * Resolve the invoice's local_id from a Paystack charge payload.
+ *
+ * This used to read `data.metadata?.invoiceId` only. The checkout in
+ * PublicInvoice.tsx sends the id inside `metadata.custom_fields` with
+ * `variable_name: "invoice_id"`, which is the shape Paystack echoes back — so
+ * `invoiceId` was always undefined and EVERY Paystack invoice payment returned
+ * 400 and aborted. The customer was charged and the invoice never settled.
+ *
+ * Accepts all three shapes so old and new clients both work:
+ *   metadata.invoiceId · metadata.invoice_id · metadata.custom_fields[]
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const resolveInvoiceId = (metadata: any): string | null => {
+  if (!metadata) return null;
+  if (metadata.invoiceId) return String(metadata.invoiceId);
+  if (metadata.invoice_id) return String(metadata.invoice_id);
+
+  const fields = metadata.custom_fields;
+  if (Array.isArray(fields)) {
+    const match = fields.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (f: any) => f?.variable_name === 'invoice_id' || f?.variable_name === 'invoiceId'
+    );
+    if (match?.value) return String(match.value);
+  }
+  return null;
+};
+
 serve(async (req) => {
   try {
     const signature = req.headers.get('x-paystack-signature');
@@ -25,10 +54,11 @@ serve(async (req) => {
     // Only handle successful payments for now
     if (event.event === 'charge.success') {
       const data = event.data;
-      const invoiceId = data.metadata?.invoiceId;
+      const invoiceId = resolveInvoiceId(data.metadata);
 
       if (!invoiceId) {
-        return new Response('Missing invoiceId in metadata', { status: 400 });
+        console.error('Paystack webhook: could not resolve invoice id from metadata', JSON.stringify(data.metadata));
+        return new Response('Missing invoice id in metadata', { status: 400 });
       }
 
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -67,11 +97,17 @@ serve(async (req) => {
         return new Response('Invalid signature', { status: 401 });
       }
 
-      // 4. Verify Amount & Currency, then update invoice.
+      // 4. Verify currency, then record the payment through the ledger.
       //
-      // UNITS: invoice.total is BIGINT MINOR units (kobo) as of migration
-      // 20261009010000. Paystack also reports in minor units. Both sides of the
-      // comparison below must therefore be minor — never divide here.
+      // UNITS: Paystack reports minor units (kobo) and invoice.total is BIGINT
+      // minor, so no division — fromGatewayAmount encodes that per gateway.
+      //
+      // Checkout charges the OUTSTANDING BALANCE, not the full total, so the
+      // amount here may be a partial installment. record_payment_event
+      // accumulates it and is replay-safe via UNIQUE (gateway, reference) —
+      // comparing a single installment against the full total and overwriting
+      // amount_paid previously meant an invoice paid in instalments could
+      // never reach PAID.
       const paidAmountMinor = fromGatewayAmount(data.amount, 'paystack');
       const expectedCurrency = invoice.currency || 'NGN';
 
@@ -79,26 +115,34 @@ serve(async (req) => {
         throw new Error(`Currency mismatch: Expected ${expectedCurrency}, got ${data.currency}`);
       }
 
-      const newStatus = paidAmountMinor >= invoice.total ? 'PAID' : 'PARTIAL';
+      const reference = data.reference ?? data.id;
+      if (!reference) {
+        throw new Error('Paystack payload has no reference — cannot guarantee idempotency');
+      }
 
-      const { error } = await supabase
-        .from('invoices')
-        .update({
-          status: newStatus,
-          amount_paid: paidAmountMinor
-        })
-        .eq('local_id', invoiceId);
+      const { data: newStatus, error } = await supabase.rpc('record_payment_event', {
+        p_org_id: invoice.organization_id,
+        p_invoice_local_id: invoiceId,
+        p_gateway: 'paystack',
+        p_reference: String(reference),
+        p_amount_minor: paidAmountMinor,
+        p_currency: expectedCurrency
+      });
 
       if (error) {
-        console.error('Failed to update invoice in DB:', error);
+        console.error('Failed to record payment event:', error);
         throw error;
       }
 
-      console.log(
-        `Invoice ${invoiceId} marked ${newStatus} via Paystack. ` +
-        `Paid ${expectedCurrency} ${toMajorString(paidAmountMinor)} of ${toMajorString(invoice.total)} ` +
-        `(minor: ${paidAmountMinor}/${invoice.total}).`
-      );
+      if (newStatus === 'DUPLICATE') {
+        console.log(`Paystack webhook replay ignored for invoice ${invoiceId} (ref ${reference}).`);
+      } else {
+        console.log(
+          `Invoice ${invoiceId} marked ${newStatus} via Paystack. ` +
+          `Captured ${expectedCurrency} ${toMajorString(paidAmountMinor)} ` +
+          `against a total of ${toMajorString(invoice.total)} (ref ${reference}).`
+        );
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });

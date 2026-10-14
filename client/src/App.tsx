@@ -42,6 +42,8 @@ const Documentation = React.lazy(() => import('./pages/public/Documentation'));
 const Guides = React.lazy(() => import('./pages/public/Guides'));
 const Templates = React.lazy(() => import('./pages/public/Templates'));
 const Contact = React.lazy(() => import('./pages/public/Contact'));
+const NotFound = React.lazy(() => import('./pages/public/NotFound'));
+const Unsubscribe = React.lazy(() => import('./pages/public/Unsubscribe'));
 import { useAppStore } from './store/useAppStore';
 import { supabase } from './lib/supabase';
 import { syncEngine } from './services/syncEngine';
@@ -250,8 +252,7 @@ function App() {
             
             {/* Fully Open Routes without Layout */}
             <Route path="/pay/:id" element={<PublicInvoice />} />
-            <Route path="/quote/:id" element={<PublicQuote />} />
-            {/* Auth Routes */}
+            <Route path="/quote/:id" element={<PublicQuote />} />            {/* Auth Routes */}
             <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
@@ -274,6 +275,22 @@ function App() {
               <Route path="payments" element={<Payments />} />
               <Route path="upgrade" element={<Upgrade />} />
               <Route path="support" element={<Support />} />
+            </Route>
+
+            {/*
+              Catch-all. Without this, `vercel.json`'s `/(.*) -> /` rewrite made
+              every unknown URL return HTTP 200 with an empty page, which Google
+              Search Console reported as a soft 404 and which blocked
+              billreve.app from being indexed. NotFound renders real content and
+              sets `noindex, follow`.
+            */}
+            <Route element={<PublicLayout />}>
+              {/*
+                Reached from the footer link in every campaign email, and POSTed
+                to directly by mail clients honouring List-Unsubscribe-Post.
+              */}
+              <Route path="/unsubscribe/:token" element={<Unsubscribe />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
         </Suspense>

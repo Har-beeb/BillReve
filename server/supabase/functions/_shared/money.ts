@@ -74,6 +74,9 @@ const MONEY_KEYS = new Set([
   'unitPrice', 'unit_price',
   'totalRevenue', 'outstandingBalance', 'totalTaxCollected',
   'balance', 'balanceDue', 'balance_due',
+  // Added with the enriched get_ai_context payload (20261013000000):
+  // per-client aggregates and the headline outstanding figure.
+  'outstanding', 'totalPaid', 'overdueAmount',
 ]);
 
 /**

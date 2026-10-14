@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildFrom, wrapEmailHtml } from "../_shared/email.ts";
 
 const resendApiKey = Deno.env.get('RESEND_API_KEY');
 const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://billreve.app';
@@ -7,7 +8,13 @@ const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://billreve.app';
 // Simple delay function for retries
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function sendEmailWithRetry(to: string, subject: string, html: string, retries = 3): Promise<boolean> {
+async function sendEmailWithRetry(
+  to: string,
+  subject: string,
+  html: string,
+  retries = 3,
+  orgName?: string | null
+): Promise<boolean> {
   if (!resendApiKey) {
     console.warn('RESEND_API_KEY not set. Skipping email.');
     return false;
@@ -22,10 +29,12 @@ async function sendEmailWithRetry(to: string, subject: string, html: string, ret
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'BillReve <noreply@billreve.app>',
+          // Sent as the merchant's business where known, with the standard
+          // "Powered by BillReve" footer applied centrally.
+          from: buildFrom(orgName),
           to,
           subject,
-          html
+          html: wrapEmailHtml(html, { orgName })
         })
       });
 

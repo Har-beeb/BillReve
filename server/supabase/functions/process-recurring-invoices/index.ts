@@ -1,9 +1,75 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { buildFrom, wrapEmailHtml } from "../_shared/email.ts";
+import { toMajorString } from "../_shared/money.ts";
+
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://billreve.app';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+/**
+ * Email a generated recurring invoice to the client.
+ *
+ * Returns true on success. The generated invoice is only promoted from DRAFT
+ * to SENT when this succeeds, so a delivery failure leaves a visible draft
+ * rather than a silently "sent" invoice the client never received.
+ */
+const emailRecurringInvoice = async (opts: {
+  toEmail: string;
+  clientName: string | null;
+  orgName: string | null;
+  invoiceNumber: string;
+  totalMinor: number;
+  currency: string | null;
+  dueDate: string | null;
+  publicLink: string;
+}): Promise<boolean> => {
+  if (!RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not set — cannot email recurring invoice.');
+    return false;
+  }
+
+  const currency = opts.currency || 'NGN';
+  const body = `
+    <h2 style="color:#4F46E5;margin:0 0 16px 0;">Invoice ${opts.invoiceNumber} from ${opts.orgName || 'your provider'}</h2>
+    <p>Hi ${opts.clientName || 'there'},</p>
+    <p>Here is your scheduled invoice.</p>
+    <p><strong>Amount:</strong> ${currency} ${toMajorString(opts.totalMinor)}</p>
+    ${opts.dueDate ? `<p><strong>Due Date:</strong> ${new Date(opts.dueDate).toDateString()}</p>` : ''}
+    <div style="margin-top:24px;">
+      <a href="${opts.publicLink}" style="background-color:#8b5cf6;color:#ffffff;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:bold;">View &amp; Pay Invoice</a>
+    </div>
+  `;
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: buildFrom(opts.orgName),
+        to: [opts.toEmail],
+        reply_to: 'support@billreve.app',
+        subject: `Invoice ${opts.invoiceNumber} from ${opts.orgName || 'your provider'}`,
+        html: wrapEmailHtml(body, { orgName: opts.orgName }),
+      }),
+    });
+
+    if (!res.ok) {
+      console.error('Resend rejected recurring invoice email:', await res.text());
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to send recurring invoice email:', err);
+    return false;
+  }
 };
 
 serve(async (req) => {
@@ -24,7 +90,9 @@ serve(async (req) => {
       .from('recurring_schedules')
       .select(`
         *,
-        invoices!template_invoice_id(*)
+        invoices!template_invoice_id(*),
+        clients!client_id(name, email),
+        organizations!organization_id(name)
       `)
       .eq('status', 'ACTIVE')
       .lte('next_run_date', today);
@@ -84,12 +152,67 @@ serve(async (req) => {
           due_date: dueDate
         };
 
-        // Insert new invoice
-        const { error: insertError } = await supabaseClient
+        // Insert new invoice. `.select()` returns the row AFTER the
+        // assign_invoice_number trigger has replaced the DRAFT- placeholder
+        // with the real sequential number, which is what the client must see.
+        const { data: inserted, error: insertError } = await supabaseClient
           .from('invoices')
-          .insert(newInvoice);
+          .insert(newInvoice)
+          .select('local_id, invoice_number, total, currency, due_date')
+          .single();
 
         if (insertError) throw insertError;
+
+        const assignedNumber = inserted?.invoice_number || draftInvoiceNumber;
+
+        // ---------------------------------------------------------------
+        // Send it. Previously the function stopped at the DRAFT insert, so
+        // recurring invoices were generated silently and never reached the
+        // client — while the UI and docs promised they would be emailed
+        // automatically. Promote to SENT only if delivery succeeded.
+        // ---------------------------------------------------------------
+        const clientRow = (schedule as any).clients;
+        const orgRow = (schedule as any).organizations;
+        let delivered = false;
+
+        if (clientRow?.email) {
+          delivered = await emailRecurringInvoice({
+            toEmail: clientRow.email,
+            clientName: clientRow.name ?? null,
+            orgName: orgRow?.name ?? null,
+            invoiceNumber: assignedNumber,
+            totalMinor: Number(inserted?.total ?? newInvoice.total ?? 0),
+            currency: inserted?.currency ?? newInvoice.currency ?? null,
+            dueDate: inserted?.due_date ?? dueDate,
+            publicLink: `${FRONTEND_URL}/pay/${newLocalId}`,
+          });
+        } else {
+          console.warn(`Schedule ${schedule.id}: client has no email, leaving invoice as DRAFT.`);
+        }
+
+        if (delivered) {
+          await supabaseClient
+            .from('invoices')
+            .update({
+              status: 'SENT',
+              issued_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('local_id', newLocalId)
+            .eq('organization_id', template.organization_id);
+        }
+
+        // Tell the merchant either way — a generated-but-undelivered invoice
+        // is exactly the thing they need to know about.
+        await supabaseClient.from('notifications').insert({
+          organization_id: template.organization_id,
+          title: delivered ? 'Recurring Invoice Sent' : 'Recurring Invoice Needs Attention',
+          message: delivered
+            ? `Invoice ${assignedNumber} was generated and emailed to ${clientRow?.name || 'your client'}.`
+            : `Invoice ${assignedNumber} was generated but could not be emailed. It is saved as a draft.`,
+          type: delivered ? 'INVOICE_SENT' : 'INVOICE_DRAFT',
+          entity_id: newLocalId,
+        });
 
         // Calculate next run date
         const currentRunDate = new Date(schedule.next_run_date);

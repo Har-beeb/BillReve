@@ -398,11 +398,18 @@ class SyncEngine {
       return { data: allData };
     };
 
-    // Pull paginated data from Supabase for this user
-    const [clientsRes, invoicesRes, quotesRes] = await Promise.all([
+    // Pull paginated data from Supabase for this user.
+    //
+    // recurring_schedules MUST be included. It was pushed but never pulled,
+    // so a schedule created on one device existed in Postgres but could never
+    // come back down — it vanished on logout (which clears Dexie) and never
+    // appeared on a second device. The Dashboard MRR card reads from the local
+    // table, so it silently read zero.
+    const [clientsRes, invoicesRes, quotesRes, recurringRes] = await Promise.all([
       fetchPaginated('clients'),
       fetchPaginated('invoices'),
-      fetchPaginated('quotes')
+      fetchPaginated('quotes'),
+      fetchPaginated('recurring_schedules')
     ]);
 
     const processRemoteData = async (tableName: string, table: any, remoteData: any[]) => {
@@ -476,7 +483,8 @@ class SyncEngine {
     await Promise.all([
       processRemoteData('clients', db.clients, clientsRes.data || []),
       processRemoteData('invoices', db.invoices, invoicesRes.data || []),
-      processRemoteData('quotes', db.quotes, quotesRes.data || [])
+      processRemoteData('quotes', db.quotes, quotesRes.data || []),
+      processRemoteData('recurring_schedules', db.recurringSchedules, recurringRes.data || [])
     ]);
   }
 }

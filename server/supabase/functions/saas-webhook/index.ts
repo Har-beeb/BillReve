@@ -68,7 +68,60 @@ serve(async (req) => {
           if (field.variable_name === 'type') type = field.value;
         }
       }
-      
+      // Also accept flat metadata keys, which are simpler for the client to set
+      // and less error-prone to read than digging through custom_fields.
+      userId = userId || data.metadata?.userId || data.metadata?.user_id || '';
+      type = type || data.metadata?.type || '';
+
+      // -------------------------------------------------------------------
+      // Campaign email credit pack: ₦2,000 for 1,000 extra campaign emails.
+      //
+      // Idempotent via grant_campaign_credits, which keys on the Paystack
+      // reference — a replayed webhook adds nothing rather than granting free
+      // credits.
+      // -------------------------------------------------------------------
+      if (userId && type === 'campaign_credits') {
+        const { data: member } = await supabase
+          .from('organization_members').select('organization_id')
+          .eq('user_id', userId).limit(1).single();
+        if (!member) throw new Error('User has no organization');
+
+        const amount = data.amount; // kobo
+        const PACK_PRICE_KOBO = 200000;  // ₦2,000
+        const PACK_EMAILS = 1000;
+
+        if (amount < PACK_PRICE_KOBO) {
+          throw new Error(`Amount too low for campaign credit pack: ${amount} kobo`);
+        }
+
+        // Pay for more than one pack and you get more than one pack.
+        const packs = Math.floor(amount / PACK_PRICE_KOBO);
+        const reference = data.reference ?? data.id;
+        if (!reference) {
+          throw new Error('Paystack payload has no reference — cannot guarantee idempotency');
+        }
+
+        const { data: grant, error: grantError } = await supabase.rpc('grant_campaign_credits', {
+          p_org_id: member.organization_id,
+          p_emails: packs * PACK_EMAILS,
+          p_gateway: 'paystack',
+          p_reference: String(reference),
+          p_amount_minor: amount,
+          p_currency: data.currency ?? 'NGN',
+        });
+
+        if (grantError) throw grantError;
+
+        console.log(
+          `Campaign credits for organization ${member.organization_id}: ` +
+          `${JSON.stringify(grant)} (ref ${reference}).`
+        );
+
+        return new Response(JSON.stringify({ received: true, credits: grant }), {
+          status: 200, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       // If the charge was for a subscription
       if (userId && type === 'saas_subscription') {
         const { data: member } = await supabase.from('organization_members').select('organization_id').eq('user_id', userId).limit(1).single();

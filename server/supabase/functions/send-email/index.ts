@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildFrom, wrapEmailHtml } from "../_shared/email.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -74,7 +75,14 @@ serve(async (req) => {
     }
 
     const recipients = Array.isArray(to) ? to : [to];
-    
+
+    // The organization's own name goes in the From display name, and every
+    // body gets the "Powered by BillReve" footer. Both are centralised in
+    // _shared/email.ts so a new send path cannot omit them. buildFrom also
+    // strips header-injection characters from the merchant-supplied name.
+    const fromHeader = buildFrom(fromName);
+    const bodyHtml = wrapEmailHtml(html, { orgName: fromName });
+
     let res;
     if (recipients.length === 1) {
       // Use the standard endpoint for single emails, which safely supports all attachments
@@ -85,11 +93,11 @@ serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: fromName ? `${fromName} <noreply@billreve.app>` : "BillReve <noreply@billreve.app>",
+          from: fromHeader,
           to: recipients,
           reply_to: replyTo || "support@billreve.app",
           subject: subject || "Update from BillReve",
-          html: html || "<p>Please see the attached document.</p>",
+          html: bodyHtml,
           attachments: attachments || [],
         }),
       });
@@ -102,11 +110,11 @@ serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify(recipients.map(recipient => ({
-          from: fromName ? `${fromName} <noreply@billreve.app>` : "BillReve <noreply@billreve.app>",
+          from: fromHeader,
           to: [recipient],
           reply_to: replyTo || "support@billreve.app",
           subject: subject || "Update from BillReve",
-          html: html || "<p>Please see the attached document.</p>",
+          html: bodyHtml,
           attachments: attachments || [],
         }))),
       });

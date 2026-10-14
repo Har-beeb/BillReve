@@ -1,3 +1,11 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * Renders React, so it needs a DOM. The default test environment is `node`
+ * because constructing jsdom for every file cost ~14s each and caused worker
+ * startup timeouts on Windows.
+ */
+import '@testing-library/jest-dom';
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { DocumentPreview } from './DocumentPreview';

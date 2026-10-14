@@ -1,3 +1,9 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * Needs a DOM for `localStorage`, which the sync watermark assertions read and
+ * write. Everything else in this suite is mocked.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { syncEngine } from './syncEngine';
 import { db } from '../db/db';

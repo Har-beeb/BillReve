@@ -4,6 +4,7 @@ import { Building2, Globe2, Palette, Upload, ChevronRight, ChevronLeft, ArrowRig
 import { useAppStore } from '../../store/useAppStore';
 import { Logo } from '../ui/Logo';
 import { supabase } from '../../lib/supabase';
+import { requireOrganizationId } from '../../lib/organization';
 import toast from 'react-hot-toast';
 
 const slideVariants = {
@@ -72,15 +73,29 @@ export const OnboardingWizard: React.FC = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
-        await supabase.from('organizations').update({
-          name: profile.name,
-          phone: profile.phone,
-          industry: profile.industry,
-          business_description: profile.businessDescription,
-          country: profile.country,
-          currency: profile.currency,
-          logo_url: profile.logoUrl || null,
-        }).eq('id', session.user.id);
+        // `organizations.id` is a generated UUID, not the auth user id — the
+        // previous `.eq('id', session.user.id)` matched zero rows, so nothing
+        // the user entered during onboarding was ever saved to the cloud.
+        const orgId = await requireOrganizationId();
+
+        const { data: updated, error: orgError } = await supabase
+          .from('organizations')
+          .update({
+            name: profile.name,
+            phone: profile.phone,
+            industry: profile.industry,
+            business_description: profile.businessDescription,
+            country: profile.country,
+            currency: profile.currency,
+            logo_url: profile.logoUrl || null,
+          })
+          .eq('id', orgId)
+          .select('id');
+
+        if (orgError) throw orgError;
+        if (!updated || updated.length === 0) {
+          throw new Error('No organization row was updated.');
+        }
         
         await supabase.auth.updateUser({
           data: {

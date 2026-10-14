@@ -240,7 +240,9 @@ const PublicQuote: React.FC = () => {
           bankAccountSnapshot: quote.bank_account_snapshot,
           amountPaid: quote.amount_paid
       };
-      const profileData = { ...profile, bankAccounts: profile.bank_accounts };
+      // Remote RPC gives snake_case, the offline Zustand fallback gives
+      // camelCase. Accept either, or the offline PDF loses payment details.
+      const profileData = { ...profile, bankAccounts: profile.bank_accounts || profile.bankAccounts || [] };
         await (await import('../utils/pdfGenerator')).generateDocumentPdf({ document: docData, client, profile: profileData, type: 'QUOTE', download: true });
     } catch (err) {
       console.error('Download failed:', err);

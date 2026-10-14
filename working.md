@@ -1,5 +1,5 @@
 # BillReve — Technical Working Document
-*Last updated: 2026-10-11 | Version: 1.5.0*
+*Last updated: 2026-10-14 | Version: 1.5.0*
 
 > This document is the **authoritative internal reference** for BillReve. It is written for developers, AI agents, and collaborators continuing work on this project. It must be kept up-to-date after every significant change.
 >
@@ -44,7 +44,7 @@ BillReve is an **offline-first, AI-powered invoicing and billing SaaS** for free
 - **Client Directory** — Full CRUD, soft-delete, CSV import via wizard
 - **Payments Tab** — Manual bank transfer accounts (free), Paystack / Flutterwave gateways (Pro). **Stripe is not implemented**
 - **Trash & Auto-Purge** — Soft-deleted records recoverable for 7 days (Free) or 30 days (Pro), then purged by `empty_trash_based_on_plan()` on a daily cron
-- **Email Campaigns** — Promotional emails sent to client directory (send-only; no campaign history table exists)
+- **Email Campaigns** — Rich-text composer (dependency-free, `components/campaigns/RichTextEditor.tsx`) with image upload, live desktop/mobile preview, a pre-send proofread gate, per-recipient unsubscribe, a suppression list, and per-recipient delivery tracking. Pro only: 250 emails/month, max 2 campaigns per rolling 7 days, top-up packs at ₦2,000 per 1,000 emails
 - **Reports & CFO Insights** — Financial summaries, revenue/outstanding/overdue charts, AI CFO report generation
 - **PDF Export** — 5 themes (Standard, Professional, Modern, Classic, Monochrome) with live logo and branding
 - **Sequential Document Numbers** — gapless per-organization numbering via Postgres sequences in `user_sequences`; offline-created documents carry a `DRAFT-INV-xxxx` placeholder until synced
@@ -105,11 +105,11 @@ If you are writing `* 100` or `/ 100` outside those two files, stop.
 
 > Dexie and Supabase mirror each other for synced entities. Dexie uses camelCase, Supabase snake_case; `syncEngine.ts` converts between them.
 >
-> **There is no `profiles` table, no `payments` table, no `campaigns` table and no `bank_accounts` table.** Earlier revisions of this document described all four. Bank accounts are a JSONB array on `organizations`.
+> **There is no `profiles` table and no `payments` table.** Earlier revisions of this document described both, plus `campaigns` and `bank_accounts` tables that did not exist at the time. `campaigns` now DOES exist (added 2026-10-14) but with a different shape than was once documented. Bank accounts remain a JSONB array on `organizations`.
 
 ### Real tables
 
-`organizations`, `organization_members`, `clients`, `invoices`, `quotes`, `recurring_schedules`, `notifications`, `user_secrets`, `user_sequences`, `api_logs`, `rate_limits`, `webhook_logs`.
+`organizations`, `organization_members`, `clients`, `invoices`, `quotes`, `recurring_schedules`, `notifications`, `user_secrets`, `user_sequences`, `api_logs`, `rate_limits`, `webhook_logs`, `payment_events`, `campaigns`, `campaign_recipients`, `email_suppressions`, `campaign_credit_purchases`.
 
 ### `organizations` (the tenant — replaced `profiles`)
 ```
@@ -221,6 +221,13 @@ Note the real field names: `entity`/`action`/`status`, not `table`/`operation`/`
 | `check_rate_limit(identifier, action, max, window)` | public RPCs | Per-source-address **and** per-document throttling |
 | `check_and_log_rate_limit(p_user_id, p_endpoint, p_limit, p_window_minutes)` | `ai`, `send-email` | Per-organization API rate limit |
 | `is_member_of(_org_id)` / `is_org_owner(_org_id)` | RLS policies | Membership and ownership predicates |
+| `record_payment_event(...)` | payment webhooks | Records a captured gateway payment and reconciles the invoice. **Accumulates**, and is replay-safe via `UNIQUE (gateway, reference)` |
+| `queue_campaign(...)` | `Campaigns.tsx` | The only way a campaign enters the send queue. Re-checks quota, expands client ids into recipients, drops suppressed addresses, debits credit packs, refuses content that failed the proofread gate |
+| `check_campaign_quota(p_recipient_count)` | `Campaigns.tsx` | Pro gate + 250/month + 2 campaigns per rolling 7 days + purchased credit balance |
+| `unsubscribe_by_token(p_token)` | public unsubscribe page (anon) | Idempotent. Never reveals the email or organization, so the token cannot be used to enumerate contacts |
+| `record_email_suppression(...)` | `resend-webhook` | Bounce/complaint → do-not-send list |
+| `grant_campaign_credits(...)` | `saas-webhook` | Credits a paid top-up pack. Idempotent on the gateway reference |
+| `bump_campaign_counter(...)` | `resend-webhook` | Increments denormalised campaign counters |
 | `empty_trash_based_on_plan()` | daily cron | Purges soft-deleted rows past retention |
 
 ### Postgres Triggers
@@ -243,8 +250,11 @@ Note the real field names: `entity`/`action`/`status`, not `table`/`operation`/`
 | `email-cron` | Daily cron | Reminder emails; also sweeps expired Pro subscriptions |
 | `email-worker` | HTTP (internal) | Sends transactional emails |
 | `send-email` | HTTP | Generic email dispatch |
-| `process-recurring-invoices` | `pg_cron` | Generates invoices from `recurring_schedules` |
-| `saas-webhook` | Paystack | Pro subscription. HMAC verified **before** any DB logging; enforces a minimum amount of 350000 kobo before granting Pro; does **not** downgrade on `charge.failed` — `pro_expires_at` expires naturally |
+| `process-recurring-invoices` | `pg_cron` | Generates invoices from `recurring_schedules`, emails them, and promotes DRAFT → SENT only when delivery succeeded |
+| `campaign-worker` | `pg_cron`, every minute | Drains `campaign_recipients` in batches of 100 (Resend's hard cap), re-checks suppression at send time, attaches RFC 8058 unsubscribe headers, ships a plain-text part, records per-recipient outcomes. Caps itself at 5 batches per run and resumes on the next tick. **Service-role only** — requires `Authorization: Bearer CRON_SECRET` |
+| `campaign-proofread` | HTTP | Pre-send gate. Deterministic rules block; the LLM only warns |
+| `resend-webhook` | Resend (Svix-signed) | Bounce and complaint events → suppression. Hard bounces suppress, soft bounces do not |
+| `saas-webhook` | Paystack | Pro subscription **and** campaign credit packs. HMAC verified **before** any DB logging; enforces a minimum amount; does **not** downgrade on `charge.failed` — `pro_expires_at` lapses naturally |
 | `paystack-webhook` | Paystack POST | Verifies HMAC (constant-time), currency, and amount against the invoice total, then sets `PAID` or `PARTIAL` |
 | `flutterwave-webhook` | Flutterwave POST | Same, with major→minor conversion on the incoming amount |
 
@@ -402,8 +412,30 @@ Enforced entirely in `server/supabase/functions/ai/index.ts`: JWT verification �
 - Amounts rendered with `toMajorString()` — raw minor units previously leaked into client-facing email bodies
 - Also sweeps expired Pro subscriptions
 
-### Campaigns (`Campaigns.tsx`)
-Admin composes subject + body, sent to all clients in the directory. **There is no `campaigns` table** — sends are not persisted server-side. Earlier revisions of this document claimed otherwise.
+### Sender identity and the footer
+All three sending paths go through `_shared/email.ts`, which owns the `From` header and the "Powered by BillReve" footer so a new send path cannot forget either. Mail goes out as the merchant's own business, not as BillReve — `buildFrom` strips CR/LF and quotes from the merchant-supplied display name, because it is attacker-controllable and would otherwise allow header injection.
+
+### Campaigns (`Campaigns.tsx` + `campaign-worker`)
+
+The flow is: compose → proofread → `queue_campaign` → cron-driven `campaign-worker` → per-recipient rows updated → `resend-webhook` feeds bounces and complaints back into suppression.
+
+Things that are load-bearing and easy to break:
+
+- **Campaigns are immutable once queued.** The RLS UPDATE policy on `campaigns` requires `status = 'DRAFT'`. Otherwise a user could pass the proofread gate and then rewrite the body mid-send.
+- **`campaign_recipients` is read-only to clients.** Rows are created only by `queue_campaign`. The `unsubscribe_token` is the sole credential on a public endpoint, so it must never be client-chosen.
+- **The proofread gate is deterministic; the LLM is advisory.** Campaign bodies are untrusted text being fed to a model whose output we act on. If an LLM were the gate, a prompt injection or an unlucky sampling run would decide whether real mail goes out. `queue_campaign` independently refuses any payload whose `proofread.blocking` array is non-empty, so the gate is enforced in the database and not just the UI.
+- **A proofread outage must not block sending.** If Gemini is unavailable the deterministic verdict stands.
+- **The frequency limit is not decoration.** 2 campaigns per rolling 7 days, enforced regardless of credit balance. A volume cap alone does nothing to stop someone mailing the same list every other day, which is the pattern that gets a sending domain throttled.
+- **Unsubscribe is mandatory, not a nicety.** Gmail and Yahoo's bulk sender rules (February 2024) require one-click unsubscribe and a complaint rate under 0.3%. Both `List-Unsubscribe` and `List-Unsubscribe-Post` are needed; the first alone does not satisfy them.
+- **The unsubscribe page acts on load, not on a confirmation click.** Mail clients and security scanners pre-fetch links, so a confirm step loses genuine unsubscribes. The RPC is idempotent.
+- **Hard bounces suppress; soft bounces do not.** A full mailbox is not a dead address.
+- **Merchants cannot delete an `UNSUBSCRIBED`/`BOUNCED`/`COMPLAINED` suppression.** Only `MANUAL` entries. Overriding an unsubscribe is both a legal and a reputation problem.
+
+### ⚠️ Sending domain
+`CAMPAIGN_SENDER_ADDRESS` must point at a **separate verified subdomain** with its own SPF/DKIM/DMARC. Marketing mail attracts complaints; invoices are what customers depend on. While both share a domain, one badly-received campaign degrades invoice deliverability for every merchant. The worker logs a warning on every run until this is set.
+
+### On Amazon SES
+Considered and deliberately deferred. SES is roughly 4× cheaper ($0.10/1,000 versus Resend's ~$0.0004/email), but it enforces *ratio* thresholds — complaints above 0.1%, bounces above 5% — which are most dangerous at low volume, where a single complaint is many times the limit. SES also starts sandboxed (200/day, verified recipients only, production access by application), has no direct batch equivalent (`SendBulkEmail` needs server-side templates, so per-recipient unsubscribe tokens move into substitution data), and delivers events via SNS rather than one signed webhook. `campaign-worker` is the only file that talks to a send API, so this stays a one-file change. Revisit past a few hundred thousand emails a month.
 
 ---
 
@@ -430,10 +462,13 @@ Admin composes subject + body, sent to all clients in the directory. **There is 
 > **Priority:** 🔴 Critical | 🟡 Medium | 🟢 Low
 
 ### 🔴 1. Automated Pro checkout is disabled
-`Upgrade.tsx` is locked to manual bank transfer pending payment-processor business verification. Conversion requires the user to leave the app, transfer, email a receipt, and wait for a manual upgrade. No funnel survives this, and it gates all self-serve revenue.
-- **Fix:** complete verification, then re-enable the `PaystackButton` path. The `plan` payload parameter is already wired.
+`Upgrade.tsx` is locked to manual bank transfer pending payment-processor business verification. Conversion requires the user to leave the app, transfer, email a receipt, and wait for a manual upgrade. No funnel survives this, and it now also gates campaign credit packs.
+- **Fix:** complete verification, then re-enable the `PaystackButton` path. The `plan` payload parameter is already wired. Credit packs need a checkout that sets metadata `type=campaign_credits` and `userId`.
 
-### 🟡 2. `schema.sql` is stale
+### 🔴 2. Campaigns still share the transactional sending domain
+Until `CAMPAIGN_SENDER_ADDRESS` points at a verified subdomain, a campaign that draws complaints degrades **invoice** deliverability for every merchant. This is DNS and configuration work, not code — the plumbing is already in place and `campaign-worker` warns on every run while it is unset.
+
+### 🟡 3. `schema.sql` is stale
 The committed dump predates the multi-tenant migration — it still shows `user_id NOT NULL` and `clients_user_id_local_id_key`. The migration files are correct; the dump is not.
 - **Fix:** re-dump after applying migrations, and do it as part of the release checklist.
 
@@ -465,13 +500,15 @@ On slow devices, generating a large PDF can freeze the tab.
 `Quotes.tsx` / `Invoices.tsx` and `PublicQuote.tsx` / `PublicInvoice.tsx` remain near-duplicates (~2,800 lines expressing two behaviours). This is how the PDF argument swap and the Paystack currency bug reached production in one path but not the other.
 
 ### Resolved (do not re-report)
-AI context overflow · bank-account referential integrity · client clock drift · `is_pro`/`pro_expires_at` desync · public RPC rate limiting · plaintext gateway secrets · duplicate invoice numbers · shared sync watermark · logout trap · PDF sender/recipient swap · client-side-only quotas · 100× gateway billing · webhook amount verification · zero tests/CI/telemetry.
+AI context overflow · bank-account referential integrity · client clock drift · `is_pro`/`pro_expires_at` desync · public RPC rate limiting · plaintext gateway secrets · duplicate invoice numbers · shared sync watermark · logout trap · PDF sender/recipient swap · client-side-only quotas · 100× gateway billing · webhook amount verification · zero tests/CI/telemetry · Paystack webhook metadata mismatch · organization writes matching zero rows · `email-cron` wrong column name · instalment payments never reaching PAID · `recurring_schedules` never pulled · dead webhook URL shown to merchants · soft 404 / not indexed · RevenueChat starved of context · campaigns with no unsubscribe, suppression or batching.
 
 ---
 
 ## 15. Recent Work (Reverse Chronological)
 
-- **2026-10-11 — Audit remediation.** Introduced `money.ts` / `_shared/money.ts` as the single unit boundary and fixed all four 100× payment bugs (Paystack checkout, Flutterwave checkout, both webhooks) plus the quote counter-offer unit mismatch. Repaired `check_and_log_rate_limit` and `empty_trash_based_on_plan`, which still referenced the dropped `profiles` table and `user_id` column — AI, transactional email and the nightly trash purge had all been failing. Rewrote the AI quota to resolve tenancy through `organization_members` and fail closed. Restored idempotent `amount_paid` and removed `PARTIAL` from the public allow-list. Fixed logout leaving per-table watermarks behind, and the whitespace in `onConflict`. Un-stubbed Sentry and PostHog (every `init` had been commented out). Made `formatMoney` deterministic by deriving locale from currency. Added `money.test.ts`; suite now 33 tests, all passing. Migration: `20261011000000_fix_audit_regressions.sql`.
+- **2026-10-14 — Campaign system rebuild.** Replaced fire-and-forget bulk sending with a real pipeline: `campaigns` / `campaign_recipients` / `email_suppressions` / `campaign_credit_purchases` tables, `queue_campaign` as the only entry point, a cron-driven `campaign-worker` batching at Resend's 100-message cap with per-recipient tracking, Svix-verified `resend-webhook` feeding bounces and complaints into suppression, RFC 8058 one-click unsubscribe with a public unsubscribe page, and a `campaign-proofread` gate (deterministic blocking + AI advisory). New dependency-free `RichTextEditor` with image upload to a `campaign-assets` bucket, live desktop/mobile preview, and a quota meter. Pro-gated at 250 emails/month with a 2-per-week frequency limit and ₦2,000/1,000-email top-up packs. Migrations `20261014000000`–`20261014030000`.
+- **2026-10-12/13 — Third audit remediation.** Fixed the Paystack webhook metadata mismatch that was failing **every** invoice payment; four `organizations` updates using `.eq('id', user.id)` that matched zero rows and silently saved nothing (now `lib/organization.ts`); `email-cron` selecting a non-existent `business_name` column so no reminder had ever sent; instalment payments never reaching PAID (now the `payment_events` ledger); `recurring_schedules` never being pulled by the sync engine; raw minor units in notification text; the dead `api.billreve.app` webhook URL shown to merchants; recurring invoices generated as silent drafts; dashboard card click inconsistency; the native date-picker icon colliding with the custom one; the Google soft 404 (no catch-all route plus a `/(.*) → /` rewrite); and RevenueChat, where `get_ai_context` returned a client *count* with no list, quotes or ids while the prompt instructed the model to use them. Migrations `20261012000000`–`20261013000000`.
+- **2026-10-11 — Audit remediation.** Introduced `money.ts` / `_shared/money.ts` as the single unit boundary and fixed all four 100× payment bugs plus the quote counter-offer unit mismatch. Repaired `check_and_log_rate_limit` and `empty_trash_based_on_plan`, which still referenced the dropped `profiles` table and `user_id` column. Rewrote the AI quota to resolve tenancy through `organization_members` and fail closed. Restored idempotent `amount_paid`. Fixed logout leaving per-table watermarks behind, and the whitespace in `onConflict`. Un-stubbed Sentry and PostHog. Made `formatMoney` deterministic by deriving locale from currency. Migration `20261011000000`.
 - **2026-10-10 (Phase 7 & 8).** Deployed Recurring Invoices full-stack. Refactored Dashboard charts. Fixed offline localStorage fallbacks by routing to Zustand state. Rewrote list filters with `useMemo`.
 - **2026-10-09 (Phase 6).** Built the Sync Settings DLQ UI. Removed legacy API interceptors and consolidated `services/`.
 - **2026-10-08 (Phase 4 & 5).** Re-architected money to integer minor units. Migrated `profiles` → `organizations` to lay groundwork for team accounts.
@@ -503,6 +540,8 @@ AI context overflow · bank-account referential integrity · client clock drift 
 ### DON'T
 - Don't write a bare `* 100` or `/ 100` anywhere outside the two money files
 - Don't let the client assert `PAID` or supply `amount_paid` — that is the webhook's job
+- Don't insert `campaign_recipients` from the client, or let the UI be the only proofread gate
+- Don't delete a non-`MANUAL` suppression, and don't add a campaign send path that bypasses `_shared/email.ts`
 - Don't trust `isProUser` or `aiPromptsUsed` from localStorage for anything that costs money
 - Don't use `bg-blue-*` for accent colors — they render as purple globally
 - Don't query Supabase directly from components for CRUD
@@ -531,6 +570,16 @@ GEMINI_API_KEY=
 RESEND_API_KEY=
 SAAS_PAYSTACK_SECRET_KEY=
 CRON_SECRET=
+RESEND_WEBHOOK_SECRET=        # whsec_… from the Resend webhook settings
+CAMPAIGN_SENDER_ADDRESS=      # noreply@campaigns.billreve.app — see §12
+FRONTEND_URL=                 # used to build unsubscribe and public links
+```
+
+The `campaign-worker` cron job reads its own credentials from Supabase Vault rather than from a committed migration:
+
+```sql
+SELECT vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+SELECT vault.create_secret('<same value as CRON_SECRET>', 'cron_secret');
 ```
 
 Merchant Paystack/Flutterwave **secret** keys are not environment variables — they are stored per-organization, encrypted, in `user_secrets`, and read only via `get_merchant_secret`.

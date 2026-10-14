@@ -94,6 +94,28 @@ const Dashboard: React.FC = () => {
     ? ((totalRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 
     : (totalRevenue > 0 ? 100 : 0);
 
+  // Metric cards: one consistent interaction model.
+  //
+  // Previously each card behaved differently — Outstanding was clickable only
+  // via its inner pill, while Overdue and MRR made BOTH the card and the pill
+  // clickable. Worse, Overdue's pill navigated to a *different* (unfiltered)
+  // destination than the card itself. Nested interactive elements are also an
+  // accessibility problem: a screen reader announces a button inside a button.
+  //
+  // Now the whole card is the single click target, keyboard-operable, and the
+  // pills are plain labels describing where the card goes.
+  const cardNav = (to: string) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    onClick: () => navigate(to),
+    onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        navigate(to);
+      }
+    },
+  });
+
   // Monthly Recurring Revenue (MRR) Calculation
   let trueMRR = 0;
   const activeSchedules = React.useMemo(() => recurringSchedules.filter(s => s.status === 'ACTIVE'), [recurringSchedules]);
@@ -250,7 +272,11 @@ const Dashboard: React.FC = () => {
         className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 overflow-x-auto pb-4 md:pb-0 snap-x snap-mandatory hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0"
       >
         {/* Card 1: Total Revenue */}
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '50ms' }}>
+        <Card
+          className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+          style={{ animationDelay: '50ms' }}
+          {...cardNav('/reports')}
+        >
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
@@ -269,13 +295,17 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Card 2: Outstanding Balance */}
-        <Card className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-amber-50/30 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 animate-fade-in-up flex flex-col justify-between" style={{ animationDelay: '150ms' }}>
+        <Card
+          className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-amber-50/30 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+          style={{ animationDelay: '150ms' }}
+          {...cardNav('/invoices')}
+        >
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
                 <Clock size={20} />
               </div>
-              <span className="text-xs font-medium px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors" onClick={() => navigate('/invoices')}>View Unpaid</span>
+              <span className="text-xs font-medium px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">View Unpaid</span>
             </div>
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Outstanding Balance</h3>
@@ -286,17 +316,17 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Card 3: Overdue Amount */}
-        <Card 
-          className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-rose-50/30 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors" 
+        <Card
+          className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-rose-50/30 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
           style={{ animationDelay: '250ms' }}
-          onClick={() => navigate('/invoices?status=OVERDUE')}
+          {...cardNav('/invoices?status=OVERDUE')}
         >
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-600 dark:text-rose-400">
                 <FileText size={20} />
               </div>
-              <span className="text-xs font-medium px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-full cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors" onClick={(e) => { e.stopPropagation(); navigate('/invoices'); }}>View Overdue</span>
+              <span className="text-xs font-medium px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-full">View Overdue</span>
             </div>
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Overdue Amount</h3>
@@ -309,17 +339,17 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Card 4: Monthly Recurring Revenue */}
-        <Card 
-          className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors" 
+        <Card
+          className="min-w-[85vw] md:min-w-0 snap-center p-5 md:p-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 animate-fade-in-up flex flex-col justify-between cursor-pointer hover:border-purple-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
           style={{ animationDelay: '350ms' }}
-          onClick={() => navigate('/recurring')}
+          {...cardNav('/recurring')}
         >
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <TrendingUp size={20} />
               </div>
-              <span className="text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors" onClick={(e) => { e.stopPropagation(); navigate('/recurring'); }}>Manage MRR</span>
+              <span className="text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full">Manage MRR</span>
             </div>
             <div>
               <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 truncate">Monthly Recurring Revenue</h3>

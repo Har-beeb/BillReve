@@ -6,6 +6,7 @@ import type { BankAccount } from '../types';
 import { InstructionNote } from '../components/ui';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
+import { requireOrganizationId } from '../lib/organization';
 import toast from 'react-hot-toast';
 
 const Payments: React.FC = () => {
@@ -28,9 +29,13 @@ const Payments: React.FC = () => {
     setPaystackPubKey(businessProfile.paystackPublicKey || '');
     setFlutterwavePubKey(businessProfile.flutterwavePublicKey || '');
     
-    // Set the webhook URL based on the current domain
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.billreve.app/v1';
-    setWebhookUrl(apiUrl.replace('/api/v1', '') + '/api/v1/payments/webhook');
+    // Webhooks are hosted on Supabase Edge Functions. This previously built a
+    // URL from `VITE_API_URL || 'https://api.billreve.app/v1'` — BillReve has
+    // no such API host, so every merchant who followed these instructions
+    // configured a dead endpoint in their gateway dashboard and their invoices
+    // never auto-marked as PAID.
+    const functionsBase = `${import.meta.env.VITE_SUPABASE_URL ?? ''}/functions/v1`;
+    setWebhookUrl(functionsBase);
   }, [businessProfile.paystackPublicKey, businessProfile.flutterwavePublicKey]);
 
   useEffect(() => {
@@ -92,14 +97,24 @@ const Payments: React.FC = () => {
         bankAccounts: bankAccounts
       });
 
-      const { error: profileError } = await supabase
+      // Tenancy must resolve through organization_members. `user.id` is an
+      // auth user id and never matches `organizations.id`, so the previous
+      // `.eq('id', user.id)` matched zero rows and saved nothing — while still
+      // reporting success, because a zero-row UPDATE is not an error.
+      const orgId = await requireOrganizationId();
+
+      const { data: updated, error: profileError } = await supabase
         .from('organizations')
         .update({
           bank_accounts: bankAccounts
         })
-        .eq('id', user.id);
-        
+        .eq('id', orgId)
+        .select('id');
+
       if (profileError) throw profileError;
+      if (!updated || updated.length === 0) {
+        throw new Error('No organization row was updated.');
+      }
       toast.success('Bank details saved successfully!');
     } catch (err) {
       console.error('Error saving banks:', err);
@@ -119,13 +134,21 @@ const Payments: React.FC = () => {
         flutterwavePublicKey: flutterwavePubKey
       });
 
-      const { error: profileError } = await supabase
+      const orgId = await requireOrganizationId();
+
+      const { data: updated, error: profileError } = await supabase
         .from('organizations')
         .update({
           paystack_public_key: paystackPubKey,
           flutterwave_public_key: flutterwavePubKey
         })
-        .eq('id', user.id);
+        .eq('id', orgId)
+        .select('id');
+
+      if (profileError) throw profileError;
+      if (!updated || updated.length === 0) {
+        throw new Error('No organization row was updated.');
+      }
         
       if (profileError) throw profileError;
 
@@ -304,7 +327,7 @@ const Payments: React.FC = () => {
               To automatically mark invoices as PAID, copy and paste this Webhook URL into your Paystack Dashboard:
               <br />
               <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs break-all">
-                {webhookUrl}/paystack
+                {webhookUrl}/paystack-webhook
               </code>
             </InstructionNote>
           </div>
@@ -350,7 +373,7 @@ const Payments: React.FC = () => {
               To automatically mark invoices as PAID, copy and paste this Webhook URL into your Flutterwave Dashboard:
               <br />
               <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs break-all">
-                {webhookUrl}/flutterwave
+                {webhookUrl}/flutterwave-webhook
               </code>
             </InstructionNote>
           </div>
