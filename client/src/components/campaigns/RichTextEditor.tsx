@@ -3,29 +3,46 @@ import DOMPurify from 'dompurify';
 import {
   Bold, Italic, Underline, List, ListOrdered, Link2, Unlink,
   AlignLeft, AlignCenter, AlignRight, Image as ImageIcon,
-  Heading2, Quote, RemoveFormatting, Loader2,
+  Heading2, Quote, RemoveFormatting, Loader2, Baseline, Highlighter,
 } from 'lucide-react';
 
 /**
  * Dependency-free rich-text editor for campaign bodies.
  *
- * WHY NO LIBRARY: TipTap/Quill/Lexical would all be better editors, but each
- * adds a dependency that has to be installed before the project will even type
- * check. This is self-contained, so it works immediately and ships nothing
- * extra to the bundle.
+ * WHY NO LIBRARY: TipTap/Quill/Lexical are all better editors, but each adds a
+ * dependency that must be installed before the project will type check. This is
+ * self-contained, so it works immediately and ships nothing extra.
  *
- * WHY execCommand: it is formally deprecated, but it remains implemented in
- * every browser and is the only way to apply formatting to a selection without
- * hand-writing Range manipulation. The modern alternative is a full document
- * model (which is what the libraries above are). For a toolbar this size the
- * trade is worth it — and critically, with `styleWithCSS` enabled it emits
- * INLINE styles, which is exactly what email requires since <style> blocks are
- * stripped by most mail clients.
+ * WHY execCommand: formally deprecated, but still implemented everywhere and
+ * the only way to format a selection without hand-writing a document model.
+ * With `styleWithCSS` it emits inline styles, which is what email needs since
+ * most mail clients strip <style> blocks.
  *
- * SANITISATION: the HTML is passed through DOMPurify with an email-safe
- * allow-list on every change. Users paste from Word, Google Docs and websites,
- * which drags in <script>, <style>, class attributes and layout that no mail
- * client will honour.
+ * ---------------------------------------------------------------------------
+ * THREE THINGS THAT MAKE execCommand ACTUALLY WORK, all learned the hard way:
+ *
+ * 1. SELECTION MUST SURVIVE THE CLICK. Any toolbar control that takes focus
+ *    destroys the selection before the command runs, so the command applies to
+ *    nothing. Every control here uses `onMouseDown` + `preventDefault()`, and
+ *    the caret is additionally saved and restored as a fallback for when focus
+ *    was lost elsewhere (e.g. the user clicked the subject field in between).
+ *    This is why the original colour `<select>` elements did nothing: a native
+ *    select cannot avoid taking focus, so they are now popovers made of
+ *    buttons.
+ *
+ * 2. THERE MUST BE A BLOCK TO FORMAT. `formatBlock` converts the block
+ *    containing the caret. In an empty contentEditable Chrome leaves bare text
+ *    nodes with no block parent, so clicking H2 has nothing to act on and
+ *    silently no-ops. `defaultParagraphSeparator` is set to `p` and the editor
+ *    is seeded with a paragraph so a block always exists.
+ *
+ * 3. styleWithCSS MUST BE TOGGLED PER COMMAND. With it ON, bold produces
+ *    `<span style="font-weight:bold">`, which some mail clients strip — so
+ *    semantic commands want it OFF to get <b>/<i>/<u>. But with it OFF,
+ *    foreColor emits `<font color>`, and <font> is not in the sanitiser's
+ *    allow-list, so colours were being stripped immediately after being
+ *    applied. Colour commands therefore need it ON.
+ * ---------------------------------------------------------------------------
  */
 
 /** Tags and attributes that render reliably across mail clients. */
@@ -38,7 +55,6 @@ const EMAIL_SAFE_CONFIG = {
     'a', 'img', 'blockquote', 'hr',
   ],
   ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'width', 'height', 'style'],
-  // Block anything that is not a real web link or image source.
   ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|cid:|data:image\/(?:png|jpeg|gif|webp);base64,)/i,
 };
 
@@ -57,6 +73,7 @@ const TEXT_COLOURS = [
   { name: 'Default', value: '#1e293b' },
   { name: 'Purple', value: '#7c3aed' },
   { name: 'Blue', value: '#1d4ed8' },
+  { name: 'Teal', value: '#0f766e' },
   { name: 'Green', value: '#15803d' },
   { name: 'Amber', value: '#b45309' },
   { name: 'Red', value: '#b91c1c' },
@@ -69,7 +86,11 @@ const HIGHLIGHTS = [
   { name: 'Green', value: '#bbf7d0' },
   { name: 'Blue', value: '#bfdbfe' },
   { name: 'Pink', value: '#fbcfe8' },
+  { name: 'Orange', value: '#fed7aa' },
 ];
+
+/** Commands that need inline styles rather than legacy presentational tags. */
+const NEEDS_CSS_STYLING = new Set(['foreColor', 'hiliteColor', 'backColor']);
 
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   value,
@@ -80,50 +101,136 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const savedRange = useRef<Range | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isEmpty, setIsEmpty] = useState(!value);
+  const [palette, setPalette] = useState<'text' | 'highlight' | null>(null);
 
   // Seed the DOM once. Never drive innerHTML from state on every render — that
-  // destroys the caret position mid-typing, which is the classic bug with
-  // contentEditable in React.
+  // destroys the caret mid-typing, the classic contentEditable-in-React bug.
   useEffect(() => {
-    if (editorRef.current && !editorRef.current.innerHTML && value) {
-      editorRef.current.innerHTML = sanitize(value);
-      setIsEmpty(false);
-    }
+    const el = editorRef.current;
+    if (!el || el.innerHTML) return;
+    // Always start with a real block so formatBlock has something to convert.
+    el.innerHTML = value ? sanitize(value) : '<p><br></p>';
+    setIsEmpty(!value);
   }, [value]);
 
-  // Produce inline styles rather than <font> tags, so the output survives email.
   useEffect(() => {
+    // Produce <p> on Enter rather than <div> or bare text nodes.
     try {
-      document.execCommand('styleWithCSS', false, 'true');
+      document.execCommand('defaultParagraphSeparator', false, 'p');
     } catch {
-      /* not supported — formatting still works, just less cleanly */
+      /* unsupported — Enter still works, blocks are just less tidy */
     }
   }, []);
 
+  /** Remember the caret so a toolbar click can put it back if focus was lost. */
+  const saveSelection = useCallback(() => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (editorRef.current?.contains(range.commonAncestorContainer)) {
+      savedRange.current = range.cloneRange();
+    }
+  }, []);
+
+  const restoreSelection = useCallback(() => {
+    const el = editorRef.current;
+    const sel = window.getSelection();
+    if (!el || !sel) return;
+
+    // If the caret is already inside the editor, leave it exactly where it is.
+    if (sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+      return;
+    }
+    if (savedRange.current) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange.current);
+      return;
+    }
+    // Nothing saved — put the caret at the end so commands have a target.
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }, []);
+
   const emit = useCallback(() => {
-    if (!editorRef.current) return;
-    const raw = editorRef.current.innerHTML;
-    setIsEmpty(!editorRef.current.textContent?.trim() && !raw.includes('<img'));
+    const el = editorRef.current;
+    if (!el) return;
+    const raw = el.innerHTML;
+    const hasText = Boolean(el.textContent?.trim());
+    setIsEmpty(!hasText && !raw.includes('<img'));
     onChange(sanitize(raw));
   }, [onChange]);
 
-  const exec = (command: string, arg?: string) => {
+  const exec = useCallback((command: string, arg?: string) => {
     if (disabled) return;
-    editorRef.current?.focus();
+    const el = editorRef.current;
+    if (!el) return;
+
+    el.focus();
+    restoreSelection();
+
+    try {
+      // See note 3 in the header: the wrong styleWithCSS value either produces
+      // markup mail clients strip, or markup the sanitiser strips.
+      document.execCommand('styleWithCSS', false, String(NEEDS_CSS_STYLING.has(command)));
+    } catch {
+      /* ignore — command below still runs */
+    }
+
     try {
       document.execCommand(command, false, arg);
     } catch (err) {
       console.warn(`Formatting command "${command}" failed:`, err);
     }
+
+    saveSelection();
     emit();
-  };
+  }, [disabled, emit, restoreSelection, saveSelection]);
 
   /**
-   * Paste as sanitised HTML, falling back to plain text.
-   *
-   * Without this, pasting from Word or a web page injects class names, <style>
+   * Heading toggles rather than one-way sets, so clicking H2 on a heading
+   * returns it to a paragraph. `formatBlock` argument style differs between
+   * engines, so both forms are attempted.
+   */
+  const toggleBlock = useCallback((tag: 'h2' | 'blockquote') => {
+    const current = (() => {
+      try {
+        return (document.queryCommandValue('formatBlock') || '').toLowerCase();
+      } catch {
+        return '';
+      }
+    })();
+
+    const target = current === tag ? 'p' : tag;
+
+    if (disabled) return;
+    const el = editorRef.current;
+    if (!el) return;
+
+    el.focus();
+    restoreSelection();
+    try {
+      document.execCommand('styleWithCSS', false, 'false');
+      // Chrome historically wanted '<h2>'; the bare form is the spec'd one.
+      // Try bare first, fall back to the bracketed legacy form.
+      if (!document.execCommand('formatBlock', false, target)) {
+        document.execCommand('formatBlock', false, `<${target}>`);
+      }
+    } catch (err) {
+      console.warn('formatBlock failed:', err);
+    }
+    saveSelection();
+    emit();
+  }, [disabled, emit, restoreSelection, saveSelection]);
+
+  /**
+   * Paste as sanitised HTML, falling back to escaped plain text.
+   * Without this, pasting from Word or a web page drags in class names, <style>
    * blocks and nested tables that no mail client renders consistently.
    */
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -134,7 +241,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (html) {
       document.execCommand('insertHTML', false, sanitize(html));
     } else if (text) {
-      // Escape, then convert newlines, so pasted text can never become markup.
       const escaped = text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -142,19 +248,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .replace(/\n/g, '<br/>');
       document.execCommand('insertHTML', false, escaped);
     }
+    saveSelection();
     emit();
   };
 
   const handleLink = () => {
+    restoreSelection();
     const selection = window.getSelection();
     const selected = selection?.toString().trim();
     const url = window.prompt(
-      selected
-        ? `Link "${selected}" to which address?`
-        : 'Enter the URL to link to:',
+      selected ? `Link "${selected}" to which address?` : 'Enter the URL to link to:',
       'https://'
     );
-    if (!url) return;
+    if (!url || url === 'https://') return;
 
     if (!/^https?:\/\//i.test(url) && !/^mailto:/i.test(url)) {
       window.alert('Links must start with https:// or mailto:');
@@ -162,10 +268,14 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
 
     if (!selected) {
-      // No selection — insert the URL as its own link rather than silently
-      // doing nothing, which is what execCommand('createLink') would do.
-      document.execCommand('insertHTML', false,
-        `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+      editorRef.current?.focus();
+      restoreSelection();
+      document.execCommand(
+        'insertHTML',
+        false,
+        `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+      );
+      saveSelection();
       emit();
       return;
     }
@@ -174,7 +284,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-picking the same file
+    e.target.value = '';
     if (!file || !onUploadImage) return;
 
     if (file.size > 2 * 1024 * 1024) {
@@ -187,13 +297,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       const url = await onUploadImage(file);
       const alt = (file.name || 'image').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
       editorRef.current?.focus();
-      // width:100% with max-width keeps it responsive in the inbox; alt text is
-      // what recipients see when images are blocked, which is common.
+      restoreSelection();
       document.execCommand(
         'insertHTML',
         false,
         `<img src="${url}" alt="${alt.replace(/"/g, '')}" style="max-width:100%;height:auto;display:block;margin:12px 0;border-radius:8px;" />`
       );
+      saveSelection();
       emit();
     } catch (err) {
       console.error('Image upload failed:', err);
@@ -204,104 +314,126 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   const ToolbarButton: React.FC<{
-    onClick: () => void;
+    onAction: () => void;
     title: string;
+    active?: boolean;
     children: React.ReactNode;
-  }> = ({ onClick, title, children }) => (
+  }> = ({ onAction, title, active, children }) => (
     <button
       type="button"
-      // onMouseDown + preventDefault keeps the selection alive; a plain onClick
-      // would blur the editor first and the command would apply to nothing.
-      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      // preventDefault on mousedown is what keeps the selection alive. A plain
+      // onClick blurs the editor first and the command applies to nothing.
+      onMouseDown={(e) => { e.preventDefault(); onAction(); }}
       title={title}
       aria-label={title}
+      aria-pressed={active}
       disabled={disabled}
-      className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 disabled:opacity-40 transition-colors"
+      className={`p-2 rounded-lg transition-colors disabled:opacity-40 ${
+        active
+          ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
+          : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300'
+      }`}
     >
       {children}
     </button>
   );
 
-  const Divider = () => <span className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" aria-hidden="true" />;
+  const Divider = () => (
+    <span className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" aria-hidden="true" />
+  );
+
+  const Swatches: React.FC<{
+    options: { name: string; value: string }[];
+    command: 'foreColor' | 'hiliteColor';
+  }> = ({ options, command }) => (
+    <div className="absolute z-20 top-full left-0 mt-1 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg grid grid-cols-4 gap-1.5 w-max">
+      {options.map((c) => (
+        <button
+          key={c.value}
+          type="button"
+          title={c.name}
+          aria-label={c.name}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            exec(command, c.value);
+            setPalette(null);
+          }}
+          className="w-7 h-7 rounded-md border border-slate-200 dark:border-slate-600 hover:scale-110 transition-transform"
+          style={{
+            backgroundColor: c.value === 'transparent' ? '#ffffff' : c.value,
+            backgroundImage:
+              c.value === 'transparent'
+                ? 'linear-gradient(45deg, #e2e8f0 25%, transparent 25%, transparent 75%, #e2e8f0 75%)'
+                : undefined,
+            backgroundSize: c.value === 'transparent' ? '8px 8px' : undefined,
+          }}
+        />
+      ))}
+    </div>
+  );
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 overflow-hidden focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/30 transition-all">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 overflow-visible focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/30 transition-all">
       <div
         role="toolbar"
         aria-label="Formatting"
-        className="flex items-center flex-wrap gap-0.5 p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900"
+        className="flex items-center flex-wrap gap-0.5 p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 rounded-t-xl"
       >
-        <ToolbarButton onClick={() => exec('bold')} title="Bold"><Bold size={16} /></ToolbarButton>
-        <ToolbarButton onClick={() => exec('italic')} title="Italic"><Italic size={16} /></ToolbarButton>
-        <ToolbarButton onClick={() => exec('underline')} title="Underline"><Underline size={16} /></ToolbarButton>
-        <ToolbarButton onClick={() => exec('formatBlock', '<h2>')} title="Heading"><Heading2 size={16} /></ToolbarButton>
-        <ToolbarButton onClick={() => exec('formatBlock', '<blockquote>')} title="Quote"><Quote size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('bold')} title="Bold"><Bold size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('italic')} title="Italic"><Italic size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('underline')} title="Underline"><Underline size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => toggleBlock('h2')} title="Heading"><Heading2 size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => toggleBlock('blockquote')} title="Quote"><Quote size={16} /></ToolbarButton>
 
         <Divider />
 
-        <ToolbarButton onClick={() => exec('insertUnorderedList')} title="Bulleted list"><List size={16} /></ToolbarButton>
-        <ToolbarButton onClick={() => exec('insertOrderedList')} title="Numbered list"><ListOrdered size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('insertUnorderedList')} title="Bulleted list"><List size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('insertOrderedList')} title="Numbered list"><ListOrdered size={16} /></ToolbarButton>
 
         <Divider />
 
-        <ToolbarButton onClick={() => exec('justifyLeft')} title="Align left"><AlignLeft size={16} /></ToolbarButton>
-        <ToolbarButton onClick={() => exec('justifyCenter')} title="Align centre"><AlignCenter size={16} /></ToolbarButton>
-        <ToolbarButton onClick={() => exec('justifyRight')} title="Align right"><AlignRight size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('justifyLeft')} title="Align left"><AlignLeft size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('justifyCenter')} title="Align centre"><AlignCenter size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('justifyRight')} title="Align right"><AlignRight size={16} /></ToolbarButton>
 
         <Divider />
 
-        <ToolbarButton onClick={handleLink} title="Insert link"><Link2 size={16} /></ToolbarButton>
-        <ToolbarButton onClick={() => exec('unlink')} title="Remove link"><Unlink size={16} /></ToolbarButton>
+        <ToolbarButton onAction={handleLink} title="Insert link"><Link2 size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('unlink')} title="Remove link"><Unlink size={16} /></ToolbarButton>
 
         {onUploadImage && (
-          <ToolbarButton
-            onClick={() => fileInputRef.current?.click()}
-            title="Insert image"
-          >
+          <ToolbarButton onAction={() => fileInputRef.current?.click()} title="Insert image">
             {isUploading ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
           </ToolbarButton>
         )}
 
         <Divider />
 
-        {/* Text colour */}
-        <label className="flex items-center gap-1 pl-1" title="Text colour">
-          <span className="sr-only">Text colour</span>
-          <select
-            aria-label="Text colour"
-            disabled={disabled}
-            onMouseDown={(e) => e.stopPropagation()}
-            onChange={(e) => { exec('foreColor', e.target.value); e.currentTarget.selectedIndex = 0; }}
-            className="text-xs bg-transparent border border-slate-200 dark:border-slate-700 rounded-md px-1.5 py-1 text-slate-600 dark:text-slate-300 cursor-pointer"
-            defaultValue=""
+        <span className="relative">
+          <ToolbarButton
+            onAction={() => setPalette((p) => (p === 'text' ? null : 'text'))}
+            title="Text colour"
+            active={palette === 'text'}
           >
-            <option value="" disabled>Colour</option>
-            {TEXT_COLOURS.map((c) => (
-              <option key={c.value} value={c.value}>{c.name}</option>
-            ))}
-          </select>
-        </label>
+            <Baseline size={16} />
+          </ToolbarButton>
+          {palette === 'text' && <Swatches options={TEXT_COLOURS} command="foreColor" />}
+        </span>
 
-        {/* Highlight */}
-        <label className="flex items-center gap-1" title="Highlight">
-          <span className="sr-only">Highlight colour</span>
-          <select
-            aria-label="Highlight colour"
-            disabled={disabled}
-            onChange={(e) => { exec('hiliteColor', e.target.value); e.currentTarget.selectedIndex = 0; }}
-            className="text-xs bg-transparent border border-slate-200 dark:border-slate-700 rounded-md px-1.5 py-1 text-slate-600 dark:text-slate-300 cursor-pointer"
-            defaultValue=""
+        <span className="relative">
+          <ToolbarButton
+            onAction={() => setPalette((p) => (p === 'highlight' ? null : 'highlight'))}
+            title="Highlight"
+            active={palette === 'highlight'}
           >
-            <option value="" disabled>Highlight</option>
-            {HIGHLIGHTS.map((c) => (
-              <option key={c.value} value={c.value}>{c.name}</option>
-            ))}
-          </select>
-        </label>
+            <Highlighter size={16} />
+          </ToolbarButton>
+          {palette === 'highlight' && <Swatches options={HIGHLIGHTS} command="hiliteColor" />}
+        </span>
 
         <Divider />
 
-        <ToolbarButton onClick={() => exec('removeFormat')} title="Clear formatting">
+        <ToolbarButton onAction={() => exec('removeFormat')} title="Clear formatting">
           <RemoveFormatting size={16} />
         </ToolbarButton>
       </div>
@@ -319,8 +451,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           role="textbox"
           aria-multiline="true"
           aria-label="Campaign content"
-          onInput={emit}
-          onBlur={emit}
+          onInput={() => { saveSelection(); emit(); }}
+          onKeyUp={saveSelection}
+          onMouseUp={saveSelection}
+          onBlur={() => { saveSelection(); emit(); }}
           onPaste={handlePaste}
           className="min-h-[260px] max-h-[520px] overflow-y-auto p-4 outline-none text-slate-800 dark:text-slate-100 leading-relaxed [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-purple-600 [&_a]:underline [&_p]:mb-3"
         />

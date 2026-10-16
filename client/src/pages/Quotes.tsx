@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Search, Plus, Download, RefreshCw, FileText, MessageSquare, Link, ExternalLink } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Badge, ProFeature } from '../components/ui';
-import { formatMoney, formatDate, roundMoney } from '../utils/formatters';
+import { formatMoney, formatDate, formatDateIso, roundMoney } from '../utils/formatters';
 import { toMajorString } from '../utils/money';
 import { Pagination } from '../components/Pagination';
 import { PreviewPanel } from '../components/PreviewPanel';
@@ -192,7 +192,8 @@ const Quotes: React.FC = () => {
           quote.quoteNumber || quote.localId.slice(0, 8),
           client?.name || quote.clientId,
           quote.description || '',
-          new Date(quote.issuedAt || quote.createdAt).toLocaleDateString(),
+          // ISO in CSV so spreadsheets parse it reliably regardless of locale.
+          formatDateIso(quote.issuedAt || quote.createdAt),
           quote.status,
           // Money is stored in MINOR units; a spreadsheet needs major units.
           toMajorString(quote.subtotal),
@@ -659,7 +660,7 @@ const Quotes: React.FC = () => {
                       {quote.description || '—'}
                     </div>
                     <div className="text-slate-400 text-xs mt-0.5">
-                      {quote.issuedAt ? `Issued ${new Date(quote.issuedAt).toLocaleDateString()}` : 'Not issued yet'}
+                      {quote.issuedAt ? `Issued ${formatDate(quote.issuedAt)}` : 'Not issued yet'}
                     </div>
                   </div>
                   

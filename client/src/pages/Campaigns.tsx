@@ -278,9 +278,36 @@ const Campaigns: React.FC = () => {
       }
 
       toast.success(
-        `Queued for ${data.queued} recipient${data.queued === 1 ? '' : 's'}. Sending starts within a minute.`,
-        { duration: 6000 }
+        `Queued for ${data.queued} recipient${data.queued === 1 ? '' : 's'}. Sending now…`,
+        { duration: 5000 }
       );
+
+      /*
+       * Kick the worker immediately rather than waiting for the next cron tick.
+       *
+       * The worker accepts a signed-in user and scopes itself to that user's
+       * organization, so this only ever sends the campaign just queued. Cron
+       * remains the retry backstop for anything this call does not finish.
+       *
+       * Deliberately not awaited for correctness — if it fails (offline, cold
+       * start, misconfiguration) the campaign is already safely QUEUED in
+       * Postgres and cron will pick it up. Failing to trigger must never lose
+       * the send.
+       */
+      supabase.functions
+        .invoke('campaign-worker', { body: {} })
+        .then(({ error: dispatchError }) => {
+          if (dispatchError) {
+            console.warn('Immediate dispatch failed; cron will retry.', dispatchError);
+          }
+        })
+        .catch((dispatchError) => {
+          console.warn('Immediate dispatch failed; cron will retry.', dispatchError);
+        })
+        .finally(() => {
+          // Refresh so the user sees SENDING/SENT rather than a stale QUEUED.
+          loadHistory();
+        });
 
       setSubject('');
       setPreviewText('');

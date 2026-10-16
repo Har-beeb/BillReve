@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams , useLocation } from 'react-router-dom';
 import { Search, Plus, Download, FileText, ReceiptText, MessageSquare, Link, ExternalLink } from 'lucide-react';
 import { Card, Badge, ProFeature, EmptyState } from '../components/ui';
-import { formatMoney, formatDate } from '../utils/formatters';
+import { formatMoney, formatDate, formatDateIso } from '../utils/formatters';
 import { toMajorString } from '../utils/money';
 import { Pagination } from '../components/Pagination';
 import { PreviewPanel } from '../components/PreviewPanel';
@@ -233,8 +233,11 @@ const Invoices: React.FC = () => {
         return [
           invoice.invoiceNumber || invoice.localId.slice(0, 8),
           client?.name || invoice.clientId,
-          new Date(invoice.issuedAt || invoice.createdAt).toLocaleDateString(),
-          invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A',
+          // ISO in CSV: spreadsheets parse and sort it reliably, whereas a
+          // localised date imports as the wrong day on a differently-configured
+          // machine.
+          formatDateIso(invoice.issuedAt || invoice.createdAt),
+          invoice.dueDate ? formatDateIso(invoice.dueDate) : 'N/A',
           invoice.status,
           // Money is stored in MINOR units; a spreadsheet needs major units.
           toMajorString(invoice.subtotal),
@@ -599,7 +602,7 @@ const Invoices: React.FC = () => {
                       {invoice.description || '—'}
                     </div>
                     <div className="text-slate-400 text-xs mt-0.5">
-                      {invoice.issuedAt ? `Issued ${new Date(invoice.issuedAt).toLocaleDateString()}` : 'Not issued yet'}
+                      {invoice.issuedAt ? `Issued ${formatDate(invoice.issuedAt)}` : 'Not issued yet'}
                     </div>
                   </div>
                   

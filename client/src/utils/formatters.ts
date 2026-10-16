@@ -97,15 +97,40 @@ export const calculatePercentage = (part: number, total: number): number => {
 };
 
 /**
- * Formats a date string to a localized short date (e.g., Oct 23, 2023).
- * @param dateString - The ISO date string to format.
- * @returns A formatted date string.
+ * Formats a date as an unambiguous short date (e.g. Oct 23, 2023).
+ *
+ * The spelled-out month is deliberate. A numeric date is genuinely ambiguous
+ * across locales — "09/10/2026" reads as 9 October to a British or Nigerian
+ * recipient and 10 September to an American one. On an invoice due date that is
+ * a month's difference in when someone believes they owe money, so numeric
+ * formats are not acceptable on anything a client sees.
+ *
+ * The locale is pinned for the same reason `formatMoney`'s is: a raw
+ * `toLocaleDateString()` renders differently depending on who opens the
+ * document. That also made the DocumentPreview snapshot fail in CI, where the
+ * runner resolved US format and the authoring machine did not.
  */
-export const formatDate = (dateString?: string | null): string => {
-  if (!dateString) return '';
+export const formatDate = (date?: string | number | Date | null): string => {
+  if (date === null || date === undefined || date === '') return '';
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '';
   return new Intl.DateTimeFormat(DEFAULT_LOCALE, {
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  }).format(new Date(dateString));
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }).format(parsed);
+};
+
+/**
+ * ISO calendar date (YYYY-MM-DD), for CSV exports.
+ *
+ * Spreadsheets parse ISO reliably and sort it correctly even as text. A
+ * localised date in a CSV either imports as the wrong day or not as a date at
+ * all, depending on the machine opening it.
+ */
+export const formatDateIso = (date?: string | number | Date | null): string => {
+  if (date === null || date === undefined || date === '') return '';
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toISOString().slice(0, 10);
 };

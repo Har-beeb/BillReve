@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSelection } from '../hooks/useSelection';
 import { useAppStore } from '../store/useAppStore';
 import { PreviewPanel } from '../components/PreviewPanel';
-import { formatMoney } from '../utils/formatters';
+import { formatMoney, formatDate } from '../utils/formatters';
 
 const Trash: React.FC = () => {
   const { isProUser } = useAppStore();
@@ -336,9 +336,9 @@ const Trash: React.FC = () => {
           
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {paginatedItems.map(item => {
-              if ('invoiceNumber' in item) return renderItem(item, 'INVOICE', item.invoiceNumber || 'Draft', new Date(item.deletedAt as string).toLocaleDateString());
-              if ('quoteNumber' in item) return renderItem(item, 'QUOTE', item.quoteNumber || 'Draft', new Date(item.deletedAt as string).toLocaleDateString());
-              return renderItem(item, 'CLIENT', (item as any).name || 'Unknown', new Date(item.deletedAt as string).toLocaleDateString());
+              if ('invoiceNumber' in item) return renderItem(item, 'INVOICE', item.invoiceNumber || 'Draft', formatDate(item.deletedAt as string));
+              if ('quoteNumber' in item) return renderItem(item, 'QUOTE', item.quoteNumber || 'Draft', formatDate(item.deletedAt as string));
+              return renderItem(item, 'CLIENT', (item as any).name || 'Unknown', formatDate(item.deletedAt as string));
             })}
           </div>
           

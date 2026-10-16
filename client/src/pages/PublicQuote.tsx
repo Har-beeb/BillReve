@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AlertCircle, CheckCircle2, Download, MessageSquare } from 'lucide-react';
 import { SEO } from '../components/SEO';
-import { formatMoney } from '../utils/formatters';
+import { formatMoney, formatDate } from '../utils/formatters';
 import { toMinor } from '../utils/money';
 import { db } from '../db/db';
 import { useAppStore } from '../store/useAppStore';
@@ -330,12 +330,12 @@ const PublicQuote: React.FC = () => {
              <div className="text-right flex flex-col items-end gap-4">
                <div>
                  <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${themeStyles.accentText}`}>Date Issued</p>
-                 <p className="font-medium text-slate-900">{new Date(quote.created_at).toLocaleDateString()}</p>
+                 <p className="font-medium text-slate-900">{formatDate(quote.created_at)}</p>
                </div>
                {(quote.expires_at || quote.expiresAt) && (
                  <div>
                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${themeStyles.accentText}`}>Valid Until</p>
-                   <p className="font-medium text-slate-900">{new Date(quote.expires_at || quote.expiresAt).toLocaleDateString()}</p>
+                   <p className="font-medium text-slate-900">{formatDate(quote.expires_at || quote.expiresAt)}</p>
                  </div>
                )}
              </div>

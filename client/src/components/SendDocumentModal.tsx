@@ -9,6 +9,7 @@ import { db } from '../db/db';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { syncEngine } from '../services/syncEngine';
+import { formatDate } from '../utils/formatters';
 
 interface SendDocumentModalProps {
   isOpen: boolean;
@@ -209,7 +210,7 @@ export const SendDocumentModal: React.FC<SendDocumentModalProps> = ({
           `}
           
           <p><strong>Amount:</strong> ${amount}</p>
-          ${(document as any).dueDate ? `<p><strong>Due Date:</strong> ${new Date((document as any).dueDate).toLocaleDateString()}</p>` : ''}
+          ${(document as any).dueDate ? `<p><strong>Due Date:</strong> ${formatDate((document as any).dueDate)}</p>` : ''}
           ${publicLink ? `<div style="margin-top: 24px;"><a href="${publicLink}" style="background-color: #8b5cf6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">${documentType === 'Invoice' ? (isProUser ? 'View & Pay Online' : 'View Invoice Online') : 'View Quote Online'}</a></div>` : ''}
         </div>
       `;

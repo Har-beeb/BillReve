@@ -1,5 +1,5 @@
 import { getThemeStyles } from '../utils/documentThemes';
-import { formatMoney } from '../utils/formatters';
+import { formatMoney, formatDate } from '../utils/formatters';
 import React from 'react';
 import { Eye } from 'lucide-react';
 import DOMPurify from 'dompurify';
@@ -125,12 +125,12 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
            <div className="text-right flex flex-col items-end gap-4">
              <div>
                <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${t.accentText}`}>Date Issued</p>
-               <p className="font-medium text-slate-900 text-sm">{new Date().toLocaleDateString()}</p>
+               <p className="font-medium text-slate-900 text-sm">{formatDate(new Date())}</p>
              </div>
              {type === 'INVOICE' && dueDate && (
                <div>
                  <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${t.accentText}`}>Due Date</p>
-                 <p className="font-medium text-slate-900 text-sm">{new Date(dueDate).toLocaleDateString()}</p>
+                 <p className="font-medium text-slate-900 text-sm">{formatDate(dueDate)}</p>
                </div>
              )}
            </div>

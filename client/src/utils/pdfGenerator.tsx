@@ -4,7 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 
 // @ts-ignore
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
-import { formatMoney } from './formatters';
+import { formatMoney, formatDate } from './formatters';
 
 import { getThemeInlineStyles } from './documentThemes';
 
@@ -55,11 +55,11 @@ const PDFTemplate = ({ document, client, profile, type }: { document: any, clien
           </div>
           <div className="text-right">
             <p className="text-sm font-medium uppercase mb-1" style={{ color: '#94a3b8' }}>Date Issued</p>
-            <p className="font-medium">{new Date(document.createdAt || document.created_at).toLocaleDateString()}</p>
+            <p className="font-medium">{formatDate(document.createdAt || document.created_at)}</p>
             {document.dueDate && (
               <>
                 <p className="text-sm font-medium uppercase mt-4 mb-1" style={{ color: '#94a3b8' }}>Due Date</p>
-                <p className="font-medium">{new Date(document.dueDate).toLocaleDateString()}</p>
+                <p className="font-medium">{formatDate(document.dueDate)}</p>
               </>
             )}
           </div>

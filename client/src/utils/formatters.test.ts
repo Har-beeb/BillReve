@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { roundMoney, calculatePercentage, formatMoney, formatCompactMinor } from './formatters';
+import { roundMoney, calculatePercentage, formatMoney, formatCompactMinor, formatDate, formatDateIso } from './formatters';
 
 // Mock the zustand store so it doesn't crash on import
 vi.mock('../store/useAppStore', () => ({
@@ -69,8 +69,68 @@ describe('formatters', () => {
     });
   });
 
-  describe('formatCompactMinor', () => {
-    // Regression: chart axis formatters read minor units directly, so 5,000.00
+  describe('formatDate', () => {
+    /*
+     * CI caught this one: the committed snapshot had "09/10/2026" from the
+     * authoring machine while the GitHub runner rendered "10/9/2026". Same day,
+     * two formats — and on an invoice due date a client cannot tell which, so
+     * the two readings are a month apart.
+     *
+     * The fix was to stop using raw toLocaleDateString anywhere a client sees a
+     * date, and to spell the month out. These tests exist so that cannot
+     * silently come back.
+     */
+    it('spells the month out, so the date cannot be misread', () => {
+      expect(formatDate('2026-10-09T00:00:00.000Z')).toBe('Oct 9, 2026');
+      // The ambiguous numeric forms must never appear.
+      expect(formatDate('2026-10-09T00:00:00.000Z')).not.toContain('/');
+    });
+
+    it('is deterministic regardless of the ambient system locale', () => {
+      // Two readings of the same instant must agree; a locale-dependent
+      // formatter is what made the snapshot flake.
+      const a = formatDate('2026-01-02T00:00:00.000Z');
+      const b = formatDate(new Date('2026-01-02T00:00:00.000Z'));
+      expect(a).toBe(b);
+      expect(a).toBe('Jan 2, 2026');
+    });
+
+    it('accepts strings, Dates and timestamps', () => {
+      const iso = '2026-03-15T00:00:00.000Z';
+      expect(formatDate(iso)).toBe('Mar 15, 2026');
+      expect(formatDate(new Date(iso))).toBe('Mar 15, 2026');
+      expect(formatDate(new Date(iso).getTime())).toBe('Mar 15, 2026');
+    });
+
+    it('returns an empty string for missing or unparseable input', () => {
+      expect(formatDate(undefined)).toBe('');
+      expect(formatDate(null)).toBe('');
+      expect(formatDate('')).toBe('');
+      // Previously this produced "Invalid Date" on the rendered document.
+      expect(formatDate('not a date')).toBe('');
+    });
+  });
+
+  describe('formatDateIso', () => {
+    it('emits YYYY-MM-DD for spreadsheet-safe CSV export', () => {
+      expect(formatDateIso('2026-10-09T13:45:00.000Z')).toBe('2026-10-09');
+      expect(formatDateIso(new Date('2026-01-02T00:00:00.000Z'))).toBe('2026-01-02');
+    });
+
+    it('sorts correctly as plain text, which is the point', () => {
+      const dates = ['2026-10-09', '2026-01-02', '2026-03-15'].map(
+        (d) => formatDateIso(`${d}T00:00:00.000Z`)
+      );
+      expect([...dates].sort()).toEqual(['2026-01-02', '2026-03-15', '2026-10-09']);
+    });
+
+    it('returns an empty string for missing or unparseable input', () => {
+      expect(formatDateIso(undefined)).toBe('');
+      expect(formatDateIso('nonsense')).toBe('');
+    });
+  });
+
+  describe('formatCompactMinor', () => {    // Regression: chart axis formatters read minor units directly, so 5,000.00
     // rendered as "500k" while the tooltip on the same chart showed the correct
     // figure via formatMoney — the two disagreed by 100x.
     it('converts to major units before abbreviating', () => {

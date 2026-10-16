@@ -6,7 +6,7 @@ import { PaystackButton } from 'react-paystack';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { CheckCircle2, AlertCircle, Download, X, Building2, CreditCard } from 'lucide-react';
 import { SEO } from '../components/SEO';
-import { formatMoney } from '../utils/formatters';
+import { formatMoney, formatDate } from '../utils/formatters';
 import { toGatewayAmount } from '../utils/money';
 import { db } from '../db/db';
 import { useAppStore } from '../store/useAppStore';
@@ -342,12 +342,12 @@ const PublicInvoice: React.FC = () => {
              <div className="text-right flex flex-col items-end gap-4">
                <div>
                  <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${themeStyles.accentText}`}>Date Issued</p>
-                 <p className="font-medium text-slate-900">{new Date(invoice.created_at).toLocaleDateString()}</p>
+                 <p className="font-medium text-slate-900">{formatDate(invoice.created_at)}</p>
                </div>
                {(invoice.due_date || invoice.dueDate) && (
                  <div>
                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${themeStyles.accentText}`}>Due Date</p>
-                   <p className="font-medium text-slate-900">{new Date(invoice.due_date || invoice.dueDate).toLocaleDateString()}</p>
+                   <p className="font-medium text-slate-900">{formatDate(invoice.due_date || invoice.dueDate)}</p>
                  </div>
                )}
              </div>
