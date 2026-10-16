@@ -44,6 +44,18 @@ serve(async (req) => {
         }
       }
 
+      // A deleted client leaves a null join, and a client with no address
+      // cannot be reminded at all. Without this guard the template below
+      // dereferences `invoice.client.name`, throws, and the exception
+      // propagates out of the loop — so ONE bad row silently kills the entire
+      // reminder run for every tenant that day.
+      if (!invoice.client?.email) {
+        console.warn(
+          `[email-cron] Skipping invoice ${invoice.local_id ?? invoice.id}: client missing or has no email.`
+        );
+        continue;
+      }
+
       // Calculate difference in days (negative = upcoming, 0 = due today, positive = overdue)
       const diffTime = today.getTime() - dueDate.getTime();
       const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));

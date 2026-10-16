@@ -55,17 +55,69 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // This endpoint can spend real money and touch every tenant's data, so it is
-  // service-role only — never reachable with an anon or user JWT.
-  const authHeader = req.headers.get('Authorization');
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-  }
-
   if (!RESEND_API_KEY) {
     return new Response(JSON.stringify({ error: 'RESEND_API_KEY is not configured' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  }
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
+  /*
+   * TWO CALLERS, DIFFERENT SCOPES.
+   *
+   * 1. The cron job presents CRON_SECRET and may drain every tenant's queue.
+   * 2. A signed-in user may trigger a send, but ONLY for their own
+   *    organization — `scopedOrgId` is applied to the campaigns query below.
+   *
+   * The second path exists because making this cron-only put three invisible
+   * prerequisites (function deployed, CRON_SECRET set, two Vault secrets
+   * created) between pressing Send and anything happening. When one was
+   * missing, campaigns sat on QUEUED with no feedback. Now the client triggers
+   * its own send immediately and cron is a retry backstop, so a cron
+   * misconfiguration delays retries instead of blocking sending outright.
+   */
+  const authHeader = req.headers.get('Authorization');
+  const isCron = Boolean(CRON_SECRET) && authHeader === `Bearer ${CRON_SECRET}`;
+  let scopedOrgId: string | null = null;
+
+  if (!isCron) {
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: member } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (!member?.organization_id) {
+      return new Response(JSON.stringify({ error: 'No organization' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    scopedOrgId = member.organization_id;
   }
 
   if (!campaignDomainIsSeparate()) {
@@ -77,20 +129,22 @@ serve(async (req) => {
     );
   }
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
   const summary: Record<string, unknown>[] = [];
 
   try {
-    const { data: campaigns, error: campaignErr } = await supabase
+    let campaignQuery = supabase
       .from('campaigns')
       .select('id, organization_id, subject, title, preview_text, content_html, recipient_count')
       .in('status', ['QUEUED', 'SENDING'])
       .order('queued_at', { ascending: true })
       .limit(5);
+
+    // A user-triggered run must never touch another tenant's campaigns.
+    if (scopedOrgId) {
+      campaignQuery = campaignQuery.eq('organization_id', scopedOrgId);
+    }
+
+    const { data: campaigns, error: campaignErr } = await campaignQuery;
 
     if (campaignErr) throw campaignErr;
 
