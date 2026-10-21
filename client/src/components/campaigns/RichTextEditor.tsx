@@ -92,6 +92,34 @@ const HIGHLIGHTS = [
 /** Commands that need inline styles rather than legacy presentational tags. */
 const NEEDS_CSS_STYLING = new Set(['foreColor', 'hiliteColor', 'backColor']);
 
+/**
+ * The formatting state at the caret, read from the browser.
+ *
+ * `queryCommandState` reports inline toggles (bold, italic, lists); block-level
+ * state needs `queryCommandValue('formatBlock')`. Both are read on every
+ * selection change so the toolbar reflects where the caret actually is — click
+ * into a heading and H2 lights up, move into plain text and it goes out.
+ */
+interface ToolbarState {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  unorderedList: boolean;
+  orderedList: boolean;
+  align: 'left' | 'center' | 'right';
+  block: string;
+}
+
+const EMPTY_TOOLBAR_STATE: ToolbarState = {
+  bold: false,
+  italic: false,
+  underline: false,
+  unorderedList: false,
+  orderedList: false,
+  align: 'left',
+  block: '',
+};
+
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   value,
   onChange,
@@ -105,6 +133,73 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isEmpty, setIsEmpty] = useState(!value);
   const [palette, setPalette] = useState<'text' | 'highlight' | null>(null);
+  const [toolbar, setToolbar] = useState<ToolbarState>(EMPTY_TOOLBAR_STATE);
+
+  /**
+   * Read the current formatting state. Wrapped in try/catch because
+   * queryCommandState throws in some engines when the selection is outside the
+   * document, which happens transiently during unmount.
+   */
+  const readToolbarState = useCallback((): ToolbarState => {
+    const el = editorRef.current;
+    if (!el) return EMPTY_TOOLBAR_STATE;
+
+    const sel = window.getSelection();
+    const inside = Boolean(
+      sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer)
+    );
+    if (!inside) return EMPTY_TOOLBAR_STATE;
+
+    try {
+      const state = (cmd: string) => {
+        try { return document.queryCommandState(cmd); } catch { return false; }
+      };
+      const value = (cmd: string) => {
+        try { return String(document.queryCommandValue(cmd) || '').toLowerCase(); } catch { return ''; }
+      };
+
+      const align: ToolbarState['align'] =
+        state('justifyCenter') ? 'center' : state('justifyRight') ? 'right' : 'left';
+
+      return {
+        bold: state('bold'),
+        italic: state('italic'),
+        underline: state('underline'),
+        unorderedList: state('insertUnorderedList'),
+        orderedList: state('insertOrderedList'),
+        align,
+        // Chrome returns the tag name, sometimes wrapped as '<h2>'.
+        block: value('formatBlock').replace(/[<>]/g, ''),
+      };
+    } catch {
+      return EMPTY_TOOLBAR_STATE;
+    }
+  }, []);
+
+  const refreshToolbar = useCallback(() => {
+    const next = readToolbarState();
+    setToolbar((prev) =>
+      prev.bold === next.bold &&
+      prev.italic === next.italic &&
+      prev.underline === next.underline &&
+      prev.unorderedList === next.unorderedList &&
+      prev.orderedList === next.orderedList &&
+      prev.align === next.align &&
+      prev.block === next.block
+        ? prev // same object, so React skips the re-render
+        : next
+    );
+  }, [readToolbarState]);
+
+  /**
+   * `selectionchange` fires on the document, not the element, so it must be
+   * filtered to selections inside this editor — otherwise the toolbar would
+   * light up while the user is selecting text in the subject field above.
+   */
+  useEffect(() => {
+    document.addEventListener('selectionchange', refreshToolbar);
+    return () => document.removeEventListener('selectionchange', refreshToolbar);
+  }, [refreshToolbar]);
 
   // Seed the DOM once. Never drive innerHTML from state on every render — that
   // destroys the caret mid-typing, the classic contentEditable-in-React bug.
@@ -190,7 +285,11 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
     saveSelection();
     emit();
-  }, [disabled, emit, restoreSelection, saveSelection]);
+    // Refresh immediately rather than waiting for the next selectionchange —
+    // that event does not reliably fire when a command is applied to a
+    // collapsed caret, which would leave the highlight stale.
+    refreshToolbar();
+  }, [disabled, emit, refreshToolbar, restoreSelection, saveSelection]);
 
   /**
    * Heading toggles rather than one-way sets, so clicking H2 on a heading
@@ -226,7 +325,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
     saveSelection();
     emit();
-  }, [disabled, emit, restoreSelection, saveSelection]);
+    refreshToolbar();
+  }, [disabled, emit, refreshToolbar, restoreSelection, saveSelection]);
 
   /**
    * Paste as sanitised HTML, falling back to escaped plain text.
@@ -330,7 +430,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       disabled={disabled}
       className={`p-2 rounded-lg transition-colors disabled:opacity-40 ${
         active
-          ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
+          ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-1 ring-purple-300 dark:ring-purple-700'
           : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300'
       }`}
     >
@@ -379,22 +479,22 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         aria-label="Formatting"
         className="flex items-center flex-wrap gap-0.5 p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 rounded-t-xl"
       >
-        <ToolbarButton onAction={() => exec('bold')} title="Bold"><Bold size={16} /></ToolbarButton>
-        <ToolbarButton onAction={() => exec('italic')} title="Italic"><Italic size={16} /></ToolbarButton>
-        <ToolbarButton onAction={() => exec('underline')} title="Underline"><Underline size={16} /></ToolbarButton>
-        <ToolbarButton onAction={() => toggleBlock('h2')} title="Heading"><Heading2 size={16} /></ToolbarButton>
-        <ToolbarButton onAction={() => toggleBlock('blockquote')} title="Quote"><Quote size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('bold')} title="Bold" active={toolbar.bold}><Bold size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('italic')} title="Italic" active={toolbar.italic}><Italic size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('underline')} title="Underline" active={toolbar.underline}><Underline size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => toggleBlock('h2')} title="Heading" active={toolbar.block === 'h2'}><Heading2 size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => toggleBlock('blockquote')} title="Quote" active={toolbar.block === 'blockquote'}><Quote size={16} /></ToolbarButton>
 
         <Divider />
 
-        <ToolbarButton onAction={() => exec('insertUnorderedList')} title="Bulleted list"><List size={16} /></ToolbarButton>
-        <ToolbarButton onAction={() => exec('insertOrderedList')} title="Numbered list"><ListOrdered size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('insertUnorderedList')} title="Bulleted list" active={toolbar.unorderedList}><List size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('insertOrderedList')} title="Numbered list" active={toolbar.orderedList}><ListOrdered size={16} /></ToolbarButton>
 
         <Divider />
 
-        <ToolbarButton onAction={() => exec('justifyLeft')} title="Align left"><AlignLeft size={16} /></ToolbarButton>
-        <ToolbarButton onAction={() => exec('justifyCenter')} title="Align centre"><AlignCenter size={16} /></ToolbarButton>
-        <ToolbarButton onAction={() => exec('justifyRight')} title="Align right"><AlignRight size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('justifyLeft')} title="Align left" active={toolbar.align === 'left'}><AlignLeft size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('justifyCenter')} title="Align centre" active={toolbar.align === 'center'}><AlignCenter size={16} /></ToolbarButton>
+        <ToolbarButton onAction={() => exec('justifyRight')} title="Align right" active={toolbar.align === 'right'}><AlignRight size={16} /></ToolbarButton>
 
         <Divider />
 

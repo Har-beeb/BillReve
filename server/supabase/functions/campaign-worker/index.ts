@@ -8,6 +8,8 @@ import {
   campaignDomainIsSeparate,
 } from "../_shared/email.ts";
 
+import { corsHeaders } from "../_shared/cors.ts";
+
 /**
  * Campaign send worker.
  *
@@ -28,6 +30,11 @@ import {
  *
  * Invoke from pg_cron on a short interval, and once immediately after queueing
  * so sends feel instant.
+ *
+ * CORS: headers come from `_shared/cors.ts`. This function originally omits
+ * `x-app-version` from its allow-list, which made the browser reject the
+ * client's immediate-dispatch call at the preflight stage. The cron caller never
+ * noticed because Postgres is not a browser and sends no preflight.
  */
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
@@ -38,11 +45,6 @@ const CRON_SECRET = Deno.env.get('CRON_SECRET');
 const BATCH_SIZE = 100;
 // How many batches to attempt per invocation, to stay inside the wall clock.
 const MAX_BATCHES_PER_RUN = 5;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface RecipientRow {
   id: string;
@@ -167,6 +169,11 @@ serve(async (req) => {
 
       let sentThisCampaign = 0;
       let failedThisCampaign = 0;
+      // Captured so the campaign row can show WHY it failed, not just that it
+      // did. The most common value is Resend rejecting the `from` address
+      // because the sending domain is not verified — which is otherwise
+      // invisible, since the client dispatch is fire-and-forget.
+      let lastError: string | null = null;
 
       for (let batchNo = 0; batchNo < MAX_BATCHES_PER_RUN; batchNo++) {
         const { data: recipients, error: recipientErr } = await supabase
@@ -232,6 +239,7 @@ serve(async (req) => {
           });
         } catch (networkErr) {
           // Leave the rows PENDING so the next run retries them.
+          lastError = `Network error reaching the email provider: ${String((networkErr as Error)?.message ?? networkErr)}`;
           console.error('[campaign-worker] network failure, batch left pending:', networkErr);
           break;
         }
@@ -240,6 +248,7 @@ serve(async (req) => {
 
         if (!res.ok) {
           const message = typeof body?.message === 'string' ? body.message : `HTTP ${res.status}`;
+          lastError = message;
           console.error('[campaign-worker] Resend rejected batch:', message);
 
           await supabase.from('campaign_recipients')
@@ -306,6 +315,9 @@ serve(async (req) => {
           status: finalStatus,
           sent_count: sentTotal ?? 0,
           failed_count: failedTotal ?? 0,
+          // Only record an error when the outcome is actually bad. A clean SENT
+          // must clear any stale error from a previous failed attempt.
+          last_error: (finalStatus === 'FAILED' || finalStatus === 'PARTIAL') ? lastError : null,
           sent_at: isDone ? new Date().toISOString() : null,
           updated_at: new Date().toISOString(),
         })

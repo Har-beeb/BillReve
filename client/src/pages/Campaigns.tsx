@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Mail, Send, Loader2, CheckSquare, Square, Search, ShieldCheck,
   AlertTriangle, XCircle, Sparkles, Monitor, Smartphone, History,
-  PenLine, MailX, Zap, Info, TrendingUp,
+  PenLine, MailX, Zap, Info, TrendingUp, RefreshCw,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
@@ -56,6 +56,7 @@ interface CampaignRow {
   unsubscribed_count: number;
   created_at: string;
   sent_at: string | null;
+  last_error: string | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -115,7 +116,7 @@ const Campaigns: React.FC = () => {
     setIsLoadingHistory(true);
     const { data, error } = await supabase
       .from('campaigns')
-      .select('id, subject, status, recipient_count, sent_count, failed_count, bounced_count, complained_count, unsubscribed_count, created_at, sent_at')
+      .select('id, subject, status, recipient_count, sent_count, failed_count, bounced_count, complained_count, unsubscribed_count, created_at, sent_at, last_error')
       .order('created_at', { ascending: false })
       .limit(50);
     setIsLoadingHistory(false);
@@ -324,6 +325,33 @@ const Campaigns: React.FC = () => {
     }
   };
 
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  const handleRetry = async (campaignId: string) => {
+    setRetryingId(campaignId);
+    try {
+      const { data, error } = await supabase.rpc('retry_campaign', { p_campaign_id: campaignId });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error(data?.message || 'Could not retry this campaign.');
+        return;
+      }
+      toast.success(data.message || 'Campaign requeued.');
+
+      // Same immediate-dispatch pattern as a fresh send: kick the worker now,
+      // fall back to cron. Not awaited for correctness — the campaign is QUEUED
+      // in Postgres, so a failed trigger only delays, never loses.
+      supabase.functions.invoke('campaign-worker', { body: {} })
+        .catch((e) => console.warn('Retry dispatch failed; cron will retry.', e))
+        .finally(() => { loadHistory(); loadQuota(); });
+    } catch (err: any) {
+      console.error('Retry failed:', err);
+      toast.error(err.message || 'Could not retry this campaign.');
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const remaining = quota?.remaining ?? 0;
   const overAllowance = mailableSelected.length > remaining;
   const canSend =
@@ -461,7 +489,7 @@ const Campaigns: React.FC = () => {
 
               {/* Proofread */}
               <Card className="p-5">
-                <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
                   <div>
                     <h2 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                       <ShieldCheck size={18} className="text-purple-600" />
@@ -474,7 +502,7 @@ const Campaigns: React.FC = () => {
                   <button
                     onClick={runProofread}
                     disabled={isChecking || !contentHtml.trim() || !subject.trim()}
-                    className="shrink-0 inline-flex items-center gap-2 text-sm font-medium border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 px-4 py-2.5 rounded-xl disabled:opacity-50 transition-colors"
+                    className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 text-sm font-medium border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 px-4 py-2.5 rounded-xl disabled:opacity-50 transition-colors"
                   >
                     {isChecking ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                     {isChecking ? 'Checking…' : 'Check campaign'}
@@ -727,7 +755,7 @@ const Campaigns: React.FC = () => {
           </div>
         ) : (
           /* History */
-          <Card className="p-5 mt-6">
+          <Card className="p-3 sm:p-5 mt-6">
             {isLoadingHistory ? (
               <div className="py-12 text-center text-slate-400">
                 <Loader2 size={24} className="animate-spin mx-auto mb-3" />
@@ -740,7 +768,65 @@ const Campaigns: React.FC = () => {
                 <p className="text-sm text-slate-500 mt-1">Your sent campaigns and their results will appear here.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div>
+                <div className="space-y-3 md:hidden">
+                  {history.map((c) => {
+                    const canRetry = c.status === 'FAILED' || c.status === 'PARTIAL';
+                    return (
+                      <article
+                        key={c.id}
+                        className="rounded-xl border border-slate-200 dark:border-slate-800 p-3.5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="min-w-0 font-medium text-slate-800 dark:text-slate-100 break-words">
+                            {c.subject}
+                          </h3>
+                          <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full ${STATUS_STYLES[c.status] || STATUS_STYLES.DRAFT}`}>
+                            {c.status}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-xs">
+                          <div>
+                            <span className="block text-slate-400 dark:text-slate-500">Sent</span>
+                            <span className="font-medium text-slate-700 dark:text-slate-300">{c.sent_count}/{c.recipient_count}</span>
+                          </div>
+                          <div>
+                            <span className="block text-slate-400 dark:text-slate-500">Date</span>
+                            <span className="font-medium text-slate-700 dark:text-slate-300">{formatDate(c.sent_at || c.created_at)}</span>
+                          </div>
+                          <div>
+                            <span className="block text-slate-400 dark:text-slate-500">Bounced</span>
+                            <span className="font-medium text-slate-700 dark:text-slate-300">{c.bounced_count}</span>
+                          </div>
+                          <div>
+                            <span className="block text-slate-400 dark:text-slate-500">Complaints / unsubs</span>
+                            <span className={`font-medium ${c.complained_count > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                              {c.complained_count} / {c.unsubscribed_count}
+                            </span>
+                          </div>
+                        </div>
+                        {c.last_error && (
+                          <div className="flex gap-2 mt-3 text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/40 rounded-lg p-2.5">
+                            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                            <span><span className="font-semibold">Why it failed:</span> {c.last_error}</span>
+                          </div>
+                        )}
+                        {canRetry && (
+                          <button
+                            onClick={() => handleRetry(c.id)}
+                            disabled={retryingId === c.id}
+                            className="w-full mt-3 inline-flex items-center justify-center gap-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/30 px-2.5 py-2 rounded-lg disabled:opacity-50 transition-colors"
+                          >
+                            {retryingId === c.id ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                            Retry failed
+                          </button>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+
+                <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-800">
@@ -750,12 +836,16 @@ const Campaigns: React.FC = () => {
                       <th className="py-3 pr-4 font-semibold text-right">Bounced</th>
                       <th className="py-3 pr-4 font-semibold text-right">Complaints</th>
                       <th className="py-3 pr-4 font-semibold text-right">Unsubs</th>
-                      <th className="py-3 font-semibold">Date</th>
+                      <th className="py-3 pr-4 font-semibold">Date</th>
+                      <th className="py-3 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {history.map((c) => (
-                      <tr key={c.id} className="border-b border-slate-100 dark:border-slate-800/60">
+                    {history.map((c) => {
+                      const canRetry = c.status === 'FAILED' || c.status === 'PARTIAL';
+                      return (
+                      <React.Fragment key={c.id}>
+                      <tr className={`border-b border-slate-100 dark:border-slate-800/60 ${c.last_error ? 'border-b-0' : ''}`}>
                         <td className="py-3 pr-4 font-medium text-slate-800 dark:text-slate-100 max-w-[240px] truncate">
                           {c.subject}
                         </td>
@@ -772,13 +862,40 @@ const Campaigns: React.FC = () => {
                           {c.complained_count}
                         </td>
                         <td className="py-3 pr-4 text-right text-slate-700 dark:text-slate-300">{c.unsubscribed_count}</td>
-                        <td className="py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        <td className="py-3 pr-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           {formatDate(c.sent_at || c.created_at)}
                         </td>
+                        <td className="py-3 text-right">
+                          {canRetry ? (
+                            <button
+                              onClick={() => handleRetry(c.id)}
+                              disabled={retryingId === c.id}
+                              className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 px-2.5 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+                            >
+                              {retryingId === c.id ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                              Retry failed
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                          )}
+                        </td>
                       </tr>
-                    ))}
+                      {c.last_error && (
+                        <tr className="border-b border-slate-100 dark:border-slate-800/60">
+                          <td colSpan={8} className="pb-3 px-1">
+                            <div className="flex gap-2 text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/40 rounded-lg p-2.5">
+                              <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                              <span><span className="font-semibold">Why it failed:</span> {c.last_error}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
+                </div>
                 <p className="text-xs text-slate-400 mt-4">
                   A complaint rate above 0.3% puts your delivery at risk. If complaints appear here, send less
                   often and only to clients who expect to hear from you.

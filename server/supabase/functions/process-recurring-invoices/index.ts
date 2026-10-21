@@ -2,14 +2,13 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { buildFrom, wrapEmailHtml } from "../_shared/email.ts";
 import { toMajorString } from "../_shared/money.ts";
+// CORS headers live in one place. This function previously omitted
+// `x-app-version`, which the client sends on every request, so any browser call
+// was rejected at the preflight stage.
+import { corsHeaders } from "../_shared/cors.ts";
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://billreve.app';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 /**
  * Email a generated recurring invoice to the client.
@@ -86,14 +85,22 @@ serve(async (req) => {
     // 1. Fetch all ACTIVE recurring schedules that are due today or earlier
     const today = new Date().toISOString().split('T')[0];
     
+    // NO embedded joins here.
+    //
+    // Migration 20261009104000 turned the template/client foreign keys into
+    // COMPOSITE keys on (organization_id, template_invoice_id) and
+    // (organization_id, client_id). PostgREST cannot resolve a single-column
+    // embed hint like `invoices!template_invoice_id(*)` against a composite FK,
+    // and `organization_id` now participates in three relationships, so
+    // `organizations!organization_id` is ambiguous. The old embedded select
+    // therefore threw PGRST200 on EVERY run — which is why no recurring invoice
+    // was ever generated or emailed.
+    //
+    // Fetching each related row explicitly by (organization_id, local_id) is
+    // deterministic and does not depend on PostgREST's relationship inference.
     const { data: schedules, error: scheduleError } = await supabaseClient
       .from('recurring_schedules')
-      .select(`
-        *,
-        invoices!template_invoice_id(*),
-        clients!client_id(name, email),
-        organizations!organization_id(name)
-      `)
+      .select('*')
       .eq('status', 'ACTIVE')
       .lte('next_run_date', today);
 
@@ -114,10 +121,47 @@ serve(async (req) => {
     // 2. Process each schedule
     for (const schedule of schedules) {
       try {
-        const template = schedule.invoices;
+        // template_invoice_id and client_id hold the frontend LOCAL ids, keyed
+        // per organization — fetch them explicitly rather than via an embed.
+        const { data: template, error: templateError } = await supabaseClient
+          .from('invoices')
+          .select('*')
+          .eq('organization_id', schedule.organization_id)
+          .eq('local_id', schedule.template_invoice_id)
+          .maybeSingle();
+
+        if (templateError) throw templateError;
         if (!template) {
-          throw new Error(`Template invoice not found for schedule ${schedule.id}`);
+          throw new Error(`Template invoice ${schedule.template_invoice_id} not found for schedule ${schedule.id}`);
         }
+        if (template.deleted_at) {
+          // The merchant deleted the template. Pause the schedule rather than
+          // erroring on it forever, and tell them why.
+          await supabaseClient.from('recurring_schedules')
+            .update({ status: 'PAUSED', updated_at: new Date().toISOString() })
+            .eq('id', schedule.id);
+          await supabaseClient.from('notifications').insert({
+            organization_id: schedule.organization_id,
+            title: 'Recurring Invoice Paused',
+            message: 'A recurring schedule was paused because its template invoice was deleted.',
+            type: 'INVOICE_DRAFT',
+            entity_id: schedule.local_id,
+          });
+          continue;
+        }
+
+        const { data: clientRow } = await supabaseClient
+          .from('clients')
+          .select('name, email')
+          .eq('organization_id', schedule.organization_id)
+          .eq('local_id', schedule.client_id)
+          .maybeSingle();
+
+        const { data: orgRow } = await supabaseClient
+          .from('organizations')
+          .select('name')
+          .eq('id', schedule.organization_id)
+          .maybeSingle();
 
         // Generate new local_id (UUID v4)
         const newLocalId = crypto.randomUUID();
@@ -170,9 +214,8 @@ serve(async (req) => {
         // recurring invoices were generated silently and never reached the
         // client — while the UI and docs promised they would be emailed
         // automatically. Promote to SENT only if delivery succeeded.
+        // (clientRow and orgRow were fetched explicitly above.)
         // ---------------------------------------------------------------
-        const clientRow = (schedule as any).clients;
-        const orgRow = (schedule as any).organizations;
         let delivered = false;
 
         if (clientRow?.email) {

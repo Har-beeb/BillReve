@@ -465,6 +465,10 @@ BillReve is designed to feel **premium and frictionless**:
 | **Dead Webhook Instructions** | `Payments.tsx` told merchants to paste `https://api.billreve.app/...`, a host that does not exist. Now points at the real Edge Function URLs |
 | **Soft 404 / Not Indexed** | No catch-all route plus a `/(.*) → /` rewrite meant unknown URLs returned HTTP 200 with an empty body. Added a real 404 page with `noindex`, a canonical link and static fallback content |
 | **RevenueChat Unable to Function** | `get_ai_context` returned a client *count* with no client list, no quotes and no ids, while the prompt told the model to list them and verify a client before creating. Context enriched and the prompt aligned |
+| **Reminders Never Scheduled** | `email-cron` existed but no cron job ever invoked it, so no payment reminder or Pro-expiry sweep had ever run. Now scheduled daily at 07:00 UTC |
+| **Lapsed Pro Kept Online Checkout** | `get_public_profile` returned raw `is_pro` without checking `pro_expires_at`; public invoices of expired merchants still offered gateway payment. Now resolved server-side |
+| **Ambiguous Dates on Documents** | Raw `toLocaleDateString()` rendered 9 Oct as `09/10` or `10/9` depending on the viewer. All client-facing dates now spell the month out |
+| **CORS Drift Between Functions** | Two functions omitted `x-app-version` from their allow-list, blocking browser calls. CORS now lives in `_shared/cors.ts` |
 | **Campaigns With No Consent Model** | Campaigns shipped with no unsubscribe link, no suppression list and no bounce handling, and sent every recipient in one call past Resend's 100-message batch cap |
 
 ### Pending Tech Debt 🚧
@@ -474,6 +478,7 @@ BillReve is designed to feel **premium and frictionless**:
 | **Automated Pro checkout disabled** | High | `Upgrade.tsx` is locked to manual bank transfer pending payment-processor business verification. Blocks all self-serve revenue, including campaign credit packs |
 | **Campaigns share the transactional domain** | High | Until `CAMPAIGN_SENDER_ADDRESS` points at a verified subdomain, campaign complaints degrade invoice deliverability. DNS work, not code |
 | **`schema.sql` is stale** | Medium | Predates the multi-tenant migration. Re-dump so the committed schema matches production |
+| **Webhook URLs on billreve.app** | Low | Merchants are now shown `https://billreve.app/api/v1/webhooks/{gateway}`, proxied by Vercel. Verify a real Paystack event reaches the function through the rewrite before announcing it |
 | **Flutterwave webhook trusts its payload** | Medium | Should re-verify via `GET /v3/transactions/:id/verify`, which needs a Flutterwave API secret stored separately from the verif-hash |
 | **Amazon SES for campaigns** | Low | ~4× cheaper than Resend ($0.10/1,000). Deliberately deferred: SES enforces complaint rates above 0.1% and bounce above 5%, which is *more* dangerous at low volume where a single complaint blows the ratio. Revisit past a few hundred thousand emails/month. `campaign-worker` is the only file that would change |
 | **~250 `any` usages** | Low | `no-explicit-any` is a warning so CI stays useful; worth paying down incrementally |

@@ -818,7 +818,12 @@ CREATE OR REPLACE FUNCTION "public"."get_public_profile"("p_id" "uuid") RETURNS 
            o.bank_accounts,
            o.paystack_public_key,
            o.flutterwave_public_key,
-           COALESCE(o.is_pro, false)
+           -- Resolved, not raw. An expired subscription is not Pro, regardless
+           -- of what the boolean still says.
+           (
+               COALESCE(o.is_pro, false)
+               AND (o.pro_expires_at IS NULL OR o.pro_expires_at > now())
+           ) AS is_pro
       FROM public.organizations o
      WHERE o.id = p_id
      LIMIT 1;
@@ -1402,6 +1407,65 @@ $$;
 ALTER FUNCTION "public"."record_payment_event"("p_org_id" "uuid", "p_invoice_local_id" "text", "p_gateway" "text", "p_reference" "text", "p_amount_minor" bigint, "p_currency" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+    v_org_id   uuid;
+    v_status   text;
+    v_requeued integer;
+BEGIN
+    SELECT organization_id, status
+      INTO v_org_id, v_status
+      FROM public.campaigns
+     WHERE id = p_campaign_id;
+
+    IF v_org_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'message', 'Campaign not found.');
+    END IF;
+
+    -- Authorisation: the caller must belong to the campaign's organization.
+    -- SECURITY DEFINER bypasses RLS, so this check is doing the work RLS would.
+    IF NOT public.is_member_of(v_org_id) THEN
+        RETURN jsonb_build_object('success', false, 'message', 'Not authorised.');
+    END IF;
+
+    IF v_status NOT IN ('FAILED', 'PARTIAL') THEN
+        RETURN jsonb_build_object('success', false,
+            'message', format('Only failed or partially-sent campaigns can be retried (this one is %s).', v_status));
+    END IF;
+
+    UPDATE public.campaign_recipients
+       SET status = 'PENDING',
+           error = NULL
+     WHERE campaign_id = p_campaign_id
+       AND status = 'FAILED';
+
+    GET DIAGNOSTICS v_requeued = ROW_COUNT;
+
+    IF v_requeued = 0 THEN
+        RETURN jsonb_build_object('success', false,
+            'message', 'There are no failed recipients to retry. Anyone not reached either unsubscribed or had a bad address.');
+    END IF;
+
+    UPDATE public.campaigns
+       SET status = 'QUEUED',
+           last_error = NULL,
+           queued_at = now(),
+           updated_at = now()
+     WHERE id = p_campaign_id;
+
+    RETURN jsonb_build_object('success', true,
+        'requeued', v_requeued,
+        'message', format('Requeued %s recipient(s). Sending will resume shortly.', v_requeued));
+END;
+$$;
+
+
+ALTER FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -1443,6 +1507,30 @@ $$;
 
 
 ALTER FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."sweep_expired_pro_subscriptions"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+    v_updated integer;
+BEGIN
+    UPDATE public.organizations
+       SET is_pro = false,
+           pro_expires_at = NULL,
+           updated_at = now()
+     WHERE is_pro = true
+       AND pro_expires_at IS NOT NULL
+       AND pro_expires_at <= now();
+
+    GET DIAGNOSTICS v_updated = ROW_COUNT;
+    RETURN v_updated;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."sweep_expired_pro_subscriptions"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."unsubscribe_by_token"("p_token" "text") RETURNS "jsonb"
@@ -1634,6 +1722,7 @@ CREATE TABLE IF NOT EXISTS "public"."campaigns" (
     "queued_at" timestamp with time zone,
     "sent_at" timestamp with time zone,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "last_error" "text",
     CONSTRAINT "campaigns_status_check" CHECK (("status" = ANY (ARRAY['DRAFT'::"text", 'QUEUED'::"text", 'SENDING'::"text", 'SENT'::"text", 'PARTIAL'::"text", 'FAILED'::"text", 'BLOCKED'::"text"])))
 );
 
@@ -2677,6 +2766,16 @@ GRANT ALL ON FUNCTION "public"."record_email_suppression"("p_org_id" "uuid", "p_
 
 REVOKE ALL ON FUNCTION "public"."record_payment_event"("p_org_id" "uuid", "p_invoice_local_id" "text", "p_gateway" "text", "p_reference" "text", "p_amount_minor" bigint, "p_currency" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."record_payment_event"("p_org_id" "uuid", "p_invoice_local_id" "text", "p_gateway" "text", "p_reference" "text", "p_amount_minor" bigint, "p_currency" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."sweep_expired_pro_subscriptions"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."sweep_expired_pro_subscriptions"() TO "service_role";
 
 
 

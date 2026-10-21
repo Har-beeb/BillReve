@@ -21,6 +21,14 @@
   ],
   "rewrites": [
     {
+      "source": "/api/v1/webhooks/paystack",
+      "destination": "https://tftgkvovzntfkymvbwdz.supabase.co/functions/v1/paystack-webhook"
+    },
+    {
+      "source": "/api/v1/webhooks/flutterwave",
+      "destination": "https://tftgkvovzntfkymvbwdz.supabase.co/functions/v1/flutterwave-webhook"
+    },
+    {
       "source": "/(.*)",
       "destination": "/"
     }

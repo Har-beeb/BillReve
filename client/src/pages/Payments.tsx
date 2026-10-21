@@ -34,8 +34,17 @@ const Payments: React.FC = () => {
     // no such API host, so every merchant who followed these instructions
     // configured a dead endpoint in their gateway dashboard and their invoices
     // never auto-marked as PAID.
-    const functionsBase = `${import.meta.env.VITE_SUPABASE_URL ?? ''}/functions/v1`;
-    setWebhookUrl(functionsBase);
+    //
+    // The URL shown is BillReve's own domain. `vercel.json` rewrites
+    // /api/v1/webhooks/* to the matching Supabase Edge Function, proxying the
+    // raw body and headers unchanged so gateway signatures still verify.
+    // This keeps the infrastructure provider out of a URL merchants paste into
+    // a third-party dashboard, and means the backend can move without every
+    // merchant having to reconfigure Paystack and Flutterwave.
+    //
+    // The direct Supabase URLs keep working, so merchants who already pasted
+    // one do not need to change anything.
+    setWebhookUrl('https://billreve.app/api/v1/webhooks');
   }, [businessProfile.paystackPublicKey, businessProfile.flutterwavePublicKey]);
 
   useEffect(() => {
@@ -327,7 +336,7 @@ const Payments: React.FC = () => {
               To automatically mark invoices as PAID, copy and paste this Webhook URL into your Paystack Dashboard:
               <br />
               <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs break-all">
-                {webhookUrl}/paystack-webhook
+                {webhookUrl}/paystack
               </code>
             </InstructionNote>
           </div>
@@ -373,7 +382,7 @@ const Payments: React.FC = () => {
               To automatically mark invoices as PAID, copy and paste this Webhook URL into your Flutterwave Dashboard:
               <br />
               <code className="block mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded border text-purple-600 select-all font-mono text-xs break-all">
-                {webhookUrl}/flutterwave-webhook
+                {webhookUrl}/flutterwave
               </code>
             </InstructionNote>
           </div>
