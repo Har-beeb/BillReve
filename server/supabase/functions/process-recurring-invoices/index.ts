@@ -102,6 +102,10 @@ serve(async (req) => {
       .from('recurring_schedules')
       .select('*')
       .eq('status', 'ACTIVE')
+      // A soft-deleted schedule may retain its old status if it was deleted
+      // before this guard existed, so status alone is not a safe eligibility
+      // check for a background job.
+      .is('deleted_at', null)
       .lte('next_run_date', today);
 
     if (scheduleError) {

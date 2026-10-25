@@ -76,7 +76,14 @@ export default function Recurring() {
       setDeleteModalOpen(false);
       return;
     }
-    const deleted = { ...schedule, deletedAt: new Date().toISOString() };
+    // Soft-delete the schedule locally so it disappears from the active list,
+    // and pause it as well so the recurring worker cannot process it while the
+    // deletion is travelling through the offline sync queue.
+    const deleted = {
+      ...schedule,
+      status: 'PAUSED' as const,
+      deletedAt: new Date().toISOString(),
+    };
     await db.recurringSchedules.put(deleted);
     await db.syncQueue.add({
       id: uuidv4(),
