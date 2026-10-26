@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Star, Check, Zap, Palette, FileSpreadsheet, Bot, Send } from 'lucide-react';
-// import { PaystackButton } from 'react-paystack';
+import { PaystackButton } from 'react-paystack';
 import { useAppStore } from '../store/useAppStore';
 import { FEATURE_FLAGS } from '../config/featureFlags';
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 const Upgrade: React.FC = () => {
   const { user, isProUser } = useAppStore();
   const [isPending, setIsPending] = useState(false);
+  const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
   
   const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'transfer'>(FEATURE_FLAGS.PAYSTACK_ENABLED ? 'paystack' : 'transfer');
   
@@ -14,8 +17,10 @@ const Upgrade: React.FC = () => {
   const ORIGINAL_PRICE = 5000;
 
   
-  const SAAS_PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_YOUR_SAAS_MASTER_KEY';
+  const SAAS_PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '';
   const paystackPlan = import.meta.env.VITE_PAYSTACK_PRO_PLAN_ID;
+  const paystackConfigured =
+    Boolean(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY) && Boolean(paystackPlan);
 
   const componentProps: any = {
     email: user?.email || 'user@example.com',
@@ -32,7 +37,10 @@ const Upgrade: React.FC = () => {
     text: "Upgrade to Pro Now",
     onSuccess: (reference: any) => {
       console.log('Subscription Payment Success:', reference);
-      // setIsSuccess(true);
+      // The webhook remains the source of truth for Pro activation. This
+      // state only explains that Paystack has returned successfully while the
+      // signed webhook is being processed.
+      setIsPending(true);
     },
     onClose: () => {
       console.log('Payment closed');
@@ -42,6 +50,20 @@ const Upgrade: React.FC = () => {
   if (paystackPlan) {
     componentProps.plan = paystackPlan;
   }
+
+  const submitManualTransfer = async () => {
+    setIsSubmittingTransfer(true);
+    try {
+      const { error } = await supabase.rpc('submit_manual_upgrade_request');
+      if (error) throw error;
+      setIsPending(true);
+    } catch (error) {
+      console.error('Could not submit manual upgrade request:', error);
+      toast.error('Could not submit your transfer for review. Please try again.');
+    } finally {
+      setIsSubmittingTransfer(false);
+    }
+  };
 
   const features = [
     { icon: <Bot className="text-purple-400 w-6 h-6" />, title: "AI Document Drafting", desc: "Generate professional quotes and invoices instantly with AI." },
@@ -66,10 +88,10 @@ const Upgrade: React.FC = () => {
             </div>
             <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-3">Verification Pending</h2>
             <p className="text-lg text-slate-600 dark:text-slate-400 mb-4">
-              Thank you for upgrading! We are currently verifying your bank transfer.
+              Thank you for upgrading! We are verifying your payment.
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-500 mb-8">
-              Your account will be upgraded to Pro manually within 24 hours. For faster verification, please send your payment receipt to <strong>support@billreve.app</strong>.
+              Online payments are verified automatically. Manual bank transfers are reviewed within 24 hours. If Pro is not active after that, please contact <strong>support@billreve.app</strong>.
             </p>
             <button 
               onClick={() => window.location.href = '/'}
@@ -155,7 +177,7 @@ const Upgrade: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Payment Method - Temporarily locked to transfer for Hackathon */}
+                {/* Keep bank transfer available while the live Paystack path is being verified. */}
                 {FEATURE_FLAGS.PAYSTACK_ENABLED && !isProUser && (
                   <div className="w-full flex items-center justify-between p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
                     <button 
@@ -190,13 +212,17 @@ const Upgrade: React.FC = () => {
                   </button>
                 ) : (
                   <div className="w-full">
-                    {FEATURE_FLAGS.PAYSTACK_ENABLED && paymentMethod === 'paystack' ? (
-                      <button 
-                        disabled
-                        className="w-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold py-4 px-6 rounded-xl cursor-not-allowed text-lg"
-                      >
-                        Initializing Gateway...
-                      </button>
+                    {FEATURE_FLAGS.PAYSTACK_ENABLED && paymentMethod === 'paystack' && paystackConfigured ? (
+                      <PaystackButton
+                        {...componentProps}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all active:scale-[0.98] text-lg"
+                      />
+                    ) : FEATURE_FLAGS.PAYSTACK_ENABLED && paymentMethod === 'paystack' ? (
+                      <div className="w-full p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl">
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-300 text-center">
+                          Online payment is not configured yet. Please use Manual Transfer.
+                        </p>
+                      </div>
                     ) : (
                     <div className="w-full text-left">
                       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
@@ -225,17 +251,18 @@ const Upgrade: React.FC = () => {
                         </div>
                       </div>
                       <button 
-                        onClick={() => setIsPending(true)}
+                        onClick={submitManualTransfer}
+                        disabled={isSubmittingTransfer}
                         className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 px-6 rounded-xl shadow-lg transition-all active:scale-[0.98] text-lg"
                       >
-                        I have made the transfer
+                        {isSubmittingTransfer ? 'Submitting…' : 'I have made the transfer'}
                       </button>
                     </div>
                     )}
                   </div>
                 )}
                 
-                {FEATURE_FLAGS.PAYSTACK_ENABLED && paymentMethod === 'paystack' && !isProUser && (
+                {FEATURE_FLAGS.PAYSTACK_ENABLED && paymentMethod === 'paystack' && paystackConfigured && !isProUser && (
                   <p className="text-xs text-slate-400 mt-6 font-medium text-center">
                     Secure payment processing by Paystack
                   </p>

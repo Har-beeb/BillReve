@@ -3,8 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createHmac } from "node:crypto";
 import { Buffer } from "node:buffer";
 
-// The master secret key for the SaaS owner (You)
-const saasSecretKey = Deno.env.get('SAAS_PAYSTACK_SECRET_KEY') as string;
+// The master secret key for the SaaS owner. It must remain an Edge Function
+// secret; only the matching public key is exposed in the client build.
+const saasSecretKey = Deno.env.get('SAAS_PAYSTACK_SECRET_KEY');
 
 serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -20,6 +21,9 @@ serve(async (req) => {
     const signature = req.headers.get('x-paystack-signature');
     if (!signature) {
       throw new Error('No signature');
+    }
+    if (!saasSecretKey) {
+      throw new Error('SAAS_PAYSTACK_SECRET_KEY is not configured');
     }
     
     // 1. Verify SaaS Paystack Signature BEFORE anything else
@@ -73,6 +77,14 @@ serve(async (req) => {
       userId = userId || data.metadata?.userId || data.metadata?.user_id || '';
       type = type || data.metadata?.type || '';
 
+      const reference = data.reference ?? data.id;
+      const customerCode = data.customer?.customer_code ?? data.customer_code ?? null;
+      const subscriptionCode =
+        data.subscription_code ??
+        data.subscription?.subscription_code ??
+        null;
+      const planCode = data.plan?.plan_code ?? data.plan_code ?? null;
+
       // -------------------------------------------------------------------
       // Campaign email credit pack: ₦2,000 for 1,000 extra campaign emails.
       //
@@ -96,7 +108,6 @@ serve(async (req) => {
 
         // Pay for more than one pack and you get more than one pack.
         const packs = Math.floor(amount / PACK_PRICE_KOBO);
-        const reference = data.reference ?? data.id;
         if (!reference) {
           throw new Error('Paystack payload has no reference — cannot guarantee idempotency');
         }
@@ -123,40 +134,89 @@ serve(async (req) => {
       }
 
       // If the charge was for a subscription
-      if (userId && type === 'saas_subscription') {
-        const { data: member } = await supabase.from('organization_members').select('organization_id').eq('user_id', userId).limit(1).single();
-        if (!member) throw new Error('User has no organization');
-        const orgId = member.organization_id;
+      if (type === 'saas_subscription' || subscriptionCode || customerCode) {
+        let orgId: string | null = null;
+        if (userId) {
+          const { data: member } = await supabase
+            .from('organization_members')
+            .select('organization_id')
+            .eq('user_id', userId)
+            .limit(1)
+            .maybeSingle();
+          orgId = member?.organization_id ?? null;
+        }
+
+        // Recurring charges are allowed to omit the original custom
+        // metadata, so resolve the organization from the stored Paystack
+        // subscription/customer identifiers when userId is unavailable.
+        if (!orgId && subscriptionCode) {
+          const { data: subscription } = await supabase
+            .from('saas_subscriptions')
+            .select('organization_id')
+            .eq('provider', 'paystack')
+            .eq('subscription_code', subscriptionCode)
+            .maybeSingle();
+          orgId = subscription?.organization_id ?? null;
+        }
+        if (!orgId && customerCode) {
+          const { data: subscription } = await supabase
+            .from('saas_subscriptions')
+            .select('organization_id')
+            .eq('provider', 'paystack')
+            .eq('customer_code', customerCode)
+            .maybeSingle();
+          orgId = subscription?.organization_id ?? null;
+        }
+        if (!orgId) throw new Error('Could not resolve organization for SaaS subscription payment');
+
         const amount = data.amount; // in kobo
         
-        // 3. Verify amount is correct for the Pro plan (3500 NGN)
-        if (amount < 350000) {
-            throw new Error(`Amount too low for PRO plan: ${amount} kobo`);
+        // 3. Validate the server-side plan price and currency. The browser
+        // amount is only a checkout hint and must never grant Pro by itself.
+        if (amount < 350000 || String(data.currency || '').toUpperCase() !== 'NGN') {
+            throw new Error(`Invalid amount or currency for PRO plan: ${amount} ${data.currency || '(missing)'}`);
         }
 
-        // Update the user's profile to is_pro = true and add 30 days
-        const { error } = await supabase
-          .from('organizations')
-          .update({ 
-            is_pro: true,
-            pro_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-          })
-          .eq('id', orgId);
-
-        if (error) {
-          throw new Error(`Failed to update user profile: ${error.message}`);
+        if (!reference) {
+          throw new Error('Paystack payload has no reference — cannot guarantee idempotency');
         }
-        
-        console.log(`Organization ${orgId} successfully upgraded to PRO.`);
 
-        // Fetch user email for the welcome email
-        const { data: profile } = await supabase
-          .from('organizations')
-          .select('email, name')
-          .eq('id', orgId)
-          .single();
+        // The RPC inserts the reference under a unique constraint and extends
+        // from the later of the current expiry or now. This makes webhook
+        // retries harmless and preserves paid time on early renewals.
+        const { data: entitlement, error: entitlementError } = await supabase.rpc(
+          'record_saas_subscription_payment',
+          {
+            p_organization_id: orgId,
+            p_provider_reference: String(reference),
+            p_amount_minor: amount,
+            p_currency: String(data.currency).toUpperCase(),
+            p_event_type: event.event,
+            p_customer_code: customerCode,
+            p_subscription_code: subscriptionCode,
+            p_plan_code: planCode,
+            p_period_days: 30,
+          }
+        );
 
-        if (profile?.email) {
+        if (entitlementError) {
+          throw new Error(`Failed to record subscription payment: ${entitlementError.message}`);
+        }
+
+        if (entitlement?.duplicate) {
+          console.log(`Paystack subscription webhook replay ignored (ref ${reference}).`);
+        } else {
+          console.log(`Organization ${orgId} successfully upgraded to PRO until ${entitlement?.expires_at}.`);
+
+          // Send the welcome email only for a newly recorded payment. A
+          // retried webhook must not send duplicate customer mail.
+          const { data: profile } = await supabase
+            .from('organizations')
+            .select('email, name')
+            .eq('id', orgId)
+            .single();
+
+          if (profile?.email) {
           const resendApiKey = Deno.env.get('RESEND_API_KEY');
           if (resendApiKey) {
             const emailResponse = await fetch('https://api.resend.com/emails', {
@@ -194,6 +254,7 @@ serve(async (req) => {
           } else {
             console.warn('RESEND_API_KEY is not set in Edge Function secrets, skipping email.');
           }
+          }
         }
       } else {
         throw new Error(`Ignored charge.success: Missing orgId or type is not saas_subscription (Found type: ${type})`);
@@ -210,13 +271,29 @@ serve(async (req) => {
           if (field.variable_name === 'type') type = field.value;
         }
       }
-      
-      if (userId && type === 'saas_subscription') {
-        const { data: member } = await supabase.from('organization_members').select('organization_id').eq('user_id', userId).limit(1).single();
-        if (!member) throw new Error('User has no organization');
-        const orgId = member.organization_id;
-        // 4. Do not maliciously downgrade immediately. Let `pro_expires_at` expire naturally.
-        console.log(`Charge failed or subscription disabled for organization ${orgId}. Leaving pro_expires_at intact until natural expiration.`);
+
+      type = type || data.metadata?.type || '';
+
+      // Failure/cancellation events may not contain the original user
+      // metadata, so identifier-based lookup is preferred. The expiry is
+      // intentionally left intact to provide the paid period as grace.
+      const customerCode = data.customer?.customer_code ?? data.customer_code ?? null;
+      const subscriptionCode =
+        data.subscription_code ??
+        data.subscription?.subscription_code ??
+        null;
+
+      if (type === 'saas_subscription' || subscriptionCode || customerCode) {
+        const { error: statusError } = await supabase.rpc('update_saas_subscription_status', {
+          p_provider: 'paystack',
+          p_customer_code: customerCode,
+          p_subscription_code: subscriptionCode,
+          p_status: event.event === 'subscription.disable' || event.event === 'subscription.not_renew'
+            ? 'CANCELLED'
+            : 'PAST_DUE',
+        });
+        if (statusError) throw statusError;
+        console.log(`Paystack subscription status updated to ${event.event}.`);
       }
     }
 

@@ -1407,6 +1407,82 @@ $$;
 ALTER FUNCTION "public"."record_payment_event"("p_org_id" "uuid", "p_invoice_local_id" "text", "p_gateway" "text", "p_reference" "text", "p_amount_minor" bigint, "p_currency" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."record_saas_subscription_payment"("p_organization_id" "uuid", "p_provider_reference" "text", "p_amount_minor" bigint, "p_currency" "text", "p_event_type" "text", "p_customer_code" "text" DEFAULT NULL::"text", "p_subscription_code" "text" DEFAULT NULL::"text", "p_plan_code" "text" DEFAULT NULL::"text", "p_period_days" integer DEFAULT 30) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+    v_inserted public.saas_subscription_payments;
+    v_current_expiry timestamptz;
+    v_base_expiry timestamptz;
+    v_new_expiry timestamptz;
+BEGIN
+    IF p_amount_minor < 350000 OR upper(p_currency) <> 'NGN' THEN
+        RAISE EXCEPTION 'Invalid SaaS subscription payment amount or currency';
+    END IF;
+
+    INSERT INTO public.saas_subscription_payments (
+        organization_id, provider, provider_reference, amount_minor,
+        currency, event_type
+    )
+    VALUES (
+        p_organization_id, 'paystack', p_provider_reference, p_amount_minor,
+        upper(p_currency), p_event_type
+    )
+    ON CONFLICT (provider, provider_reference) DO NOTHING
+    RETURNING * INTO v_inserted;
+
+    IF v_inserted.id IS NULL THEN
+        RETURN jsonb_build_object('duplicate', true);
+    END IF;
+
+    SELECT pro_expires_at
+      INTO v_current_expiry
+      FROM public.organizations
+     WHERE id = p_organization_id
+     FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Organization not found';
+    END IF;
+
+    v_base_expiry := GREATEST(COALESCE(v_current_expiry, now()), now());
+    v_new_expiry := v_base_expiry + make_interval(days => p_period_days);
+
+    UPDATE public.organizations
+       SET is_pro = true,
+           pro_expires_at = v_new_expiry,
+           updated_at = now()
+     WHERE id = p_organization_id;
+
+    INSERT INTO public.saas_subscriptions (
+        organization_id, provider, customer_code, subscription_code,
+        plan_code, status, current_period_end
+    )
+    VALUES (
+        p_organization_id, 'paystack', p_customer_code, p_subscription_code,
+        p_plan_code, 'ACTIVE', v_new_expiry
+    )
+    ON CONFLICT (organization_id) DO UPDATE SET
+        customer_code = COALESCE(EXCLUDED.customer_code, saas_subscriptions.customer_code),
+        subscription_code = COALESCE(EXCLUDED.subscription_code, saas_subscriptions.subscription_code),
+        plan_code = COALESCE(EXCLUDED.plan_code, saas_subscriptions.plan_code),
+        status = 'ACTIVE',
+        current_period_end = v_new_expiry,
+        updated_at = now();
+
+    RETURN jsonb_build_object(
+        'duplicate', false,
+        'expires_at', v_new_expiry,
+        'organization_id', p_organization_id
+    );
+END;
+$$;
+
+
+ALTER FUNCTION "public"."record_saas_subscription_payment"("p_organization_id" "uuid", "p_provider_reference" "text", "p_amount_minor" bigint, "p_currency" "text", "p_event_type" "text", "p_customer_code" "text", "p_subscription_code" "text", "p_plan_code" "text", "p_period_days" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -1507,6 +1583,47 @@ $$;
 
 
 ALTER FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."submit_manual_upgrade_request"() RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+    v_org_id uuid;
+    v_request_id uuid;
+BEGIN
+    SELECT organization_id
+      INTO v_org_id
+      FROM public.organization_members
+     WHERE user_id = auth.uid()
+     ORDER BY created_at
+     LIMIT 1;
+
+    IF v_org_id IS NULL THEN
+        RAISE EXCEPTION 'User does not belong to an organization';
+    END IF;
+
+    INSERT INTO public.manual_upgrade_requests (organization_id, user_id)
+    VALUES (v_org_id, auth.uid())
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO v_request_id;
+
+    IF v_request_id IS NULL THEN
+        SELECT id
+          INTO v_request_id
+          FROM public.manual_upgrade_requests
+         WHERE organization_id = v_org_id
+           AND status = 'PENDING'
+         LIMIT 1;
+    END IF;
+
+    RETURN v_request_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."submit_manual_upgrade_request"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."sweep_expired_pro_subscriptions"() RETURNS integer
@@ -1655,6 +1772,24 @@ $$;
 ALTER FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" bigint, "p_client_message" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."update_saas_subscription_status"("p_provider" "text", "p_customer_code" "text" DEFAULT NULL::"text", "p_subscription_code" "text" DEFAULT NULL::"text", "p_status" "text" DEFAULT 'PAST_DUE'::"text") RETURNS "void"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+    UPDATE public.saas_subscriptions
+       SET status = p_status,
+           updated_at = now()
+     WHERE provider = p_provider
+       AND (
+           (p_subscription_code IS NOT NULL AND subscription_code = p_subscription_code)
+           OR (p_customer_code IS NOT NULL AND customer_code = p_customer_code)
+       );
+$$;
+
+
+ALTER FUNCTION "public"."update_saas_subscription_status"("p_provider" "text", "p_customer_code" "text", "p_subscription_code" "text", "p_status" "text") OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."api_logs" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "endpoint" "text",
@@ -1742,6 +1877,23 @@ CREATE TABLE IF NOT EXISTS "public"."email_suppressions" (
 
 
 ALTER TABLE "public"."email_suppressions" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."manual_upgrade_requests" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "amount_minor" bigint DEFAULT 350000 NOT NULL,
+    "currency" "text" DEFAULT 'NGN'::"text" NOT NULL,
+    "status" "text" DEFAULT 'PENDING'::"text" NOT NULL,
+    "submitted_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "reviewed_at" timestamp with time zone,
+    "reviewer_note" "text",
+    CONSTRAINT "manual_upgrade_requests_status_check" CHECK (("status" = ANY (ARRAY['PENDING'::"text", 'APPROVED'::"text", 'REJECTED'::"text"])))
+);
+
+
+ALTER TABLE "public"."manual_upgrade_requests" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."notifications" (
@@ -1849,6 +2001,41 @@ CREATE TABLE IF NOT EXISTS "public"."recurring_schedules" (
 ALTER TABLE "public"."recurring_schedules" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."saas_subscription_payments" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" "uuid" NOT NULL,
+    "provider" "text" NOT NULL,
+    "provider_reference" "text" NOT NULL,
+    "amount_minor" bigint NOT NULL,
+    "currency" "text" NOT NULL,
+    "event_type" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "saas_subscription_payments_amount_minor_check" CHECK (("amount_minor" > 0)),
+    CONSTRAINT "saas_subscription_payments_provider_check" CHECK (("provider" = 'paystack'::"text"))
+);
+
+
+ALTER TABLE "public"."saas_subscription_payments" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."saas_subscriptions" (
+    "organization_id" "uuid" NOT NULL,
+    "provider" "text" NOT NULL,
+    "customer_code" "text",
+    "subscription_code" "text",
+    "plan_code" "text",
+    "status" "text" DEFAULT 'ACTIVE'::"text" NOT NULL,
+    "current_period_end" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "saas_subscriptions_provider_check" CHECK (("provider" = 'paystack'::"text")),
+    CONSTRAINT "saas_subscriptions_status_check" CHECK (("status" = ANY (ARRAY['ACTIVE'::"text", 'PAST_DUE'::"text", 'CANCELLED'::"text", 'DISABLED'::"text"])))
+);
+
+
+ALTER TABLE "public"."saas_subscriptions" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."user_secrets" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
@@ -1950,6 +2137,11 @@ ALTER TABLE ONLY "public"."invoices"
 
 
 
+ALTER TABLE ONLY "public"."manual_upgrade_requests"
+    ADD CONSTRAINT "manual_upgrade_requests_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_pkey" PRIMARY KEY ("id");
 
@@ -2002,6 +2194,21 @@ ALTER TABLE ONLY "public"."recurring_schedules"
 
 ALTER TABLE ONLY "public"."recurring_schedules"
     ADD CONSTRAINT "recurring_schedules_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."saas_subscription_payments"
+    ADD CONSTRAINT "saas_subscription_payments_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."saas_subscription_payments"
+    ADD CONSTRAINT "saas_subscription_payments_provider_provider_reference_key" UNIQUE ("provider", "provider_reference");
+
+
+
+ALTER TABLE ONLY "public"."saas_subscriptions"
+    ADD CONSTRAINT "saas_subscriptions_pkey" PRIMARY KEY ("organization_id");
 
 
 
@@ -2081,6 +2288,18 @@ CREATE INDEX "idx_recurring_schedules_org_id" ON "public"."recurring_schedules" 
 
 
 CREATE INDEX "idx_recurring_schedules_run_date" ON "public"."recurring_schedules" USING "btree" ("next_run_date", "status");
+
+
+
+CREATE UNIQUE INDEX "manual_upgrade_requests_one_pending_idx" ON "public"."manual_upgrade_requests" USING "btree" ("organization_id") WHERE ("status" = 'PENDING'::"text");
+
+
+
+CREATE UNIQUE INDEX "saas_subscriptions_provider_customer_idx" ON "public"."saas_subscriptions" USING "btree" ("provider", "customer_code") WHERE ("customer_code" IS NOT NULL);
+
+
+
+CREATE UNIQUE INDEX "saas_subscriptions_provider_subscription_idx" ON "public"."saas_subscriptions" USING "btree" ("provider", "subscription_code") WHERE ("subscription_code" IS NOT NULL);
 
 
 
@@ -2164,6 +2383,16 @@ ALTER TABLE ONLY "public"."invoices"
 
 
 
+ALTER TABLE ONLY "public"."manual_upgrade_requests"
+    ADD CONSTRAINT "manual_upgrade_requests_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."manual_upgrade_requests"
+    ADD CONSTRAINT "manual_upgrade_requests_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
 
@@ -2201,6 +2430,16 @@ ALTER TABLE ONLY "public"."recurring_schedules"
 
 ALTER TABLE ONLY "public"."recurring_schedules"
     ADD CONSTRAINT "recurring_schedules_template_local_id_fkey" FOREIGN KEY ("organization_id", "template_invoice_id") REFERENCES "public"."invoices"("organization_id", "local_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."saas_subscription_payments"
+    ADD CONSTRAINT "saas_subscription_payments_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."saas_subscriptions"
+    ADD CONSTRAINT "saas_subscriptions_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
 
 
 
@@ -2295,6 +2534,18 @@ CREATE POLICY "Members can view secrets" ON "public"."user_secrets" FOR SELECT U
 
 
 CREATE POLICY "Members can view sequences" ON "public"."user_sequences" FOR SELECT USING ("public"."is_member_of"("organization_id"));
+
+
+
+CREATE POLICY "Members can view their SaaS subscription" ON "public"."saas_subscriptions" FOR SELECT USING ("public"."is_member_of"("organization_id"));
+
+
+
+CREATE POLICY "Members can view their SaaS subscription payments" ON "public"."saas_subscription_payments" FOR SELECT USING ("public"."is_member_of"("organization_id"));
+
+
+
+CREATE POLICY "Members can view their manual upgrade requests" ON "public"."manual_upgrade_requests" FOR SELECT USING ("public"."is_member_of"("organization_id"));
 
 
 
@@ -2399,6 +2650,9 @@ ALTER TABLE "public"."email_suppressions" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."invoices" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."manual_upgrade_requests" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2418,6 +2672,12 @@ ALTER TABLE "public"."rate_limits" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."recurring_schedules" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."saas_subscription_payments" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."saas_subscriptions" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."user_secrets" ENABLE ROW LEVEL SECURITY;
@@ -2769,8 +3029,18 @@ GRANT ALL ON FUNCTION "public"."record_payment_event"("p_org_id" "uuid", "p_invo
 
 
 
+REVOKE ALL ON FUNCTION "public"."record_saas_subscription_payment"("p_organization_id" "uuid", "p_provider_reference" "text", "p_amount_minor" bigint, "p_currency" "text", "p_event_type" "text", "p_customer_code" "text", "p_subscription_code" "text", "p_plan_code" "text", "p_period_days" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_saas_subscription_payment"("p_organization_id" "uuid", "p_provider_reference" "text", "p_amount_minor" bigint, "p_currency" "text", "p_event_type" "text", "p_customer_code" "text", "p_subscription_code" "text", "p_plan_code" "text", "p_period_days" integer) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."submit_manual_upgrade_request"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."submit_manual_upgrade_request"() TO "authenticated";
 
 
 
@@ -2793,6 +3063,11 @@ GRANT ALL ON FUNCTION "public"."update_invoice_status_public"("p_local_id" "text
 
 GRANT ALL ON FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" bigint, "p_client_message" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."update_quote_status_public"("p_local_id" "text", "p_status" "text", "p_counter_amount" bigint, "p_client_message" "text") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."update_saas_subscription_status"("p_provider" "text", "p_customer_code" "text", "p_subscription_code" "text", "p_status" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."update_saas_subscription_status"("p_provider" "text", "p_customer_code" "text", "p_subscription_code" "text", "p_status" "text") TO "service_role";
 
 
 
@@ -2853,6 +3128,12 @@ GRANT ALL ON TABLE "public"."email_suppressions" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."manual_upgrade_requests" TO "anon";
+GRANT ALL ON TABLE "public"."manual_upgrade_requests" TO "authenticated";
+GRANT ALL ON TABLE "public"."manual_upgrade_requests" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."notifications" TO "anon";
 GRANT ALL ON TABLE "public"."notifications" TO "authenticated";
 GRANT ALL ON TABLE "public"."notifications" TO "service_role";
@@ -2886,6 +3167,18 @@ GRANT ALL ON TABLE "public"."rate_limits" TO "service_role";
 GRANT ALL ON TABLE "public"."recurring_schedules" TO "anon";
 GRANT ALL ON TABLE "public"."recurring_schedules" TO "authenticated";
 GRANT ALL ON TABLE "public"."recurring_schedules" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."saas_subscription_payments" TO "anon";
+GRANT ALL ON TABLE "public"."saas_subscription_payments" TO "authenticated";
+GRANT ALL ON TABLE "public"."saas_subscription_payments" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."saas_subscriptions" TO "anon";
+GRANT ALL ON TABLE "public"."saas_subscriptions" TO "authenticated";
+GRANT ALL ON TABLE "public"."saas_subscriptions" TO "service_role";
 
 
 
