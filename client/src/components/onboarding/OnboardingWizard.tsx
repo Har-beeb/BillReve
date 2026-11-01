@@ -87,7 +87,9 @@ export const OnboardingWizard: React.FC = () => {
             business_description: profile.businessDescription,
             country: profile.country,
             currency: profile.currency,
-            logo_url: profile.logoUrl || null,
+            // The organizations table stores a Storage URL, not an inline
+            // Base64 image. Logo selection uploads to Storage before this save.
+            logo_url: profile.logoUrl?.startsWith('data:image') ? null : profile.logoUrl || null,
           })
           .eq('id', orgId)
           .select('id');
@@ -112,18 +114,40 @@ export const OnboardingWizard: React.FC = () => {
     toast.success('Business Profile created! Welcome to BillReve.');
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error('Logo must be less than 2MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile(prev => ({ ...prev, logoUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be less than 2MB');
+      return;
+    }
+    if (!user?.id) {
+      toast.error('Please sign in again before uploading a logo.');
+      return;
+    }
+
+    const toastId = toast.loading('Uploading logo...');
+    try {
+      // Store the file in the same user-scoped logos bucket used by Settings.
+      // The public URL is safe to persist in organizations.logo_url and keeps
+      // the organization row small enough for normal profile reads.
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const fileName = `${user.id}/logo_${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(fileName);
+
+      setProfile(prev => ({ ...prev, logoUrl: publicUrl }));
+      toast.success('Logo uploaded!', { id: toastId });
+    } catch (error) {
+      console.error('Onboarding logo upload error:', error);
+      toast.error('Failed to upload logo. Please try again.', { id: toastId });
     }
   };
 

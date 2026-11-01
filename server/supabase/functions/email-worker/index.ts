@@ -64,35 +64,43 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get all profiles to process, BUT ONLY SELECT NECESSARY COLUMNS!
+    // Organizations replaced the old profiles table. Join the owner membership
+    // because organizations.id is not the same as auth.users.id.
     // Selecting '*' fetches massive base64 logo_urls, causing 500MB+ egress and timeouts.
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('id, name, email, email_flags, created_at, is_pro');
+    const { data: organizations, error } = await supabase
+      .from('organizations')
+      .select('id, name, email, email_flags, created_at, is_pro, organization_members!inner(user_id, role)')
+      .eq('organization_members.role', 'owner');
 
     if (error) throw error;
     
     let welcomeSent = 0;
     let day3Sent = 0;
 
-    for (const profile of profiles) {
-      const emailFlags = profile.email_flags || {};
-      const createdAt = new Date(profile.created_at);
+    for (const organization of organizations || []) {
+      const owner = organization.organization_members?.[0];
+      if (!owner?.user_id) {
+        console.warn(`Skipping organization ${organization.id}: no owner membership found.`);
+        continue;
+      }
+
+      const emailFlags = organization.email_flags || {};
+      const createdAt = new Date(organization.created_at);
       const now = new Date();
       
       const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
 
       // Only check Auth API if they actually qualify for an email to save Auth Egress & Timeouts
-      const needsWelcome = !emailFlags.welcome_sent && profile.email;
-      const needsDay3 = hoursSinceCreation >= 72 && !emailFlags.day3_sent && !profile.is_pro && profile.email;
+      const needsWelcome = !emailFlags.welcome_sent && organization.email;
+      const needsDay3 = hoursSinceCreation >= 72 && !emailFlags.day3_sent && !organization.is_pro && organization.email;
 
       if (!needsWelcome && !needsDay3) continue;
 
       // Fetch user confirmation status only if needed
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(profile.id);
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(owner.user_id);
       
       if (userError || !userData?.user) {
-        console.error(`Could not fetch auth user for profile ${profile.id}:`, userError?.message);
+        console.error(`Could not fetch auth user for organization ${organization.id}:`, userError?.message);
         continue;
       }
       
@@ -101,10 +109,10 @@ serve(async (req) => {
       // Welcome Email: Send if not sent yet, and email IS confirmed
       if (needsWelcome && isConfirmed) {
         const success = await sendEmailWithRetry(
-          profile.email,
+          organization.email,
           'Welcome to BillReve! 🎉',
           `
-            <h2>Welcome aboard, ${profile.name || 'friend'}!</h2>
+            <h2>Welcome aboard, ${organization.name || 'friend'}!</h2>
             <p>We're thrilled to have you join BillReve. You can now start creating professional quotes, managing invoices, and getting paid faster.</p>
             <p>If you have any questions, feel free to reach out to our support team.</p>
             <p><a href="${frontendUrl}/dashboard">Go to your Dashboard</a></p>
@@ -114,19 +122,19 @@ serve(async (req) => {
         
         if (success) {
           welcomeSent++;
-          await supabase.from('profiles').update({
+          await supabase.from('organizations').update({
             email_flags: { ...emailFlags, welcome_sent: true }
-          }).eq('id', profile.id);
+          }).eq('id', organization.id);
         }
       }
 
       // Day 3 Email: Send if older than 72 hours, not sent, NOT pro, and email IS confirmed
       if (needsDay3 && isConfirmed) {
         const success = await sendEmailWithRetry(
-          profile.email,
+          organization.email,
           'Unlock Your Business Potential with BillReve Pro! 🚀',
           `
-            <h2>Hi ${profile.name || 'there'},</h2>
+            <h2>Hi ${organization.name || 'there'},</h2>
             <p>It's been a few days since you joined BillReve, and we hope you're enjoying the platform!</p>
             <p>Did you know that upgrading to <strong>BillReve Pro</strong> unlocks unlimited clients, premium document templates, and priority support?</p>
             <p><a href="${frontendUrl}/settings">Upgrade to Pro today!</a></p>
@@ -136,16 +144,16 @@ serve(async (req) => {
         
         if (success) {
           day3Sent++;
-          await supabase.from('profiles').update({
+          await supabase.from('organizations').update({
             email_flags: { ...emailFlags, day3_sent: true }
-          }).eq('id', profile.id);
+          }).eq('id', organization.id);
         }
       }
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
-      processed: profiles.length,
+      processed: organizations?.length ?? 0,
       welcomeSent,
       day3Sent
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
