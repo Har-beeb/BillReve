@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { v4 as uuidv4 } from 'uuid';
+import { PaystackButton } from 'react-paystack';
 import {
   Mail, Send, Loader2, CheckSquare, Square, Search, ShieldCheck,
   AlertTriangle, XCircle, Sparkles, Monitor, Smartphone, History,
-  PenLine, MailX, Zap, Info, TrendingUp, RefreshCw,
+  PenLine, MailX, Zap, Info, TrendingUp, RefreshCw, CheckCircle2,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
@@ -70,7 +72,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const Campaigns: React.FC = () => {
-  const { businessProfile, isProUser } = useAppStore();
+  const { businessProfile, isProUser, user } = useAppStore();
   const clients = useLiveQuery(() => db.clients.filter((c) => !c.deletedAt).toArray()) || [];
 
   const [tab, setTab] = useState<'compose' | 'history'>('compose');
@@ -92,6 +94,9 @@ const Campaigns: React.FC = () => {
   const [isChecking, setIsChecking] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
+  const [creditPacks, setCreditPacks] = useState(1);
+  const [creditPaymentPending, setCreditPaymentPending] = useState(false);
 
   /** Suppressed addresses must be visible in the picker, not silently dropped later. */
   const loadSuppressions = useCallback(async () => {
@@ -111,6 +116,29 @@ const Campaigns: React.FC = () => {
     }
     setQuota(data as QuotaState);
   }, []);
+
+  const creditPaystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '';
+  const creditPaystackConfigured = Boolean(creditPaystackKey && user?.email);
+  const creditCheckoutProps = {
+    email: user?.email || '',
+    amount: creditPacks * 200000,
+    currency: 'NGN',
+    metadata: {
+      custom_fields: [
+        { display_name: 'User ID', variable_name: 'userId', value: user?.id || '' },
+        { display_name: 'Payment Type', variable_name: 'type', value: 'campaign_credits' },
+        { display_name: 'Credit Packs', variable_name: 'packs', value: String(creditPacks) },
+      ],
+    },
+    publicKey: creditPaystackKey,
+    text: `Pay ₦${(creditPacks * 2000).toLocaleString()} for ${creditPacks * 1000} credits`,
+    onSuccess: () => {
+      setCreditPaymentPending(true);
+      toast.success('Payment received. Your credits will appear after verification.');
+      window.setTimeout(loadQuota, 3000);
+    },
+    onClose: () => undefined,
+  };
 
   const loadHistory = useCallback(async () => {
     setIsLoadingHistory(true);
@@ -422,12 +450,16 @@ const Campaigns: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <a
-                href="/upgrade"
+              <button
+                type="button"
+                onClick={() => {
+                  setCreditPaymentPending(false);
+                  setIsCreditModalOpen(true);
+                }}
                 className="inline-flex items-center gap-2 text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl transition-colors self-start"
               >
                 <Zap size={16} /> Buy 1,000 more — ₦2,000
-              </a>
+              </button>
             </div>
 
             {quota.allowed === false && quota.message && (
@@ -905,6 +937,100 @@ const Campaigns: React.FC = () => {
           </Card>
         )}
       </ProFeature>
+
+      {isCreditModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="p-5 border-b border-slate-200 dark:border-slate-700 shrink-0 flex items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Buy campaign credits</h2>
+              <button
+                type="button"
+                aria-label="Close campaign credit dialog"
+                onClick={() => {
+                  if (!creditPaymentPending) setIsCreditModalOpen(false);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+            {creditPaymentPending ? (
+              <div className="text-center py-2">
+                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <CheckCircle2 className="text-emerald-600 dark:text-emerald-400" size={30} />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Payment received
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                  Your email credits will appear after Paystack verification. This usually takes a few moments.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreditModalOpen(false);
+                    loadQuota();
+                  }}
+                  className="mt-6 w-full rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 text-sm font-semibold transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Send more campaigns without changing your Pro subscription.
+                </p>
+
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-slate-900 dark:text-white">Email credit packs</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">1,000 emails for ₦2,000</p>
+                    </div>
+                    <select
+                      value={creditPacks}
+                      onChange={(event) => setCreditPacks(Number(event.target.value))}
+                      className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500/50"
+                      aria-label="Number of credit packs"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((packCount) => (
+                        <option key={packCount} value={packCount}>
+                          {packCount}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">Total</span>
+                    <span className="text-lg font-bold text-slate-900 dark:text-white">
+                      ₦{(creditPacks * 2000).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {creditPaystackConfigured ? (
+                  <PaystackButton
+                    {...creditCheckoutProps}
+                    className="w-full mt-6 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-4 py-3.5 text-sm font-bold shadow-lg shadow-purple-500/20 transition-colors"
+                  />
+                ) : (
+                  <div className="mt-6 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-700 dark:text-amber-300">
+                    Online credit purchases are temporarily unavailable. Please try again later.
+                  </div>
+                )}
+                <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-4">
+                  Payments are securely processed by Paystack. Credits are added after payment verification.
+                </p>
+              </>
+            )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
