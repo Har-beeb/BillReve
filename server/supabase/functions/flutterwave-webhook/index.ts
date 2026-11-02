@@ -62,7 +62,49 @@ serve(async (req) => {
         return new Response('Invalid signature', { status: 401 });
       }
 
-      // 4. Verify currency, then record the payment through the ledger.
+      // 4. Re-fetch the transaction from Flutterwave. The webhook signature
+      // authenticates the sender, but the payload still must not be trusted
+      // for amount, currency, status, or invoice reference.
+      const { data: apiSecretKey, error: apiSecretError } = await supabase
+        .rpc('get_merchant_secret', {
+          p_org_id: invoice.organization_id,
+          p_gateway: 'flutterwave_api'
+        });
+
+      if (apiSecretError || !apiSecretKey) {
+        throw new Error('Flutterwave API Secret Key is not configured');
+      }
+
+      const transactionId = data.id;
+      if (!transactionId) {
+        throw new Error('Flutterwave payload has no transaction ID');
+      }
+
+      const verifyResponse = await fetch(
+        `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(String(transactionId))}/verify`,
+        {
+          headers: {
+            Authorization: `Bearer ${apiSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const verifyPayload = await verifyResponse.json();
+      if (!verifyResponse.ok || verifyPayload?.status !== 'success' || !verifyPayload?.data) {
+        throw new Error('Flutterwave transaction verification failed');
+      }
+
+      const verified = verifyPayload.data;
+      if (
+        String(verified.id) !== String(transactionId) ||
+        verified.status !== 'successful' ||
+        String(verified.tx_ref) !== String(invoiceId)
+      ) {
+        throw new Error('Flutterwave verification response does not match the invoice');
+      }
+
+      // 5. Verify currency, then record the payment through the ledger.
       //
       // UNITS: Flutterwave reports MAJOR units while invoice.total is BIGINT
       // minor, so fromGatewayAmount converts.
@@ -78,18 +120,14 @@ serve(async (req) => {
       // installments, which would make a second genuine payment look like a
       // duplicate and be silently dropped.
       //
-      // TODO(hardening): Flutterwave recommend re-fetching from
-      // GET /v3/transactions/:id/verify rather than trusting this payload. That
-      // needs the merchant's Flutterwave API secret, a different credential
-      // from the verif-hash stored here.
-      const paidAmountMinor = fromGatewayAmount(data.amount, 'flutterwave');
+      const paidAmountMinor = fromGatewayAmount(verified.amount, 'flutterwave');
       const expectedCurrency = invoice.currency || 'USD';
 
-      if (data.currency !== expectedCurrency) {
-        throw new Error(`Currency mismatch: Expected ${expectedCurrency}, got ${data.currency}`);
+      if (String(verified.currency).toUpperCase() !== String(expectedCurrency).toUpperCase()) {
+        throw new Error(`Currency mismatch: Expected ${expectedCurrency}, got ${verified.currency}`);
       }
 
-      const reference = data.flw_ref ?? data.id;
+      const reference = verified.flw_ref ?? verified.id;
       if (!reference) {
         throw new Error('Flutterwave payload has no flw_ref or id — cannot guarantee idempotency');
       }

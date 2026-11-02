@@ -16,6 +16,7 @@ const Payments: React.FC = () => {
   
   const [flutterwavePubKey, setFlutterwavePubKey] = useState(businessProfile.flutterwavePublicKey || '');
   const [flutterwaveSecKey, setFlutterwaveSecKey] = useState('');
+  const [flutterwaveApiSecKey, setFlutterwaveApiSecKey] = useState('');
   
   const [loading, setLoading] = useState(true);
   const [savingBanks, setSavingBanks] = useState(false);
@@ -56,9 +57,14 @@ const Payments: React.FC = () => {
           .maybeSingle();
           
         if (data) {
-          const secrets = data as { paystack_secret_key: string, flutterwave_secret_key: string };
+          const secrets = data as {
+            paystack_secret_key: string;
+            flutterwave_secret_key: string;
+            flutterwave_api_secret_key: string;
+          };
           setPaystackSecKey(secrets.paystack_secret_key || '');
           setFlutterwaveSecKey(secrets.flutterwave_secret_key || '');
+          setFlutterwaveApiSecKey(secrets.flutterwave_api_secret_key || '');
         }
         
         // Also populate bank accounts
@@ -164,7 +170,8 @@ const Payments: React.FC = () => {
       const { error: secretsError } = await supabase
         .rpc('set_user_secrets', { 
           p_paystack: paystackSecKey,
-          p_flutterwave: flutterwaveSecKey
+          p_flutterwave: flutterwaveSecKey,
+          p_flutterwave_api: flutterwaveApiSecKey
         });
 
       if (secretsError) throw secretsError;
@@ -376,6 +383,19 @@ const Payments: React.FC = () => {
                 className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-shadow"
               />
               <p className="text-xs text-slate-500 mt-2">Find these in Flutterwave Dashboard &gt; Settings &gt; API &amp; Webhooks.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Secret Key (Transaction Verification)</label>
+              <input
+                type="password"
+                value={flutterwaveApiSecKey}
+                onChange={e => setFlutterwaveApiSecKey(e.target.value)}
+                placeholder="Your Flutterwave Secret Key"
+                className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-shadow"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Required to verify completed transactions with Flutterwave before marking invoices paid.
+              </p>
             </div>
             
             <InstructionNote type="info" title="Webhook Setup" className="mt-4">

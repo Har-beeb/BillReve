@@ -102,12 +102,16 @@ serve(async (req) => {
         const PACK_PRICE_KOBO = 200000;  // ₦2,000
         const PACK_EMAILS = 1000;
 
-        if (amount < PACK_PRICE_KOBO) {
-          throw new Error(`Amount too low for campaign credit pack: ${amount} kobo`);
+        if (
+          !Number.isInteger(amount) ||
+          amount < PACK_PRICE_KOBO ||
+          amount % PACK_PRICE_KOBO !== 0 ||
+          String(data.currency || '').toUpperCase() !== 'NGN'
+        ) {
+          throw new Error(`Invalid campaign credit payment: ${amount} ${data.currency || '(missing)'}`);
         }
 
-        // Pay for more than one pack and you get more than one pack.
-        const packs = Math.floor(amount / PACK_PRICE_KOBO);
+        const packs = amount / PACK_PRICE_KOBO;
         if (!reference) {
           throw new Error('Paystack payload has no reference — cannot guarantee idempotency');
         }
