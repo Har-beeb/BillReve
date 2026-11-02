@@ -21,7 +21,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
-  const { to, subject, html, attachments, fromName, replyTo } = payload;
+  const { to, subject, html, attachments } = payload;
   const authHeader = req.headers.get('Authorization');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   const isPublicContact = to === 'support@billreve.app' || (Array.isArray(to) && to.length === 1 && to[0] === 'support@billreve.app');
@@ -37,7 +37,9 @@ serve(async (req) => {
     { global: { headers: { Authorization: authHeader || `Bearer ${anonKey}` } } }
   );
 
-  let userIdForRateLimit = 'anonymous_user';
+  let userIdForRateLimit: string | null = null;
+  let organizationName: string | null = null;
+  let organizationEmail: string | null = null;
 
   if (!isPublicContact) {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
@@ -45,16 +47,83 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     userIdForRateLimit = user.id;
+
+    const recipients = Array.isArray(to) ? to : [to];
+    const normalizedRecipients = recipients
+      .filter((recipient): recipient is string => typeof recipient === 'string')
+      .map((recipient) => recipient.trim().toLowerCase());
+
+    if (
+      recipients.length === 0 ||
+      recipients.length > 10 ||
+      normalizedRecipients.length !== recipients.length ||
+      normalizedRecipients.some((recipient) => !recipient)
+    ) {
+      return new Response(JSON.stringify({ error: 'Invalid recipient list' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const { data: memberships, error: membershipError } = await supabaseClient
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id);
+
+    if (membershipError || !memberships?.length) {
+      console.error('Could not resolve sender organization:', membershipError);
+      return new Response(JSON.stringify({ error: 'Unable to resolve sender organization' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const organizationIds = memberships.map((membership) => membership.organization_id);
+    const { data: clients, error: clientsError } = await supabaseClient
+      .from('clients')
+      .select('email, organization_id')
+      .in('organization_id', organizationIds)
+      .in('email', normalizedRecipients);
+
+    if (clientsError) {
+      console.error('Could not validate email recipients:', clientsError);
+      return new Response(JSON.stringify({ error: 'Unable to validate recipients' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const allowedRecipients = new Set(
+      (clients || [])
+        .map((client) => client.email?.trim().toLowerCase())
+        .filter((email): email is string => Boolean(email))
+    );
+
+    if (normalizedRecipients.some((recipient) => !allowedRecipients.has(recipient))) {
+      return new Response(JSON.stringify({ error: 'Recipients must belong to your organization' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const recipientOrganizationIds = new Set((clients || []).map((client) => client.organization_id));
+    if (recipientOrganizationIds.size !== 1) {
+      return new Response(JSON.stringify({ error: 'All recipients must belong to the same organization' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const organizationId = clients?.[0]?.organization_id;
+    if (!organizationId) {
+      return new Response(JSON.stringify({ error: 'Unable to resolve sender organization' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const { data: organization, error: organizationError } = await supabaseClient
+      .from('organizations')
+      .select('name, email')
+      .eq('id', organizationId)
+      .maybeSingle();
+
+    if (organizationError) {
+      console.error('Could not load sender organization:', organizationError);
+      return new Response(JSON.stringify({ error: 'Unable to load sender organization' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    organizationName = organization?.name || null;
+    organizationEmail = organization?.email || null;
   } else {
-    // For anonymous contact requests, use the IP address for rate limiting
-    userIdForRateLimit = req.headers.get('x-forwarded-for') || 'anonymous_ip';
-    // We cannot easily use the check_and_log_rate_limit RPC for non-UUID strings since it expects UUID.
-    // To prevent failure, we will skip the DB rate limit for anon or use a different mechanism.
-    // For simplicity, we bypass the DB rate limit here. In production, we'd log to a different table or use Redis.
+    // Anonymous requests are limited to the support inbox above.
   }
 
-  // Rate Limit for authenticated users (skip for anon contact since we don't have a UUID)
-  if (!isPublicContact) {
+  // Fail closed if rate-limit validation is unavailable; otherwise a database
+  // outage would turn this endpoint into an unrestricted email relay.
+  if (userIdForRateLimit) {
     const { data: isAllowed, error: rateLimitError } = await supabaseClient.rpc('check_and_log_rate_limit', {
       p_user_id: userIdForRateLimit,
       p_endpoint: 'send-email',
@@ -64,6 +133,7 @@ serve(async (req) => {
 
     if (rateLimitError) {
       console.error('Rate Limit Error:', rateLimitError);
+      return new Response(JSON.stringify({ error: 'Unable to validate sending limits' }), { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (!isAllowed) {
       return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -80,8 +150,13 @@ serve(async (req) => {
     // body gets the "Powered by BillReve" footer. Both are centralised in
     // _shared/email.ts so a new send path cannot omit them. buildFrom also
     // strips header-injection characters from the merchant-supplied name.
-    const fromHeader = buildFrom(fromName);
-    const bodyHtml = wrapEmailHtml(html, { orgName: fromName });
+    const fromHeader = isPublicContact
+      ? buildFrom()
+      : buildFrom(organizationName);
+    const bodyHtml = wrapEmailHtml(html, { orgName: organizationName });
+    const replyToHeader = isPublicContact
+      ? "support@billreve.app"
+      : organizationEmail || "support@billreve.app";
 
     let res;
     if (recipients.length === 1) {
@@ -95,7 +170,7 @@ serve(async (req) => {
         body: JSON.stringify({
           from: fromHeader,
           to: recipients,
-          reply_to: replyTo || "support@billreve.app",
+          reply_to: replyToHeader,
           subject: subject || "Update from BillReve",
           html: bodyHtml,
           attachments: attachments || [],
@@ -112,7 +187,7 @@ serve(async (req) => {
         body: JSON.stringify(recipients.map(recipient => ({
           from: fromHeader,
           to: [recipient],
-          reply_to: replyTo || "support@billreve.app",
+          reply_to: replyToHeader,
           subject: subject || "Update from BillReve",
           html: bodyHtml,
           attachments: attachments || [],

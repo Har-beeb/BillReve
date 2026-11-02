@@ -4,6 +4,7 @@ import { buildFrom, wrapEmailHtml } from "../_shared/email.ts";
 
 const resendApiKey = Deno.env.get('RESEND_API_KEY');
 const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://billreve.app';
+const cronSecret = Deno.env.get('CRON_SECRET');
 
 // Simple delay function for retries
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -58,6 +59,11 @@ serve(async (req) => {
     // Only allow POST requests (e.g. from pg_net)
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 });
+    }
+
+    const expectedAuthorization = cronSecret ? `Bearer ${cronSecret}` : null;
+    if (!expectedAuthorization || req.headers.get('Authorization') !== expectedAuthorization) {
+      return new Response('Unauthorized', { status: 401 });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
