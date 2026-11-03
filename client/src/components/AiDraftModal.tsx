@@ -59,7 +59,7 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
     setIsLoading(true);
 
     try {
-      let payload: { text?: string; documents?: { mimeType: string; data: string }[] } = {};
+      const payload: { text?: string; documents?: { mimeType: string; data: string }[] } = {};
       
       if (activeTab === 'text') {
         if (!textInput.trim()) throw new Error(`Please enter some notes to generate a ${documentType.toLowerCase()}.`);
@@ -73,7 +73,7 @@ export const AiDraftModal: React.FC<AiDraftModalProps> = ({
         }];
       }
 
-      // @ts-ignore - passing documentType to API if updated
+      // @ts-expect-error - passing documentType to API if updated
       const generatedData = await generateAiQuote({ ...payload, documentType, businessProfile });
       onSuccess(generatedData);
       onClose();

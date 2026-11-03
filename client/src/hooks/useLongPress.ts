@@ -47,7 +47,7 @@ export const useLongPress = (
       // Ignore interactions with buttons, inputs, or specifically marked elements
       if (event.target?.closest?.('button, input, .no-row-click')) return;
 
-      timeout.current && clearTimeout(timeout.current);
+      if (timeout.current) clearTimeout(timeout.current);
       if (shouldTriggerClick && !isMoved.current && !isLongPressTriggered.current) {
         onClick(event);
       }
@@ -77,7 +77,7 @@ export const useLongPress = (
     // If moved more than 10 pixels, consider it a scroll/swipe
     if (diffX > 10 || diffY > 10) {
       isMoved.current = true;
-      timeout.current && clearTimeout(timeout.current);
+      if (timeout.current) clearTimeout(timeout.current);
     }
   }, []);
 

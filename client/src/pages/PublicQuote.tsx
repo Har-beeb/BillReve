@@ -57,7 +57,7 @@ const PublicQuote: React.FC = () => {
               quote_number: localQuote.quoteNumber,
             };
           } else {
-            throw new Error('Quote not found');
+            throw new Error('Quote not found', { cause: supabaseError });
           }
         }
         

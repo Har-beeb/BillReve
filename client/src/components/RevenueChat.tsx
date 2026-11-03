@@ -76,7 +76,9 @@ export const RevenueChat: React.FC = () => {
           setMessages(prev => [...prev, welcomeMsg]);
           return;
         }
-      } catch (e) {}
+      } catch (e) {
+        console.debug('No saved revenue chat history found.', e);
+      }
     }
     setMessages([
       {
@@ -139,7 +141,7 @@ export const RevenueChat: React.FC = () => {
     }
   }, [messages, isTyping]);
 
-  // @ts-ignore
+  // @ts-expect-error - this helper accepts the flexible AI context shape
   const stripSensitiveData = (data: any[], type: 'client' | 'invoice' | 'quote') => {
     return data.map(item => {
       if (type === 'client') {
@@ -211,7 +213,7 @@ export const RevenueChat: React.FC = () => {
 
       // 3. Send to API
       incrementAiPrompts();
-      let finalPrompt = userMsg;
+      const finalPrompt = userMsg;
 
       const result = await chatWithRevenue({
         prompt: finalPrompt,
@@ -480,7 +482,7 @@ export const RevenueChat: React.FC = () => {
       const contextData = await getAiContextData();
       
       incrementAiPrompts();
-      let finalPrompt = "The action was executed successfully! Acknowledge this briefly and ask if there is anything else I need help with. DO NOT include an 'action' object in your JSON response.";
+      const finalPrompt = "The action was executed successfully! Acknowledge this briefly and ask if there is anything else I need help with. DO NOT include an 'action' object in your JSON response.";
 
       const result = await chatWithRevenue({
         prompt: finalPrompt,

@@ -143,8 +143,8 @@ class NotificationService {
     if (type === 'Client') return;
 
     const identifier = newDoc.invoice_number || newDoc.quote_number || 'Draft';
-    let title = '';
-    let body = '';
+    let title: string;
+    let body: string;
 
     if (newDoc.status === 'ACCEPTED') {
       title = `${type} Accepted! 🎉`;

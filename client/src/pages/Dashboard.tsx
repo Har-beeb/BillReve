@@ -67,9 +67,6 @@ const Dashboard: React.FC = () => {
 
   // Selected Month Calculations
   const selectedMonthInvoices = React.useMemo(() => invoices.filter(i => isSelectedMonth(i.updatedAt || i.createdAt)), [invoices, selectedMonthOffset]);
-  const selectedMonthQuotes = React.useMemo(() => quotes.filter(q => isSelectedMonth(q.updatedAt || q.createdAt)), [quotes, selectedMonthOffset]);
-  selectedMonthQuotes; // keep TS happy
-
   const paidInvoices = React.useMemo(() => selectedMonthInvoices.filter(i => i.status === 'PAID'), [selectedMonthInvoices]);
   const outstandingInvoices = React.useMemo(() => selectedMonthInvoices.filter(i => ['SENT', 'PARTIAL', 'OVERDUE'].includes(i.status)), [selectedMonthInvoices]);
   const overdueInvoices = React.useMemo(() => selectedMonthInvoices.filter(i => i.status === 'OVERDUE'), [selectedMonthInvoices]);
@@ -540,4 +537,3 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
-

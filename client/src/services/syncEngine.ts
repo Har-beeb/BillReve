@@ -479,7 +479,7 @@ class SyncEngine {
     // Helper to fetch in batches of 500 to prevent memory crashes on large datasets
     const fetchPaginated = async (table: string) => {
       const lastSyncTime = localStorage.getItem(`last_sync_time_${table}`);
-      let allData: any[] = [];
+      const allData: any[] = [];
       let from = 0;
       const limit = 500;
       

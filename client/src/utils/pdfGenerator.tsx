@@ -2,7 +2,6 @@
 import { createRoot } from 'react-dom/client';
 import { useAppStore } from '../store/useAppStore';
 
-// @ts-ignore
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
 import { formatMoney, formatDate } from './formatters';
 

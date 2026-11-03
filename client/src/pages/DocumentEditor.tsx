@@ -188,10 +188,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
     }
     
     let finalClientId = clientId;
-    let newClientObj = null;
     if (isCreatingClient && newClientName) {
       finalClientId = newClientLocalId;
-      newClientObj = {
+      const newClientObj = {
         localId: finalClientId,
         name: newClientName,
         email: newClientEmail,
@@ -279,7 +278,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
         ...docBase,
         invoiceNumber: initialDoc?.invoiceNumber || documentNumber,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        ...(true && { issuedAt: new Date().toISOString() }),
+        issuedAt: new Date().toISOString(),
         status: 'SENT' as any,
       };
     }
@@ -722,4 +721,3 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ type }) => {
 };
 
 export default DocumentEditor;
-

@@ -53,7 +53,7 @@ export const Modal: React.FC<ModalProps> = ({
           className
         )}
       >
-        {(title || true) && (
+        {(
           <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
             {title && (
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">

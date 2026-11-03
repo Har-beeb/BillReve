@@ -232,7 +232,7 @@ export const useAppStore = create<AppState>()(
             if (e.message?.startsWith('UNSYNCED_DATA')) throw e;
             console.error("Sync before logout failed", e);
             toast.dismiss("logout-sync");
-            throw new Error("SYNC_FAILED");
+            throw new Error("SYNC_FAILED", { cause: e });
           }
         } else {
           toast.dismiss("logout-sync");

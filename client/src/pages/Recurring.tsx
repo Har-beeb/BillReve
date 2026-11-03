@@ -23,6 +23,13 @@ export default function Recurring() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<string | null>(null);
 
+  const filtered = useMemo(() => allSchedules.filter(s => {
+    const client = allClients.find(c => c.localId === s.clientId);
+    return client?.name?.toLowerCase().includes(search.toLowerCase());
+  }), [allSchedules, allClients, search]);
+
+  const { currentPage, setCurrentPage, totalPages, paginatedItems } = usePagination(filtered, 9);
+
   if (!isProUser) {
     return (
       <div className="flex flex-col gap-6 relative animate-fade-in-up items-center justify-center min-h-[60vh]">
@@ -39,13 +46,6 @@ export default function Recurring() {
       </div>
     );
   }
-
-  const filtered = useMemo(() => allSchedules.filter(s => {
-    const client = allClients.find(c => c.localId === s.clientId);
-    return client?.name?.toLowerCase().includes(search.toLowerCase());
-  }), [allSchedules, allClients, search]);
-
-  const { currentPage, setCurrentPage, totalPages, paginatedItems } = usePagination(filtered, 9);
 
   const toggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';

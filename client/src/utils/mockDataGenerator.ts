@@ -131,7 +131,7 @@ export const generateMockData = async (userId: string) => {
     return { success: true };
   } catch (error) {
     console.error("Failed to generate mock data", error);
-    throw new Error("Error generating mock data.");
+    throw new Error("Error generating mock data.", { cause: error });
   }
 };
 
@@ -163,6 +163,6 @@ export const clearAllData = async (userId: string) => {
     return { success: true };
   } catch (error) {
     console.error("Failed to clear data", error);
-    throw new Error("Error clearing data. Please try again.");
+    throw new Error("Error clearing data. Please try again.", { cause: error });
   }
 };

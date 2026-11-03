@@ -9,16 +9,11 @@ const toMajor = (minorAmount: number) => (minorAmount / 100).toFixed(2);
  * Generates a country-specific CSV report for revenue.
  */
 export const generateTaxReportCsv = (invoices: Invoice[], clients: Client[], country: string) => {
-  let headers: string[] = [];
-  
-  if (country === 'US') {
-    headers = ['Date', 'Invoice Number', 'Client Name', 'Status', 'Subtotal', 'State Tax', 'Federal Tax', 'Net Amount'];
-  } else if (country === 'GB') {
-    headers = ['Date', 'Invoice Number', 'Client Name', 'Status', 'Subtotal', 'VAT', 'Net Amount'];
-  } else {
-    // Default to FIRS (Nigeria) or generic
-    headers = ['Date', 'Invoice Number', 'Client Name', 'Status', 'Subtotal', 'VAT Amount', 'WHT Amount', 'Net Amount'];
-  }
+  const headers: string[] = country === 'US'
+    ? ['Date', 'Invoice Number', 'Client Name', 'Status', 'Subtotal', 'State Tax', 'Federal Tax', 'Net Amount']
+    : country === 'GB'
+      ? ['Date', 'Invoice Number', 'Client Name', 'Status', 'Subtotal', 'VAT', 'Net Amount']
+      : ['Date', 'Invoice Number', 'Client Name', 'Status', 'Subtotal', 'VAT Amount', 'WHT Amount', 'Net Amount'];
 
   const rows = invoices.map(inv => {
     const client = clients.find(c => c.localId === inv.clientId);

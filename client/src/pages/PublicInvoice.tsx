@@ -56,7 +56,7 @@ const PublicInvoice: React.FC = () => {
               invoice_number: localInvoice.invoiceNumber,
             };
           } else {
-            throw new Error('Invoice not found');
+            throw new Error('Invoice not found', { cause: supabaseError });
           }
         }
         
@@ -144,6 +144,25 @@ const PublicInvoice: React.FC = () => {
     }
   };
 
+  const balanceDueMinor = Math.max(0, (invoice?.total || 0) - (invoice?.amount_paid || 0));
+  const flutterwaveConfig = profile?.flutterwave_public_key ? {
+    public_key: profile.flutterwave_public_key,
+    tx_ref: invoice?.local_id || invoice?.id || '',
+    amount: toGatewayAmount(balanceDueMinor, 'flutterwave'),
+    currency: invoice?.currency || profile.currency || 'USD',
+    payment_options: 'card,mobilemoney,ussd',
+    customer: {
+      email: client?.email || 'customer@example.com',
+      name: client?.name || 'Customer Name',
+    },
+    customizations: {
+      title: `Invoice #${invoice?.invoice_number || invoice?.local_id?.slice(0, 8) || ''}`,
+      description: 'Payment for services rendered',
+      logo: profile?.logo_url || '',
+    },
+  } : null;
+  const handleFlutterwavePayment = useFlutterwave(flutterwaveConfig as any);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -190,8 +209,6 @@ const PublicInvoice: React.FC = () => {
   // Outstanding balance, in MINOR units (kobo/cents) — the unit everything is
   // stored in. Each gateway is handed this value through toGatewayAmount(),
   // which applies that gateway's own convention. Never convert inline here.
-  const balanceDueMinor = Math.max(0, (invoice.total || 0) - (invoice.amount_paid || 0));
-
   // Paystack configuration
   const componentProps = profile?.paystack_public_key ? {
     email: client?.email || 'customer@example.com',
@@ -231,26 +248,6 @@ const PublicInvoice: React.FC = () => {
       console.log('Payment closed');
     },
   } : null;
-
-  // Flutterwave configuration
-  const flutterwaveConfig = profile?.flutterwave_public_key ? {
-    public_key: profile.flutterwave_public_key,
-    tx_ref: invoice.local_id || invoice.id,
-    amount: toGatewayAmount(balanceDueMinor, 'flutterwave'),
-    currency: invoice.currency || profile.currency || 'USD',
-    payment_options: 'card,mobilemoney,ussd',
-    customer: {
-      email: client?.email || 'customer@example.com',
-      name: client?.name || 'Customer Name',
-    },
-    customizations: {
-      title: `Invoice #${invoice.invoice_number || invoice.local_id.slice(0, 8)}`,
-      description: 'Payment for services rendered',
-      logo: profile?.logo_url || '',
-    },
-  } : null;
-
-  const handleFlutterwavePayment = useFlutterwave(flutterwaveConfig as any);
 
   const typographyStyle = profile?.is_pro ? {
     fontFamily: fontFamily === 'Inter' ? undefined : fontFamily,
@@ -428,7 +425,7 @@ const PublicInvoice: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mt-8 border-t border-slate-100 pt-8 px-8 md:px-12">
              {(() => {
                 const actualBankId = invoice?.bank_account_id || invoice?.bankAccountId;
-                let actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
+                const actualBankAccounts = profile?.bank_accounts || profile?.bankAccounts || [];
                 const bank = invoice.bank_account_snapshot || invoice.bankAccountSnapshot || actualBankAccounts.find((b: any) => String(b.id) === String(actualBankId));
                 
                 const hasOnlinePayment = (profile?.is_pro && ['NGN', 'GHS', 'ZAR', 'KES'].includes(invoice.currency || profile?.currency || 'NGN') && componentProps) ||
