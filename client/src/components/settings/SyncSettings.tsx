@@ -100,6 +100,7 @@ export const SyncSettings: React.FC = () => {
                   try {
                     // Reset status to pending to allow retry
                     await Promise.all(failedSyncs.map(item => 
+                      
                       db.syncQueue.update(item.id, {
                         status: 'pending',
                         error: undefined,

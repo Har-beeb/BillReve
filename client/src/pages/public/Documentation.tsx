@@ -355,6 +355,32 @@ const Sidebar: React.FC<{ activeId: string; onNavigate: (id: string) => void }> 
 );
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
+const currentDocMarkdown = billreveDocMarkdown
+  .replace(
+    'Select your frequency (Weekly, Monthly, Quarterly, Annually)',
+    'Select your frequency (Weekly, Monthly, or Yearly)'
+  )
+  .replace(
+    '| `VOID` | Cancelled / voided |',
+    ''
+  )
+  .replace(
+    'Send bulk emails to your entire client directory.',
+    'Send email campaigns to selected clients in your directory. Campaign sending requires an internet connection.'
+  )
+  .replace(
+    'Click **Send to All Clients**',
+    'Select recipients, check the campaign, and send it'
+  )
+  .replace(
+    '| Send emails (queued until online) | Webhook-triggered status updates |',
+    '| Edit existing data | Send campaigns and process online payments |'
+  )
+  .replace(
+    'RevenueChat **never** sends sensitive data to AI. Only anonymised, aggregated financial summaries are shared — never client names, contact details, or bank account numbers.',
+    'AI features process the business data needed to answer your request. Prompts may include invoice numbers and client names when relevant; do not include passwords, payment secrets, or other information you do not want sent to the configured AI provider.'
+  );
+
 const Documentation: React.FC = () => {
   const { hash } = useLocation();
   const [activeId, setActiveId] = useState('1-what-is-billreve');
@@ -421,7 +447,7 @@ const Documentation: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline-flex px-2 py-0.5 text-xs font-bold bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full tracking-wide">
-              v1.4.1
+              v1.5.0
             </span>
             <button onClick={() => setMobileNavOpen(true)}
               className="lg:hidden p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
@@ -450,11 +476,15 @@ const Documentation: React.FC = () => {
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-8">
 
-          {/* Sidebar — no internal scroll, full list always visible */}
+          {/* Reserve the sidebar column while its navigation stays fixed to the viewport. */}
           <aside className="hidden lg:block w-56 xl:w-60 flex-shrink-0">
             <div
-              className="sticky rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-              style={{ top: `${HEADER_H + 16}px` }}
+              className="fixed z-30 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-y-auto w-56 xl:w-60"
+              style={{
+                top: `${HEADER_H + 16}px`,
+                left: 'max(2rem, calc((100vw - 1280px) / 2 + 2rem))',
+                maxHeight: `calc(100vh - ${HEADER_H + 32}px)`,
+              }}
             >
               <Sidebar activeId={activeId} onNavigate={handleNavigate} />
             </div>
@@ -547,7 +577,7 @@ const Documentation: React.FC = () => {
                   rehypePlugins={[rehypeSlug]}
                   components={mdComponents}
                 >
-                  {billreveDocMarkdown}
+                  {currentDocMarkdown}
                 </ReactMarkdown>
               </div>
 
@@ -555,7 +585,7 @@ const Documentation: React.FC = () => {
               <div style={{ padding: '1.25rem 3rem', borderTop: '1px solid #f1f5f9' }}
                 className="bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <p style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.8125rem', color: '#94a3b8' }}>
-                  BillReve Documentation · v1.4.1 · September 2026
+                  BillReve Documentation · v1.5.0 · November 2026
                 </p>
                 <a href="https://billreve.app/support" target="_blank" rel="noopener noreferrer"
                   style={{

@@ -172,13 +172,6 @@ const Login: React.FC = () => {
             placeholder="Enter your email"
           />
 
-          <div className="flex items-center justify-between pt-1 pb-2">
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input type="checkbox" className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 bg-white dark:bg-slate-800" />
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Remember me</span>
-            </label>
-          </div>
-
           <button
             type="submit"
             disabled={loading}
