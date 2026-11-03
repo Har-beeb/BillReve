@@ -1,6 +1,7 @@
 import { db } from '../db/db';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/useAppStore';
+import type { SyncQueueItem } from '../types';
 
 import toast from 'react-hot-toast';
 
@@ -69,8 +70,10 @@ class SyncEngine {
   private channel: ReturnType<typeof supabase.channel> | null = null;
   private retryCount = 0;
   private maxRetries = 5;
+  private maxQueueRetries = 5;
   private syncDebounceTimer: any = null;
   private pollingInterval: any = null;
+  private queueRetryTimer: ReturnType<typeof setTimeout> | null = null;
   
   // References for cleanup
   private onlineListener: (() => void) | null = null;
@@ -169,6 +172,10 @@ class SyncEngine {
             clearInterval(this.pollingInterval);
             this.pollingInterval = null;
           }
+          if (this.queueRetryTimer) {
+            clearTimeout(this.queueRetryTimer);
+            this.queueRetryTimer = null;
+          }
         } else {
           // Tab is visible again — do one immediate sync, then restart normal polling.
           this.sync();
@@ -235,7 +242,9 @@ class SyncEngine {
       
       await this.pullRemoteChanges();
       
-      useAppStore.getState().setSyncStatus('synced');
+      const failedQueueItems = await db.syncQueue.where('status').equals('failed').count();
+      useAppStore.getState().setSyncStatus(failedQueueItems > 0 ? 'failed' : 'synced');
+      await this.scheduleQueueRetry();
       this.retryCount = 0;
     } catch (error) {
       console.error('Sync failed:', error);
@@ -275,7 +284,22 @@ class SyncEngine {
     if (!orgMember) return;
     const orgId = orgMember.organization_id;
 
-    const pendingItems = await db.syncQueue.where('status').equals('pending').sortBy('createdAt');
+    const now = Date.now();
+    const queuedItems = await db.syncQueue.toArray();
+    const pendingItems = queuedItems
+      .filter((item) => {
+        if (item.status === 'pending') {
+          return !item.nextRetryAt || new Date(item.nextRetryAt).getTime() <= now;
+        }
+
+        if (item.status === 'failed') {
+          return (item.retryCount || 0) < this.maxQueueRetries &&
+            Boolean(item.nextRetryAt) &&
+            new Date(item.nextRetryAt as string).getTime() <= now;
+        }
+        return false;
+      })
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     
     for (const item of pendingItems) {
       try {
@@ -348,9 +372,101 @@ class SyncEngine {
           throw error; // Abort further sync this cycle
         }
         
-        await db.syncQueue.update(item.id, { status: 'failed', error: String(error.message || error) });
+        const retryCount = (item.retryCount || 0) + 1;
+        const canRetry = retryCount < this.maxQueueRetries;
+        await db.syncQueue.update(item.id, {
+          status: 'failed',
+          error: String(error.message || error),
+          retryCount,
+          lastAttemptAt: getAccurateIsoDate(),
+          nextRetryAt: canRetry
+            ? new Date(Date.now() + Math.pow(2, retryCount - 1) * 5000).toISOString()
+            : undefined,
+        });
       }
     }
+  }
+
+  async discardFailedItem(item: SyncQueueItem) {
+    if (item.status !== 'failed') {
+      throw new Error('Only failed sync items can be discarded.');
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('You must be signed in to discard a failed sync item.');
+
+    const { data: orgMember, error: membershipError } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', session.user.id)
+      .limit(1)
+      .single();
+    if (membershipError || !orgMember) {
+      throw new Error('Unable to resolve your organization.');
+    }
+
+    const tableNameByEntity = {
+      CLIENT: 'clients',
+      INVOICE: 'invoices',
+      QUOTE: 'quotes',
+      RECURRING_SCHEDULE: 'recurring_schedules',
+    } as const;
+    const tableName = tableNameByEntity[item.entity];
+    const localId = item.payload.local_id || item.payload.localId;
+    if (typeof localId !== 'string' || !localId) {
+      throw new Error('Failed sync item has no local record ID.');
+    }
+
+    const { data: remote, error: remoteError } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('organization_id', orgMember.organization_id)
+      .eq('local_id', localId)
+      .maybeSingle();
+    if (remoteError) {
+      throw new Error(`Unable to reconcile failed sync item: ${remoteError.message}`);
+    }
+
+    const restored = remote ? { ...toCamelCase(remote), syncStatus: 'synced' } : null;
+    if (item.entity === 'CLIENT') {
+      if (restored) await db.clients.put(restored);
+      else await db.clients.delete(localId);
+    } else if (item.entity === 'INVOICE') {
+      if (restored) await db.invoices.put(restored);
+      else await db.invoices.delete(localId);
+    } else if (item.entity === 'QUOTE') {
+      if (restored) await db.quotes.put(restored);
+      else await db.quotes.delete(localId);
+    } else {
+      if (restored) await db.recurringSchedules.put(restored);
+      else await db.recurringSchedules.delete(localId);
+    }
+
+    await db.syncQueue.delete(item.id);
+  }
+
+  private async scheduleQueueRetry() {
+    if (this.queueRetryTimer) {
+      clearTimeout(this.queueRetryTimer);
+      this.queueRetryTimer = null;
+    }
+
+    const now = Date.now();
+    const retryTimes = (await db.syncQueue.where('status').equals('failed').toArray())
+      .filter((item) =>
+        (item.retryCount || 0) < this.maxQueueRetries &&
+        Boolean(item.nextRetryAt)
+      )
+      .map((item) => new Date(item.nextRetryAt as string).getTime())
+      .filter((time) => Number.isFinite(time) && time > now);
+
+    if (retryTimes.length === 0 || !navigator.onLine) return;
+
+    const delay = Math.max(Math.min(...retryTimes) - now, 1000);
+    this.queueRetryTimer = setTimeout(() => {
+      this.queueRetryTimer = null;
+      this.sync();
+    }, delay);
   }
 
   private async pullRemoteChanges() {
@@ -490,4 +606,3 @@ class SyncEngine {
 }
 
 export const syncEngine = new SyncEngine();
-

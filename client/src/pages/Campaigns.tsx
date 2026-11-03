@@ -5,7 +5,7 @@ import { PaystackButton } from 'react-paystack';
 import {
   Mail, Send, Loader2, CheckSquare, Square, Search, ShieldCheck,
   AlertTriangle, XCircle, Sparkles, Monitor, Smartphone, History,
-  PenLine, MailX, Zap, Info, TrendingUp, RefreshCw, CheckCircle2,
+  PenLine, MailX, Zap, Info, TrendingUp, RefreshCw, CheckCircle2, WifiOff,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
@@ -90,6 +90,7 @@ const Campaigns: React.FC = () => {
   const [suppressed, setSuppressed] = useState<Set<string>>(new Set());
   const [report, setReport] = useState<ProofreadReport | null>(null);
   const [history, setHistory] = useState<CampaignRow[]>([]);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
   const [isChecking, setIsChecking] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -141,6 +142,11 @@ const Campaigns: React.FC = () => {
   };
 
   const loadHistory = useCallback(async () => {
+    if (!navigator.onLine) {
+      setIsLoadingHistory(false);
+      return;
+    }
+
     setIsLoadingHistory(true);
     const { data, error } = await supabase
       .from('campaigns')
@@ -156,11 +162,26 @@ const Campaigns: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      loadHistory();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [loadHistory]);
+
+  useEffect(() => {
     if (!isProUser) return;
     loadQuota();
     loadSuppressions();
-    loadHistory();
-  }, [isProUser, loadQuota, loadSuppressions, loadHistory]);
+    if (isOnline) loadHistory();
+  }, [isProUser, isOnline, loadQuota, loadSuppressions, loadHistory]);
 
   // Any content edit invalidates a previous proofread — otherwise a user could
   // pass the check, then change the body, and send unreviewed content.
@@ -788,7 +809,13 @@ const Campaigns: React.FC = () => {
         ) : (
           /* History */
           <Card className="p-3 sm:p-5 mt-6">
-            {isLoadingHistory ? (
+            {!isOnline ? (
+              <div className="py-12 text-center">
+                <WifiOff size={32} className="mx-auto mb-3 text-slate-400 dark:text-slate-500" />
+                <p className="font-medium text-slate-700 dark:text-slate-200">Campaign history is unavailable offline</p>
+                <p className="text-sm text-slate-500 mt-1">Reconnect to the internet to load your campaign history.</p>
+              </div>
+            ) : isLoadingHistory ? (
               <div className="py-12 text-center text-slate-400">
                 <Loader2 size={24} className="animate-spin mx-auto mb-3" />
                 Loading campaigns…

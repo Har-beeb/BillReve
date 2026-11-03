@@ -25,11 +25,11 @@ export default defineConfig({
     setupFiles: './src/setupTests.ts',
 
     /*
-     * Threads rather than the default `forks` pool: starting a process per file
-     * is expensive on Windows, and worse here because the repo path contains a
-     * space ("My Document") and antivirus typically scans each spawn.
+     * Forks are slower to start on Windows, but the thread pool intermittently
+     * times out while starting the jsdom-heavy suites in this repository.
+     * Prefer a slower, deterministic test gate over a flaky green result.
      */
-    pool: 'threads',
+    pool: 'forks',
     maxWorkers: 1,
     fileParallelism: false,
 

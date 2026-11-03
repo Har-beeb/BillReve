@@ -159,4 +159,7 @@ export interface SyncQueueItem {
   createdAt: string;
   status: 'pending' | 'failed';
   error?: string;
+  retryCount?: number;
+  lastAttemptAt?: string;
+  nextRetryAt?: string;
 }

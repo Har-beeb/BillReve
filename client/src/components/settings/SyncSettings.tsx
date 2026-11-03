@@ -60,7 +60,7 @@ export const SyncSettings: React.FC = () => {
                 <h3 className="font-semibold text-red-900 dark:text-red-300">Sync Errors Detected</h3>
               </div>
               <p className="text-sm text-red-700 dark:text-red-400 mb-4">
-                {failedSyncs.length} {failedSyncs.length === 1 ? 'item failed' : 'items failed'} to sync to the cloud permanently. This usually happens if there was a server conflict or invalid data. You can attempt to retry them below.
+                {failedSyncs.length} {failedSyncs.length === 1 ? 'item could not be synced' : 'items could not be synced'} automatically. Temporary failures will retry in the background; invalid data may need manual correction.
               </p>
               
               <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
@@ -71,6 +71,26 @@ export const SyncSettings: React.FC = () => {
                       <span className="text-slate-500 text-xs">{new Date(item.createdAt).toLocaleString()}</span>
                     </div>
                     {item.error && <div className="text-red-600 dark:text-red-400 mt-1 text-xs font-mono bg-red-100/50 dark:bg-red-900/30 p-1 rounded break-words">{item.error}</div>}
+                    <div className="text-slate-500 dark:text-slate-400 mt-1 text-xs">
+                      Attempt {item.retryCount || 0} of 5
+                      {item.lastAttemptAt && ` · Last attempt ${new Date(item.lastAttemptAt).toLocaleString()}`}
+                      {(item.retryCount || 0) >= 5 && ' · Automatic retries exhausted'}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm('Discard this failed change? The local record will be restored from the cloud when possible.')) return;
+                        try {
+                          await syncEngine.discardFailedItem(item);
+                          toast.success('Failed change discarded.');
+                        } catch (e: any) {
+                          toast.error(e.message || 'Failed to discard sync item.');
+                        }
+                      }}
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-300 hover:underline"
+                    >
+                      <Trash2 size={13} />
+                      Discard failed change
+                    </button>
                   </div>
                 ))}
               </div>
@@ -80,7 +100,13 @@ export const SyncSettings: React.FC = () => {
                   try {
                     // Reset status to pending to allow retry
                     await Promise.all(failedSyncs.map(item => 
-                      db.syncQueue.update(item.id, { status: 'pending', error: undefined })
+                      db.syncQueue.update(item.id, {
+                        status: 'pending',
+                        error: undefined,
+                        retryCount: 0,
+                        lastAttemptAt: undefined,
+                        nextRetryAt: undefined,
+                      })
                     ));
                     syncEngine.sync();
                     toast.success('Queued for retry!');

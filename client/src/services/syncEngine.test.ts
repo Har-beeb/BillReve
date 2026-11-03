@@ -15,6 +15,7 @@ vi.mock('../db/db', () => ({
       where: vi.fn().mockReturnThis(),
       equals: vi.fn().mockReturnThis(),
       sortBy: vi.fn(),
+      toArray: vi.fn(),
       delete: vi.fn(),
       update: vi.fn(),
       hook: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
@@ -86,7 +87,7 @@ describe('syncEngine', () => {
       const mockItems = [
         { id: 1, action: 'CREATE', entity: 'CLIENT', status: 'pending', payload: { localId: 'client-1', name: 'Test Client' } }
       ];
-      (db.syncQueue as any).sortBy.mockResolvedValue(mockItems);
+      (db.syncQueue as any).toArray.mockResolvedValue(mockItems);
       mockSupabaseQuery.upsert.mockResolvedValue({ error: null });
 
       await (syncEngine as any).pushLocalChanges();
@@ -108,7 +109,7 @@ describe('syncEngine', () => {
       const mockItems = [
         { id: 2, action: 'UPDATE', entity: 'INVOICE', status: 'pending', payload: { localId: 'inv-1', total: 100 } }
       ];
-      (db.syncQueue as any).sortBy.mockResolvedValue(mockItems);
+      (db.syncQueue as any).toArray.mockResolvedValue(mockItems);
 
       await (syncEngine as any).pushLocalChanges();
 
@@ -127,7 +128,7 @@ describe('syncEngine', () => {
       const mockItems = [
         { id: 3, action: 'DELETE', entity: 'QUOTE', status: 'pending', payload: { localId: 'quote-1' } }
       ];
-      (db.syncQueue as any).sortBy.mockResolvedValue(mockItems);
+      (db.syncQueue as any).toArray.mockResolvedValue(mockItems);
 
       await (syncEngine as any).pushLocalChanges();
 
