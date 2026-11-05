@@ -107,6 +107,10 @@ const Contact: React.FC = () => {
                 <AtSign size={20} />
                 @billreve.app
               </a>
+              <a href="https://x.com/BillReve" target="_blank" rel="noopener noreferrer" className="w-auto px-4 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700 dark:hover:text-white transition-colors font-medium text-sm">
+                <span className="text-base font-black">X</span>
+                @BillReve
+              </a>
             </div>
           </div>
         </div>

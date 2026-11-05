@@ -694,14 +694,13 @@ BEGIN
 
     IF p_gateway = 'paystack' THEN
         SELECT CASE WHEN paystack_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(paystack_key_encrypted, v_encryption_key) END
-        INTO v_secret
-        FROM public.user_secrets
-        WHERE organization_id = p_org_id;
+          INTO v_secret FROM public.user_secrets WHERE organization_id = p_org_id;
     ELSIF p_gateway = 'flutterwave' THEN
         SELECT CASE WHEN flutterwave_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(flutterwave_key_encrypted, v_encryption_key) END
-        INTO v_secret
-        FROM public.user_secrets
-        WHERE organization_id = p_org_id;
+          INTO v_secret FROM public.user_secrets WHERE organization_id = p_org_id;
+    ELSIF p_gateway = 'flutterwave_api' THEN
+        SELECT CASE WHEN flutterwave_api_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(flutterwave_api_key_encrypted, v_encryption_key) END
+          INTO v_secret FROM public.user_secrets WHERE organization_id = p_org_id;
     ELSE
         RAISE EXCEPTION 'Unknown gateway';
     END IF;
@@ -883,7 +882,7 @@ $$;
 ALTER FUNCTION "public"."get_public_quote"("p_local_id" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_user_secrets"() RETURNS TABLE("paystack_secret_key" "text", "flutterwave_secret_key" "text")
+CREATE OR REPLACE FUNCTION "public"."get_user_secrets"() RETURNS TABLE("paystack_secret_key" "text", "flutterwave_secret_key" "text", "flutterwave_api_secret_key" "text")
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -891,9 +890,9 @@ DECLARE
     v_encryption_key TEXT;
     v_org_id UUID;
 BEGIN
-    SELECT organization_id INTO v_org_id 
-    FROM public.organization_members 
-    WHERE user_id = auth.uid() 
+    SELECT organization_id INTO v_org_id
+    FROM public.organization_members
+    WHERE user_id = auth.uid()
     LIMIT 1;
 
     IF v_org_id IS NULL THEN
@@ -902,10 +901,11 @@ BEGIN
 
     v_encryption_key := COALESCE(current_setting('app.settings.encryption_key', true), 'billreve_fallback_secret_99');
 
-    RETURN QUERY 
-    SELECT 
+    RETURN QUERY
+    SELECT
         CASE WHEN paystack_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(paystack_key_encrypted, v_encryption_key) END,
-        CASE WHEN flutterwave_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(flutterwave_key_encrypted, v_encryption_key) END
+        CASE WHEN flutterwave_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(flutterwave_key_encrypted, v_encryption_key) END,
+        CASE WHEN flutterwave_api_key_encrypted IS NULL THEN NULL ELSE extensions.pgp_sym_decrypt(flutterwave_api_key_encrypted, v_encryption_key) END
     FROM public.user_secrets
     WHERE organization_id = v_org_id;
 END;
@@ -1349,10 +1349,11 @@ CREATE OR REPLACE FUNCTION "public"."record_payment_event"("p_org_id" "uuid", "p
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
 DECLARE
-    v_inserted   boolean := false;
-    v_total      bigint;
-    v_paid       bigint;
-    v_new_status text;
+    v_inserted      boolean := false;
+    v_total         bigint;
+    v_paid          bigint;
+    v_applied       bigint;
+    v_new_status    text;
 BEGIN
     IF p_reference IS NULL OR btrim(p_reference) = '' THEN
         RAISE EXCEPTION 'A gateway reference is required for idempotency';
@@ -1371,8 +1372,6 @@ BEGIN
     ON CONFLICT (gateway, reference) DO NOTHING;
 
     v_inserted := FOUND;
-
-    -- Already processed — a replayed webhook. Do not touch the invoice.
     IF NOT v_inserted THEN
         RETURN 'DUPLICATE';
     END IF;
@@ -1388,14 +1387,14 @@ BEGIN
         RAISE EXCEPTION 'Invoice % not found for organization %', p_invoice_local_id, p_org_id;
     END IF;
 
-    -- ACCUMULATE. This is the actual installment fix.
-    v_paid := v_paid + p_amount_minor;
+    v_applied := LEAST(p_amount_minor, GREATEST(v_total - v_paid, 0));
+    v_paid := v_paid + v_applied;
     v_new_status := CASE WHEN v_paid >= v_total THEN 'PAID' ELSE 'PARTIAL' END;
 
     UPDATE public.invoices
        SET amount_paid = v_paid,
-           status      = v_new_status,
-           updated_at  = now()
+           status = v_new_status,
+           updated_at = now()
      WHERE local_id = p_invoice_local_id
        AND organization_id = p_org_id;
 
@@ -1542,7 +1541,7 @@ $$;
 ALTER FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text", "p_flutterwave_api" "text" DEFAULT NULL::"text") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -1556,9 +1555,9 @@ BEGIN
         RAISE EXCEPTION 'Not authenticated';
     END IF;
 
-    SELECT organization_id INTO v_org_id 
-    FROM public.organization_members 
-    WHERE user_id = v_uid 
+    SELECT organization_id INTO v_org_id
+    FROM public.organization_members
+    WHERE user_id = v_uid
     LIMIT 1;
 
     IF v_org_id IS NULL THEN
@@ -1567,22 +1566,30 @@ BEGIN
 
     v_encryption_key := COALESCE(current_setting('app.settings.encryption_key', true), 'billreve_fallback_secret_99');
 
-    INSERT INTO public.user_secrets (organization_id, paystack_key_encrypted, flutterwave_key_encrypted, updated_at)
+    INSERT INTO public.user_secrets (
+        organization_id,
+        paystack_key_encrypted,
+        flutterwave_key_encrypted,
+        flutterwave_api_key_encrypted,
+        updated_at
+    )
     VALUES (
         v_org_id,
         CASE WHEN p_paystack IS NULL THEN NULL ELSE extensions.pgp_sym_encrypt(p_paystack, v_encryption_key) END,
         CASE WHEN p_flutterwave IS NULL THEN NULL ELSE extensions.pgp_sym_encrypt(p_flutterwave, v_encryption_key) END,
+        CASE WHEN p_flutterwave_api IS NULL THEN NULL ELSE extensions.pgp_sym_encrypt(p_flutterwave_api, v_encryption_key) END,
         now()
     )
     ON CONFLICT (organization_id) DO UPDATE SET
         paystack_key_encrypted = EXCLUDED.paystack_key_encrypted,
         flutterwave_key_encrypted = EXCLUDED.flutterwave_key_encrypted,
+        flutterwave_api_key_encrypted = EXCLUDED.flutterwave_api_key_encrypted,
         updated_at = now();
 END;
 $$;
 
 
-ALTER FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text", "p_flutterwave_api" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."submit_manual_upgrade_request"() RETURNS "uuid"
@@ -2041,7 +2048,8 @@ CREATE TABLE IF NOT EXISTS "public"."user_secrets" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "paystack_key_encrypted" "bytea",
     "flutterwave_key_encrypted" "bytea",
-    "organization_id" "uuid" NOT NULL
+    "organization_id" "uuid" NOT NULL,
+    "flutterwave_api_key_encrypted" "bytea"
 );
 
 
@@ -3036,6 +3044,11 @@ GRANT ALL ON FUNCTION "public"."record_saas_subscription_payment"("p_organizatio
 
 REVOKE ALL ON FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."retry_campaign"("p_campaign_id" "uuid") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text", "p_flutterwave_api" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text", "p_flutterwave_api" "text") TO "authenticated";
 
 
 

@@ -38,16 +38,26 @@ const Support: React.FC = () => {
           </div>
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Social Support</h3>
           <p className="text-slate-500 text-sm mb-4">
-            Reach out to us via direct message on Instagram for quick assistance.
+            Reach out to us via direct message on Instagram or X for quick assistance. Email remains the best channel for account-specific support.
           </p>
-          <a 
-            href="https://instagram.com/billreve.app" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-pink-600 dark:text-pink-400 font-semibold text-sm flex items-center gap-1 hover:underline"
-          >
-            @billreve.app
-          </a>
+          <div className="flex flex-wrap gap-4">
+            <a
+              href="https://instagram.com/billreve.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-pink-600 dark:text-pink-400 font-semibold text-sm flex items-center gap-1 hover:underline"
+            >
+              Instagram @billreve.app
+            </a>
+            <a
+              href="https://x.com/BillReve"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center gap-1 hover:underline"
+            >
+              X @BillReve
+            </a>
+          </div>
         </Card>
       </div>
 

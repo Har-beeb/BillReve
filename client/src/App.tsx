@@ -87,7 +87,7 @@ const ThemeController = () => {
     }
 
     const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/', '/privacy', '/terms', '/about', '/changelog', '/help', '/guides', '/templates', '/contact'];
-    const isPublicRoute = publicPaths.includes(pathname) || pathname.startsWith('/pay/') || pathname.startsWith('/quote/');
+    const isPublicRoute = publicPaths.includes(pathname) || pathname.startsWith('/pay/') || pathname.startsWith('/quote/') || pathname.startsWith('/guides/');
 
     if (!isPublicRoute) {
       if (colorTheme !== 'default') {
@@ -246,6 +246,7 @@ function App() {
               <Route path="/help" element={<HelpCenter />} />
               <Route path="/documentation" element={<Documentation />} />
               <Route path="/guides" element={<Guides />} />
+              <Route path="/guides/:slug" element={<Guides />} />
               <Route path="/templates" element={<Templates />} />
               <Route path="/contact" element={<Contact />} />
             </Route>
@@ -300,4 +301,3 @@ function App() {
 }
 
 export default App;
-
