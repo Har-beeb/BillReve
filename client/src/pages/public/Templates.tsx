@@ -2,29 +2,34 @@ import React from 'react';
 import { SEO } from '../../components/SEO';
 import { Sparkles, FileText, Download, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { downloadTemplate, type ImportType } from '../../utils/csvParser';
 
 const TEMPLATES = [
   {
     name: 'Freelance Design Invoice',
     industry: 'Design & Creative',
+    type: 'invoices' as ImportType,
     color: 'bg-purple-100 dark:bg-purple-900/50',
     iconColor: 'text-purple-600'
   },
   {
     name: 'Consulting Retainer Quote',
     industry: 'Business Consulting',
+    type: 'quotes' as ImportType,
     color: 'bg-emerald-100 dark:bg-emerald-900/50',
     iconColor: 'text-emerald-600'
   },
   {
     name: 'Software Development Bill',
     industry: 'Technology & IT',
+    type: 'invoices' as ImportType,
     color: 'bg-blue-100 dark:bg-blue-900/50',
     iconColor: 'text-blue-600'
   },
   {
     name: 'Marketing Retainer Invoice',
     industry: 'Digital Marketing',
+    type: 'invoices' as ImportType,
     color: 'bg-amber-100 dark:bg-amber-900/50',
     iconColor: 'text-amber-600'
   }
@@ -83,9 +88,13 @@ const Templates: React.FC = () => {
               <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-6">{template.industry}</p>
               
               <div className="mt-auto">
-                <span className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-400 group-hover:text-purple-600 transition-colors">
-                  <Download size={16} /> Auto-Generate
-                </span>
+                <button
+                  type="button"
+                  onClick={() => downloadTemplate(template.type)}
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-400 group-hover:text-purple-600 transition-colors"
+                >
+                  <Download size={16} /> Download CSV
+                </button>
               </div>
             </div>
           ))}
