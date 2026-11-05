@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SEO } from '../../components/SEO';
-import { Mail, MapPin, Send, MessageSquare, AtSign } from 'lucide-react';
+import { Mail, MapPin, Send, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 
@@ -104,11 +104,28 @@ const Contact: React.FC = () => {
             <h3 className="font-bold text-slate-900 dark:text-white mb-4">Follow our journey</h3>
             <div className="flex gap-4">
               <a href="https://instagram.com/billreve.app" target="_blank" rel="noopener noreferrer" className="w-auto px-4 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-2 text-slate-500 hover:bg-pink-100 hover:text-pink-600 transition-colors font-medium text-sm">
-                <AtSign size={20} />
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect width="20" height="20" x="2" y="2" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17.5" cy="6.5" r=".5" fill="currentColor" />
+                </svg>
+                <span className="sr-only">Instagram </span>
                 @billreve.app
               </a>
               <a href="https://x.com/BillReve" target="_blank" rel="noopener noreferrer" className="w-auto px-4 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-2 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700 dark:hover:text-white transition-colors font-medium text-sm">
-                <span className="text-base font-black">X</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+                  <path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.39L6.48 22H3.37l7.24-8.28L2.8 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.76h1.73L8.28 4.12H6.42L17.8 19.76Z" />
+                </svg>
+                <span className="sr-only">X </span>
                 @BillReve
               </a>
             </div>

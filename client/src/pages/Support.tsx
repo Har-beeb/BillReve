@@ -40,14 +40,29 @@ const Support: React.FC = () => {
           <p className="text-slate-500 text-sm mb-4">
             Reach out to us via direct message on Instagram or X for quick assistance. Email remains the best channel for account-specific support.
           </p>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-col items-start gap-3">
             <a
               href="https://instagram.com/billreve.app"
               target="_blank"
               rel="noopener noreferrer"
               className="text-pink-600 dark:text-pink-400 font-semibold text-sm flex items-center gap-1 hover:underline"
             >
-              Instagram @billreve.app
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r=".5" fill="currentColor" />
+              </svg>
+              <span className="sr-only">Instagram </span>
+              <span className="leading-none">@billreve.app</span>
             </a>
             <a
               href="https://x.com/BillReve"
@@ -55,7 +70,11 @@ const Support: React.FC = () => {
               rel="noopener noreferrer"
               className="text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center gap-1 hover:underline"
             >
-              X @BillReve
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                <path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.39L6.48 22H3.37l7.24-8.28L2.8 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.76h1.73L8.28 4.12H6.42L17.8 19.76Z" />
+              </svg>
+              <span className="sr-only">X </span>
+              <span className="leading-none">@BillReve</span>
             </a>
           </div>
         </Card>
