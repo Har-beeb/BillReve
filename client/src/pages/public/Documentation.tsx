@@ -447,7 +447,7 @@ const Documentation: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline-flex px-2 py-0.5 text-xs font-bold bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full tracking-wide">
-              v1.5.0
+              v1.6.0
             </span>
             <button onClick={() => setMobileNavOpen(true)}
               className="lg:hidden p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
@@ -585,7 +585,7 @@ const Documentation: React.FC = () => {
               <div style={{ padding: '1.25rem 3rem', borderTop: '1px solid #f1f5f9' }}
                 className="bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <p style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.8125rem', color: '#94a3b8' }}>
-                  BillReve Documentation · v1.5.0 · November 2026
+                  BillReve Documentation · v1.6.0 · November 2026
                 </p>
                 <a href="https://billreve.app/support" target="_blank" rel="noopener noreferrer"
                   style={{

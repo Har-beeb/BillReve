@@ -5,7 +5,15 @@ import { Zap, ShieldCheck, Sparkles } from 'lucide-react';
 
 const updates = [
   {
-    version: `v${import.meta.env.VITE_APP_VERSION || '1.5.0'}`,
+    version: `v${import.meta.env.VITE_APP_VERSION || '1.6.0'}`,
+    date: 'November 8, 2026',
+    title: 'Prepaid Pro Plans & Public Experience Refresh',
+    description: 'BillReve now makes it easier to understand, try, and upgrade the product, with a clearer public experience and flexible prepaid Pro access.',
+    features: ['Prepaid Pro Terms for 3, 6, and 12 Months', 'Server-Verified Paystack Plan Pricing', 'Manual Transfer Requests Retain Selected Terms', 'Landing Page Workflow, Audience, and FAQ Sections', 'Clearer Free and Pro Plan Benefits', 'Guides, Templates, and Support Improvements'],
+    icon: <Sparkles className="text-purple-500" size={24} />
+  },
+  {
+    version: 'v1.5.0',
     date: 'October 7, 2026',
     title: 'UI Polish, Dynamic Dashboards & Social Support',
     description: 'We refined the user interface to give you the sleekest experience yet. From smooth new data visualizations to smarter campaigns and expanded support channels.',
@@ -112,4 +120,3 @@ const Changelog: React.FC = () => {
 };
 
 export default Changelog;
-

@@ -1,5 +1,5 @@
 # BillReve — Technical Working Document
-*Last updated: 2026-10-14 | Version: 1.5.0*
+*Last updated: 2026-11-08 | Version: 1.6.0*
 
 > This document is the **authoritative internal reference** for BillReve. It is written for developers, AI agents, and collaborators continuing work on this project. It must be kept up-to-date after every significant change.
 >
@@ -37,7 +37,7 @@ BillReve is an **offline-first, AI-powered invoicing and billing SaaS** for free
 ## 2. Full Feature Inventory
 
 ### Core Business Features
-- **Invoicing Engine** — Full lifecycle: `DRAFT → SENT → PENDING → PARTIAL → PAID → OVERDUE → VOID`
+- **Invoicing Engine** — Statuses: `DRAFT`, `SENT`, `PENDING`, `PARTIAL`, `PAID`, and `OVERDUE` (overdue is a late-payment state, not a required step)
 - **Quotes & Negotiation Loop** — Lifecycle: `DRAFT → SENT → ACCEPTED / DECLINED / COUNTERED`. Clients can counter-offer via public link; admin can accept counter, decline, or redraft a new version. Minimum counter amount is enforced **server-side** in the RPC, not just in the browser
 - **Quote → Invoice Conversion** — One-click conversion preserves all line items
 - **Recurring Invoices** — `recurring_schedules` table + `process-recurring-invoices` edge function on `pg_cron`
@@ -310,10 +310,9 @@ Background, triggered by any of:
 One watermark **per table** (`last_sync_time_clients`, `_invoices`, `_quotes`). A single shared watermark previously allowed a newer timestamp in one table to advance past un-pulled rows in another — silent, unrecoverable partial data loss. All `last_sync_time*` keys are cleared on logout, so a second user on the same browser does not resume from the previous user's position.
 
 ### Dead letter queue
-Failed pushes are marked `status: 'failed'` and are **not** auto-retried. They surface in `SyncSettings.tsx` with a retry button that resets them to `pending`. Logout is never blocked by them — the user gets an explicit confirmation instead.
+Failed pushes are marked `status: 'failed'`, retain retry metadata, and are automatically retried with exponential backoff up to the queue retry limit. They surface in `SyncSettings.tsx` with retry and discard/reconciliation actions. Logout is never blocked by them — the user gets an explicit confirmation instead.
 
-### Remaining weakness 🟢
-No automatic exponential backoff on retry. Manual retry only.
+Permanent failures remain visible until the user explicitly retries or discards them. Discarding reconciles with the remote organization-scoped record when one exists, or removes only the local record when no remote record exists.
 
 ---
 
@@ -338,11 +337,16 @@ const isPro = businessProfile?.is_pro &&
 ```
 Paystack sends webhook event
   → verify HMAC FIRST (before any DB write)
-  → charge.success + metadata type=saas_subscription + amount >= 350000 kobo
-        → is_pro = true, pro_expires_at = now + 30 days
+  → charge.success + metadata type=saas_subscription + a server-approved plan amount
+        → is_pro = true, pro_expires_at = current expiry or now + selected term
   → subscription.disable / charge.failed / subscription.not_renew
         → log only. Do NOT downgrade; let pro_expires_at lapse naturally
 ```
+
+Pro is sold as prepaid, non-renewing terms: ₦3,500 for 1 month, ₦10,000 for 3 months,
+₦19,000 for 6 months, or ₦35,000 for 12 months. The client submits only the plan
+code; the webhook and `record_saas_subscription_payment` function validate the amount
+and duration before extending the organization entitlement.
 A daily sweep in `email-cron` sets `is_pro = false` where `pro_expires_at < now()`.
 
 ---
@@ -455,6 +459,18 @@ Considered and deliberately deferred. SES is roughly 4× cheaper ($0.10/1,000 ve
 - The typed counter amount is **major units** and is converted with `toMinor()` before submission
 - `minimum_counter_amount` and `allow_counter_offer` are validated in the RPC against the stored row
 
+### `/guides` and `/guides/:slug` (`public/Guides.tsx`)
+- Public guide library and dedicated article pages for invoicing, freelancer tax record-keeping, and project quotes
+- Each article includes `BillReve Team` attribution, reading time, a practical BillReve CTA, and a writer-contribution contact invitation
+
+### `/templates` (`public/Templates.tsx`)
+- Public downloadable CSV starter templates for invoice and quote workflows
+- Cards use the existing `csvParser.ts` download helper; they do not create application records
+
+### `/contact` and `/support`
+- Contact form and support email are the primary support channels
+- Instagram and X (`@BillReve`) are available as public quick-contact/social links
+
 ---
 
 ## 14. Risks, Bugs & Technical Debt
@@ -472,40 +488,34 @@ Until `CAMPAIGN_SENDER_ADDRESS` points at a verified subdomain, a campaign that 
 The committed dump predates the multi-tenant migration — it still shows `user_id NOT NULL` and `clients_user_id_local_id_key`. The migration files are correct; the dump is not.
 - **Fix:** re-dump after applying migrations, and do it as part of the release checklist.
 
-### 🟡 3. Flutterwave webhook trusts its own payload
-It reads `data.status` and `data.amount` from the request body rather than re-fetching from `GET /v3/transactions/:id/verify`, which Flutterwave's docs recommend.
-- **Blocker:** that call needs the merchant's Flutterwave **API secret**, which is a different credential from the `verif-hash` currently stored in `user_secrets`. Needs a new column first.
-
-### 🟡 4. No webhook idempotency key
+### 🟡 3. No webhook idempotency key
 Both handlers set absolute values rather than incrementing, so replay is not a double-count risk. But the gateway transaction reference is not stored, so reconciliation against the gateway dashboard is manual.
 - **Fix:** add a `payment_reference` column and treat it as an idempotency key.
 
-### 🟡 5. Notification triggers suppress teammate notifications
+### 🟡 4. Notification triggers suppress teammate notifications
 See the note in Section 5. `auth.uid() IS NOT NULL` is too broad for a tenant model.
 
-### 🟡 6. Team accounts not reachable from the UI
+### 🟡 5. Team accounts not reachable from the UI
 `organizations`, `organization_members`, owner-gated RLS policies and `is_org_owner()` all exist. There is no invite flow and the UI does not enforce `role`. Every member is effectively an owner.
 
-### 🟢 7. ~250 `any` usages
+### 🟢 6. ~250 `any` usages
 `@typescript-eslint/no-explicit-any` is set to `warn` so CI stays useful. Worth paying down incrementally, not in one pass.
 
-### 🟢 8. No sync retry backoff
-Failed items are retryable from the DLQ UI but there is no automatic exponential backoff.
-
-### 🟢 9. PDF rendering on the main thread
+### 🟢 7. PDF rendering on the main thread
 On slow devices, generating a large PDF can freeze the tab.
 - **Fix:** move generation to a Web Worker.
 
-### 🟢 10. Code duplication
+### 🟢 8. Code duplication
 `Quotes.tsx` / `Invoices.tsx` and `PublicQuote.tsx` / `PublicInvoice.tsx` remain near-duplicates (~2,800 lines expressing two behaviours). This is how the PDF argument swap and the Paystack currency bug reached production in one path but not the other.
 
 ### Resolved (do not re-report)
-AI context overflow · bank-account referential integrity · client clock drift · `is_pro`/`pro_expires_at` desync · public RPC rate limiting · plaintext gateway secrets · duplicate invoice numbers · shared sync watermark · logout trap · PDF sender/recipient swap · client-side-only quotas · 100× gateway billing · webhook amount verification · zero tests/CI/telemetry · Paystack webhook metadata mismatch · organization writes matching zero rows · `email-cron` wrong column name · instalment payments never reaching PAID · `recurring_schedules` never pulled · dead webhook URL shown to merchants · soft 404 / not indexed · RevenueChat starved of context · campaigns with no unsubscribe, suppression or batching.
+AI context overflow · bank-account referential integrity · client clock drift · `is_pro`/`pro_expires_at` desync · public RPC rate limiting · plaintext gateway secrets · duplicate invoice numbers · shared sync watermark · logout trap · PDF sender/recipient swap · client-side-only quotas · 100× gateway billing · webhook amount verification · Flutterwave transaction re-verification · zero tests/CI/telemetry · Paystack webhook metadata mismatch · organization writes matching zero rows · `email-cron` wrong column name · instalment payments never reaching PAID · `recurring_schedules` never pulled · dead webhook URL shown to merchants · soft 404 / not indexed · RevenueChat starved of context · campaigns with no unsubscribe, suppression or batching · sync retry/backoff and failed-item recovery.
 
 ---
 
 ## 15. Recent Work (Reverse Chronological)
 
+- **2026-11-05 → 11-08 — Public content and support surfaces.** Added dedicated `/guides/:slug` article routes with BillReve Team attribution, reading times, practical calls to action, and a writer-contribution contact path. Connected `/templates` cards to downloadable invoice and quote CSV starter files. Added Instagram and X (`@BillReve`) links with accessible icons to `/contact` and `/support`. Removed an accidental nested `server/supabase/supabase/migrations` directory that contained an empty migration artifact; `server/supabase/migrations` remains the only migration source.
 - **2026-10-15 → 10-20 — Live-testing fixes.** Campaigns stuck on QUEUED: the Vault secrets the cron job reads were never created, so `url` and `Authorization` resolved to NULL; cron bodies now raise a message naming the missing secret (`20261015000000`), and `campaign-worker` also accepts a signed-in user (scoped to their own org) so the client dispatches immediately and cron is only a retry backstop. The immediate dispatch then failed on CORS — `campaign-worker` and `process-recurring-invoices` hand-rolled header lists missing `x-app-version`; all CORS now comes from `_shared/cors.ts`. `email-cron` had **never been scheduled**, so no payment reminder or Pro-expiry sweep had ever run; scheduled daily at 07:00 UTC (`20261015010000`) with a guard so one deleted client cannot abort the whole run. `get_public_profile` returned the raw `is_pro` flag to anon, so a lapsed Pro merchant kept online checkout on public invoices; it now returns resolved status (`20261018000000`). All customer-facing dates moved off ambiguous `toLocaleDateString()` to `formatDate` ("Oct 9, 2026"), CSV exports to ISO — caught by CI on its first run when the runner's US locale disagreed with the snapshot. Rich-text toolbar now shows active state, read from `queryCommandState` on `selectionchange`. Merchant webhook URLs are now `https://billreve.app/api/v1/webhooks/{paystack,flutterwave}`, proxied by a Vercel rewrite; old Supabase URLs keep working. Vitest default environment switched to `node` (jsdom per file cost ~14s and caused worker timeouts that silently skipped whole files).
 - **2026-10-14 — Campaign system rebuild.** Replaced fire-and-forget bulk sending with a real pipeline: `campaigns` / `campaign_recipients` / `email_suppressions` / `campaign_credit_purchases` tables, `queue_campaign` as the only entry point, a cron-driven `campaign-worker` batching at Resend's 100-message cap with per-recipient tracking, Svix-verified `resend-webhook` feeding bounces and complaints into suppression, RFC 8058 one-click unsubscribe with a public unsubscribe page, and a `campaign-proofread` gate (deterministic blocking + AI advisory). New dependency-free `RichTextEditor` with image upload to a `campaign-assets` bucket, live desktop/mobile preview, and a quota meter. Pro-gated at 250 emails/month with a 2-per-week frequency limit and ₦2,000/1,000-email top-up packs. Migrations `20261014000000`–`20261014030000`.
 - **2026-10-12/13 — Third audit remediation.** Fixed the Paystack webhook metadata mismatch that was failing **every** invoice payment; four `organizations` updates using `.eq('id', user.id)` that matched zero rows and silently saved nothing (now `lib/organization.ts`); `email-cron` selecting a non-existent `business_name` column so no reminder had ever sent; instalment payments never reaching PAID (now the `payment_events` ledger); `recurring_schedules` never being pulled by the sync engine; raw minor units in notification text; the dead `api.billreve.app` webhook URL shown to merchants; recurring invoices generated as silent drafts; dashboard card click inconsistency; the native date-picker icon colliding with the custom one; the Google soft 404 (no catch-all route plus a `/(.*) → /` rewrite); and RevenueChat, where `get_ai_context` returned a client *count* with no list, quotes or ids while the prompt instructed the model to use them. Migrations `20261012000000`–`20261013000000`.
@@ -559,7 +569,7 @@ AI context overflow · bank-account referential integrity · client clock drift 
 # client/.env.local  — ALL of these ship in the public bundle
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_APP_VERSION=1.5.0
+VITE_APP_VERSION=1.6.0
 VITE_SENTRY_DSN=            # optional; errors are invisible without it
 VITE_POSTHOG_KEY=           # optional
 VITE_POSTHOG_HOST=          # optional, defaults to https://us.i.posthog.com

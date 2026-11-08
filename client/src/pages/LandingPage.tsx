@@ -12,13 +12,20 @@ import {
   Globe2,
   FileText,
   Users,
+  UserRound,
+  BriefcaseBusiness,
+  Paintbrush,
+  Store,
   LayoutDashboard,
   Star,
   FileSpreadsheet,
   Bot,
   Send,
   MessageSquare,
-  Loader2
+  Loader2,
+  HelpCircle,
+  ShieldCheck,
+  Clock3
 } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { useAppStore } from '../store/useAppStore';
@@ -64,6 +71,10 @@ const LandingPage: React.FC = () => {
     } else {
       navigate('/register');
     }
+  };
+
+  const handleExplorePro = () => {
+    navigate(isAuthenticated ? '/upgrade' : '/register');
   };
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
@@ -150,7 +161,7 @@ const LandingPage: React.FC = () => {
           </h1>
           
           <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10 mt-4 md:mt-0">
-            Create, send, and track stunning invoices and quotes in seconds. Get paid faster and manage your business effortlessly—even when you're offline.
+            Create professional invoices and quotes in seconds, send them with confidence, and keep your core business records moving, even when you're offline.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -259,6 +270,33 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Workflow Section */}
+      <section className="py-20 bg-slate-900 dark:bg-slate-950 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mb-12">
+            <p className="text-sm font-bold uppercase tracking-wider text-purple-300 mb-3">A calmer way to bill</p>
+            <h2 className="text-3xl md:text-4xl font-black font-['Outfit'] mb-4">From first draft to payment, without the busywork.</h2>
+            <p className="text-slate-300 text-lg">BillReve keeps the workflow simple so you can spend less time formatting documents and more time doing the work clients value.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { number: '01', title: 'Create', text: 'Start from a polished invoice or quote, or let Revenue AI turn a short description into a structured draft.', icon: <FileText size={24} /> },
+              { number: '02', title: 'Send', text: 'Share a professional document or public payment link with clear terms, branding, and next steps.', icon: <Send size={24} /> },
+              { number: '03', title: 'Track', text: 'Follow payment status, outstanding balances, and client activity from one focused workspace.', icon: <LayoutDashboard size={24} /> }
+            ].map((step) => (
+              <div key={step.number} className="group rounded-2xl border border-slate-700 bg-slate-800/60 p-7 transition-all duration-300 hover:-translate-y-2 hover:border-purple-400/70 hover:bg-slate-800 hover:shadow-2xl hover:shadow-purple-950/40">
+                <div className="flex items-center justify-between mb-8">
+                  <span className="text-sm font-black text-purple-300">{step.number}</span>
+                  <div className="h-11 w-11 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-purple-500 group-hover:text-white">{step.icon}</div>
+                </div>
+                <h3 className="text-xl font-bold mb-2">{step.title}</h3>
+                <p className="text-slate-300 leading-relaxed">{step.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="py-24 bg-white dark:bg-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -278,12 +316,12 @@ const LandingPage: React.FC = () => {
             <FeatureCard 
               icon={<RefreshCw size={32} className="text-amber-500" />}
               title="Work Offline, Sync Later"
-              description="No internet? No problem. Full offline capability means you can keep working anywhere. We'll sync automatically when you reconnect."
+              description="Create and manage core business records locally first. BillReve syncs your changes automatically when you reconnect."
             />
             <FeatureCard 
               icon={<CreditCard size={32} className="text-green-500" />}
               title="Get Paid Faster"
-              description="Send secure payment links via Email or copy them to WhatsApp. Let clients pay you online in real-time."
+              description="Share professional payment links and clear transfer instructions so clients always know what to do next."
             />
             <FeatureCard 
               icon={<Globe2 size={32} className="text-blue-500" />}
@@ -300,6 +338,30 @@ const LandingPage: React.FC = () => {
               title="Client Management"
               description="Keep all your client details organized. Track invoice history, outstanding balances, and communication."
             />
+          </div>
+        </div>
+      </section>
+
+      {/* Audience Section */}
+      <section className="py-24 bg-white dark:bg-slate-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 font-['Outfit']">Built around the way you work</h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400">Whether you are sending your first invoice or managing recurring client work, BillReve keeps the essentials close.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              { title: 'Freelancers', text: 'Send polished invoices, track payment, and keep your client history organised.', icon: <UserRound size={28} /> },
+              { title: 'Consultants', text: 'Turn agreed scope into clear quotes, milestones, and payment terms.', icon: <BriefcaseBusiness size={28} /> },
+              { title: 'Creative teams', text: 'Protect your brand with reusable themes, logos, and professional PDFs.', icon: <Paintbrush size={28} /> },
+              { title: 'Small businesses', text: 'Keep clients, invoices, quotes, and reports together as you grow.', icon: <Store size={28} /> }
+            ].map(({ title, text, icon }) => (
+              <div key={title} className="group rounded-2xl border border-slate-200 dark:border-slate-700 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-lg hover:shadow-purple-500/10">
+                <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 mb-5 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">{icon}</div>
+                <h3 className="font-bold text-lg mb-2">{title}</h3>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">{text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -395,21 +457,23 @@ const LandingPage: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:items-start gap-8 max-w-4xl mx-auto">
             {/* Free Tier */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 md:p-10 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col hover:border-purple-200 dark:hover:border-purple-800 transition-colors">
               <h3 className="text-2xl font-bold mb-2">Free</h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-6">Perfect for freelancers getting started.</p>
+              <p className="text-slate-500 dark:text-slate-400 mb-6">The essentials for getting started and staying organised.</p>
               <div className="flex items-end gap-1 mb-8">
                  <span className="text-5xl font-black font-['Outfit']">₦0</span>
                  <span className="text-lg text-slate-500 font-normal mb-2">/mo</span>
               </div>
               
-              <ul className="space-y-4 mb-10 flex-1">
-                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Up to 10 Invoices & Quotes</span></li>
-                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Up to 5 Clients</span></li>
-                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Standard Templates</span></li>
-                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Offline Mode</span></li>
+              <ul className="space-y-4 mb-10">
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">10 invoices per month</span></li>
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">10 quotes per month</span></li>
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Up to 5 clients</span></li>
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">10 AI prompts per month</span></li>
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">Offline-first workspace</span></li>
+                <li className="flex items-start gap-3"><CheckCircle2 size={20} className="text-slate-400 shrink-0 mt-0.5" /> <span className="text-slate-600 dark:text-slate-300">7-day trash recovery</span></li>
               </ul>
               
               <button onClick={handleGetStarted} className="w-full py-4 rounded-xl font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
@@ -441,6 +505,26 @@ const LandingPage: React.FC = () => {
                    <span className="text-5xl font-black font-['Outfit'] tracking-tight">₦3,500</span>
                    <span className="text-lg text-purple-300 font-normal mb-2">/mo</span>
                  </div>
+                 <div className="mt-4 rounded-2xl border border-white/15 bg-white/10 p-4 text-left">
+                   <div className="flex items-center justify-between gap-3 mb-3">
+                     <p className="text-sm font-bold text-white">Save with a longer plan</p>
+                     <span className="text-[11px] font-semibold uppercase tracking-wide text-purple-200">Pay once</span>
+                   </div>
+                   <div className="grid grid-cols-3 gap-2">
+                     {[
+                       { term: '3 months', price: '₦10,000', saving: 'Save 5%' },
+                       { term: '6 months', price: '₦19,000', saving: 'Save 10%' },
+                       { term: '12 months', price: '₦35,000', saving: 'Save 17%' }
+                     ].map((plan) => (
+                       <div key={plan.term} className="rounded-xl bg-white/10 px-2 py-3 text-center transition-colors hover:bg-white/20">
+                         <p className="text-[11px] font-medium text-purple-200">{plan.term}</p>
+                         <p className="mt-1 text-sm font-black text-white">{plan.price}</p>
+                         <p className="mt-1 text-[10px] font-semibold text-emerald-200">{plan.saving}</p>
+                       </div>
+                     ))}
+                   </div>
+                   <p className="mt-3 text-xs leading-relaxed text-purple-200">One payment, no automatic renewal. Your Pro access continues for the full selected term.</p>
+                 </div>
               </div>
               
               <ul className="space-y-4 mb-10 flex-1">
@@ -451,10 +535,40 @@ const LandingPage: React.FC = () => {
                 <li className="flex items-start gap-3"><Send size={20} className="text-blue-300 shrink-0 mt-0.5" /> <span>Automated Email Reminders & Campaigns</span></li>
               </ul>
               
-              <button onClick={handleGetStarted} className="w-full py-4 rounded-xl font-bold bg-white text-purple-700 hover:bg-purple-50 transition-colors shadow-lg mt-auto">
-                Upgrade to Pro
+              <button onClick={handleExplorePro} className="w-full py-4 rounded-xl font-bold bg-white text-purple-700 hover:bg-purple-50 hover:text-purple-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-purple-950/20 transition-all duration-200 shadow-lg mt-auto active:scale-[0.98]">
+                Explore Pro
               </button>
             </div>
+          </div>
+          <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
+            Pro upgrades support secure Paystack checkout, with manual bank transfer available as a fallback.
+          </p>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-24 bg-white dark:bg-slate-800/50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <HelpCircle className="mx-auto text-purple-600 dark:text-purple-400 mb-4" size={32} />
+            <h2 className="text-3xl md:text-4xl font-bold font-['Outfit']">Questions, answered</h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-5">
+            {[
+              ['Does BillReve work offline?', 'Core records such as clients, invoices, and quotes are created locally first and sync when you reconnect. Sending campaigns and online payment verification require a connection.'],
+              ['Can clients pay online?', 'Public invoice links support configured Paystack or Flutterwave checkout for eligible Pro accounts, as well as manual transfer instructions.'],
+              ['Is my data secure?', 'Supabase authentication, organization-scoped access policies, server-side quotas, and verified payment webhooks protect the cloud workflow.'],
+              ['How does Pro activation work?', 'Paystack checkout is verified by webhook before Pro access is activated. Manual transfer is also available and is reviewed before activation.']
+            ].map(([question, answer]) => (
+              <div key={question} className="rounded-2xl border border-slate-200 dark:border-slate-700 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-lg hover:shadow-purple-500/10">
+                <h3 className="font-bold mb-2">{question}</h3>
+                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{answer}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
+            <span className="inline-flex items-center gap-2"><ShieldCheck size={18} className="text-emerald-500" /> Server-verified payments</span>
+            <span className="inline-flex items-center gap-2"><Clock3 size={18} className="text-purple-500" /> Work locally first</span>
           </div>
         </div>
       </section>

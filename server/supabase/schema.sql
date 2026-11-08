@@ -1406,7 +1406,7 @@ $$;
 ALTER FUNCTION "public"."record_payment_event"("p_org_id" "uuid", "p_invoice_local_id" "text", "p_gateway" "text", "p_reference" "text", "p_amount_minor" bigint, "p_currency" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."record_saas_subscription_payment"("p_organization_id" "uuid", "p_provider_reference" "text", "p_amount_minor" bigint, "p_currency" "text", "p_event_type" "text", "p_customer_code" "text" DEFAULT NULL::"text", "p_subscription_code" "text" DEFAULT NULL::"text", "p_plan_code" "text" DEFAULT NULL::"text", "p_period_days" integer DEFAULT 30) RETURNS "jsonb"
+CREATE OR REPLACE FUNCTION "public"."record_saas_subscription_payment"("p_organization_id" "uuid", "p_provider_reference" "text", "p_amount_minor" bigint, "p_currency" "text", "p_event_type" "text", "p_customer_code" "text" DEFAULT NULL::"text", "p_subscription_code" "text" DEFAULT NULL::"text", "p_plan_code" "text" DEFAULT 'pro_monthly'::"text", "p_period_days" integer DEFAULT 30) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
@@ -1415,9 +1415,30 @@ DECLARE
     v_current_expiry timestamptz;
     v_base_expiry timestamptz;
     v_new_expiry timestamptz;
+    v_expected_amount bigint;
+    v_expected_days integer;
 BEGIN
-    IF p_amount_minor < 350000 OR upper(p_currency) <> 'NGN' THEN
-        RAISE EXCEPTION 'Invalid SaaS subscription payment amount or currency';
+    CASE p_plan_code
+        WHEN 'pro_monthly' THEN
+            v_expected_amount := 350000;
+            v_expected_days := 30;
+        WHEN 'pro_3_months' THEN
+            v_expected_amount := 1000000;
+            v_expected_days := 90;
+        WHEN 'pro_6_months' THEN
+            v_expected_amount := 1900000;
+            v_expected_days := 180;
+        WHEN 'pro_12_months' THEN
+            v_expected_amount := 3500000;
+            v_expected_days := 365;
+        ELSE
+            RAISE EXCEPTION 'Invalid Pro plan';
+    END CASE;
+
+    IF p_amount_minor <> v_expected_amount
+       OR p_period_days <> v_expected_days
+       OR upper(p_currency) <> 'NGN' THEN
+        RAISE EXCEPTION 'Invalid SaaS subscription payment for plan %', p_plan_code;
     END IF;
 
     INSERT INTO public.saas_subscription_payments (
@@ -1446,7 +1467,7 @@ BEGIN
     END IF;
 
     v_base_expiry := GREATEST(COALESCE(v_current_expiry, now()), now());
-    v_new_expiry := v_base_expiry + make_interval(days => p_period_days);
+    v_new_expiry := v_base_expiry + make_interval(days => v_expected_days);
 
     UPDATE public.organizations
        SET is_pro = true,
@@ -1465,7 +1486,7 @@ BEGIN
     ON CONFLICT (organization_id) DO UPDATE SET
         customer_code = COALESCE(EXCLUDED.customer_code, saas_subscriptions.customer_code),
         subscription_code = COALESCE(EXCLUDED.subscription_code, saas_subscriptions.subscription_code),
-        plan_code = COALESCE(EXCLUDED.plan_code, saas_subscriptions.plan_code),
+        plan_code = EXCLUDED.plan_code,
         status = 'ACTIVE',
         current_period_end = v_new_expiry,
         updated_at = now();
@@ -1592,14 +1613,33 @@ $$;
 ALTER FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutterwave" "text", "p_flutterwave_api" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."submit_manual_upgrade_request"() RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "public"."submit_manual_upgrade_request"("p_plan_code" "text" DEFAULT 'pro_monthly'::"text") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
 DECLARE
     v_org_id uuid;
     v_request_id uuid;
+    v_amount_minor bigint;
+    v_period_days integer;
 BEGIN
+    CASE p_plan_code
+        WHEN 'pro_monthly' THEN
+            v_amount_minor := 350000;
+            v_period_days := 30;
+        WHEN 'pro_3_months' THEN
+            v_amount_minor := 1000000;
+            v_period_days := 90;
+        WHEN 'pro_6_months' THEN
+            v_amount_minor := 1900000;
+            v_period_days := 180;
+        WHEN 'pro_12_months' THEN
+            v_amount_minor := 3500000;
+            v_period_days := 365;
+        ELSE
+            RAISE EXCEPTION 'Invalid Pro plan';
+    END CASE;
+
     SELECT organization_id
       INTO v_org_id
       FROM public.organization_members
@@ -1611,8 +1651,12 @@ BEGIN
         RAISE EXCEPTION 'User does not belong to an organization';
     END IF;
 
-    INSERT INTO public.manual_upgrade_requests (organization_id, user_id)
-    VALUES (v_org_id, auth.uid())
+    INSERT INTO public.manual_upgrade_requests (
+        organization_id, user_id, amount_minor, plan_code, period_days
+    )
+    VALUES (
+        v_org_id, auth.uid(), v_amount_minor, p_plan_code, v_period_days
+    )
     ON CONFLICT DO NOTHING
     RETURNING id INTO v_request_id;
 
@@ -1630,7 +1674,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."submit_manual_upgrade_request"() OWNER TO "postgres";
+ALTER FUNCTION "public"."submit_manual_upgrade_request"("p_plan_code" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."sweep_expired_pro_subscriptions"() RETURNS integer
@@ -1896,6 +1940,10 @@ CREATE TABLE IF NOT EXISTS "public"."manual_upgrade_requests" (
     "submitted_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "reviewed_at" timestamp with time zone,
     "reviewer_note" "text",
+    "plan_code" "text" DEFAULT 'pro_monthly'::"text" NOT NULL,
+    "period_days" integer DEFAULT 30 NOT NULL,
+    CONSTRAINT "manual_upgrade_requests_period_days_check" CHECK (("period_days" = ANY (ARRAY[30, 90, 180, 365]))),
+    CONSTRAINT "manual_upgrade_requests_plan_code_check" CHECK (("plan_code" = ANY (ARRAY['pro_monthly'::"text", 'pro_3_months'::"text", 'pro_6_months'::"text", 'pro_12_months'::"text"]))),
     CONSTRAINT "manual_upgrade_requests_status_check" CHECK (("status" = ANY (ARRAY['PENDING'::"text", 'APPROVED'::"text", 'REJECTED'::"text"])))
 );
 
@@ -3052,8 +3100,8 @@ GRANT ALL ON FUNCTION "public"."set_user_secrets"("p_paystack" "text", "p_flutte
 
 
 
-REVOKE ALL ON FUNCTION "public"."submit_manual_upgrade_request"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."submit_manual_upgrade_request"() TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."submit_manual_upgrade_request"("p_plan_code" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."submit_manual_upgrade_request"("p_plan_code" "text") TO "authenticated";
 
 
 

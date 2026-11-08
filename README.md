@@ -8,7 +8,7 @@
 
 [![Live App](https://img.shields.io/badge/Live%20App-billreve.app-6d28d9?style=flat-square&logo=vercel&logoColor=white)](https://billreve.app)
 [![Documentation](https://img.shields.io/badge/Docs-billreve.app%2Fdocumentation-5b21b6?style=flat-square)](https://billreve.app/documentation)
-[![Version](https://img.shields.io/badge/version-1.5.0-a78bfa?style=flat-square)](https://github.com/Har-beeb/BillReve/releases)
+[![Version](https://img.shields.io/badge/version-1.6.0-a78bfa?style=flat-square)](https://github.com/Har-beeb/BillReve/releases)
 [![License](https://img.shields.io/badge/license-MIT-4c1d95?style=flat-square)](LICENSE)
 
 *Create, send, and get paid — even without internet.*
@@ -25,7 +25,7 @@ BillReve is a **local-first, AI-powered invoicing and business management platfo
 
 | Problem | BillReve's Solution |
 | --- | --- |
-| Can't invoice when internet is down | Full offline mode — everything works locally first |
+| Can't invoice when internet is down | Core business data works locally first and syncs when you reconnect |
 | Writing invoices line-by-line is slow | AI draft from one natural-language sentence |
 | Back-and-forth quote negotiations via email | Built-in counter-offer & negotiation loop |
 | Chasing clients for payment confirmation | Clients click "I've transferred" — you get notified instantly |
@@ -36,7 +36,7 @@ BillReve is a **local-first, AI-powered invoicing and business management platfo
 ## ✨ Feature Highlights
 
 ### 🧾 Invoicing & Quotes
-- Full invoice lifecycle: `DRAFT → SENT → PENDING → PAID` (+ `PARTIAL`, `OVERDUE`, `VOID`)
+- Invoice statuses: `DRAFT`, `SENT`, `PENDING`, `PARTIAL`, `PAID`, and `OVERDUE` (overdue is a late-payment state, not a required step)
 - Quote negotiation loop with counter-offers, server-enforced minimum counter limits, and redraft mechanic
 - One-click conversion from accepted quote to invoice
 - Recurring invoices — schedule a template and let `pg_cron` generate and send on cadence
@@ -59,6 +59,7 @@ BillReve is a **local-first, AI-powered invoicing and business management platfo
 - **Last-Write-Wins** conflict resolution with server-clock-drift correction; `PAID`/`ACCEPTED` statuses are always protected
 - Per-table sync watermarks, so a busy table can never cause another's changes to be skipped
 - Failed pushes surface in a dead-letter queue in Settings → Sync, with a retry action
+- Failed queue items retry automatically with exponential backoff; permanent failures remain available for manual recovery
 
 ### 💸 Payments
 - Bank transfer details embedded in every public invoice (free)
@@ -95,7 +96,7 @@ BillReve is a **local-first, AI-powered invoicing and business management platfo
 - Plan limits and AI quotas enforced server-side, not in the browser
 - Campaign mail carries a per-recipient one-click unsubscribe token; unsubscribes and spam complaints are written to a suppression list the merchant cannot delete
 - Campaign bodies are sanitised with an email-safe allow-list on every keystroke and re-checked server-side before queueing
-- AI never receives raw client contact details
+- AI requests may include relevant invoice and client business data needed to answer the request; do not include unnecessary sensitive information
 
 ---
 
@@ -113,11 +114,11 @@ BillReve is a **local-first, AI-powered invoicing and business management platfo
 | Automated reminders | — | ✓ |
 | AI CFO Report | — | ✓ |
 
-Limits are enforced by Postgres triggers and inside the `ai` and campaign RPCs, so they hold regardless of what the client does. Pro is ₦3,500/month.
+Limits are enforced by Postgres triggers and inside the `ai` and campaign RPCs, so they hold regardless of what the client does. Pro is available as prepaid terms: ₦3,500/month, ₦10,000 for 3 months, ₦19,000 for 6 months, or ₦35,000 for 12 months.
 
 Campaigns additionally carry a **2-per-week frequency limit**. A monthly volume cap does nothing to stop someone mailing the same list every other day, which is the pattern that gets a sending domain throttled. Extra capacity is sold as a top-up: **₦2,000 for 1,000 campaign emails**, which persists until used and is only consumed once the monthly allowance runs out.
 
-> **Note:** automated Pro checkout is currently disabled pending payment-processor business verification. Upgrades run through a manual bank transfer flow in the meantime — see `Upgrade.tsx`.
+> **Note:** Pro checkout uses Paystack for verified one-time payments when available, with manual bank transfer review as a fallback. The webhook, not the client, activates Pro access.
 
 ---
 
@@ -202,6 +203,14 @@ Conversion happens in exactly one place: `client/src/utils/money.ts`, mirrored f
 Bank accounts are a JSONB array on `organizations`, not a separate table. Documents additionally freeze a `bank_account_snapshot` at creation so historical invoices keep correct payment details even if the account is later deleted.
 
 > ⚠️ `server/supabase/schema.sql` is a point-in-time dump and currently **predates** the multi-tenant migration. Re-dump it after applying migrations — the migration files are the source of truth.
+
+### Public resources
+
+- `/guides` — BillReve guides for professional invoicing, freelancer tax record-keeping, and project quotes
+- `/guides/:slug` — dedicated, shareable guide pages with author attribution, reading time, and BillReve calls to action
+- `/templates` — downloadable CSV starter templates for invoice and quote workflows
+- `/contact` — contact form plus Instagram and X links
+- `/support` — account support email plus Instagram and X quick-contact links
 
 ### Edge Functions
 

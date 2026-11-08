@@ -10,7 +10,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     headers: {
-      'x-app-version': '1.3.1'
+      'x-app-version': import.meta.env.VITE_APP_VERSION || '1.6.0'
     }
   }
 });

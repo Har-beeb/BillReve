@@ -6,35 +6,39 @@ import { FEATURE_FLAGS } from '../config/featureFlags';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
+const PRO_PLANS = [
+  { code: 'pro_monthly', label: 'Monthly', months: 1, amount: 3500, originalAmount: 5000, periodDays: 30, savings: null },
+  { code: 'pro_3_months', label: '3 months', months: 3, amount: 10000, originalAmount: 10500, periodDays: 90, savings: '5% off' },
+  { code: 'pro_6_months', label: '6 months', months: 6, amount: 19000, originalAmount: 21000, periodDays: 180, savings: '10% off' },
+  { code: 'pro_12_months', label: '12 months', months: 12, amount: 35000, originalAmount: 42000, periodDays: 365, savings: '17% off' },
+] as const;
+
 const Upgrade: React.FC = () => {
   const { user, isProUser } = useAppStore();
   const [isPending, setIsPending] = useState(false);
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
   
   const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'transfer'>(FEATURE_FLAGS.PAYSTACK_ENABLED ? 'paystack' : 'transfer');
-  
-  const PRO_PRICE = 3500;
-  const ORIGINAL_PRICE = 5000;
-
+  const [selectedPlanCode, setSelectedPlanCode] = useState<(typeof PRO_PLANS)[number]['code']>('pro_monthly');
   
   const SAAS_PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '';
-  const paystackPlan = import.meta.env.VITE_PAYSTACK_PRO_PLAN_ID;
   const paystackConfigured =
-    Boolean(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY) && Boolean(paystackPlan);
+    Boolean(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY);
+  const selectedPlan = PRO_PLANS.find(plan => plan.code === selectedPlanCode) ?? PRO_PLANS[0];
 
   const componentProps: any = {
     email: user?.email || 'user@example.com',
-    amount: PRO_PRICE * 100, // Amount in kobo
-    plan: paystackPlan, // Required for actual recurring subscriptions
+    amount: selectedPlan.amount * 100, // Amount in kobo
     metadata: {
       custom_fields: [
          { display_name: "User ID", variable_name: "userId", value: user?.id || '' },
-         { display_name: "Payment Type", variable_name: "type", value: "saas_subscription" }
+         { display_name: "Payment Type", variable_name: "type", value: "saas_subscription" },
+         { display_name: "Billing Plan", variable_name: "billingPlan", value: selectedPlan.code }
       ]
     },
     bearer: 'account' as 'account' | 'subaccount',
     publicKey: SAAS_PAYSTACK_PUBLIC_KEY,
-    text: "Upgrade to Pro Now",
+    text: `Pay ₦${selectedPlan.amount.toLocaleString()} for ${selectedPlan.label}`,
     onSuccess: (reference: any) => {
       console.log('Subscription Payment Success:', reference);
       // The webhook remains the source of truth for Pro activation. This
@@ -47,14 +51,12 @@ const Upgrade: React.FC = () => {
     },
   };
 
-  if (paystackPlan) {
-    componentProps.plan = paystackPlan;
-  }
-
   const submitManualTransfer = async () => {
     setIsSubmittingTransfer(true);
     try {
-      const { error } = await supabase.rpc('submit_manual_upgrade_request');
+      const { error } = await supabase.rpc('submit_manual_upgrade_request', {
+        p_plan_code: selectedPlan.code,
+      });
       if (error) throw error;
       setIsPending(true);
     } catch (error) {
@@ -138,22 +140,41 @@ const Upgrade: React.FC = () => {
                 
                 <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 mt-4">Pro Subscription</h3>
                 <p className="text-slate-500 dark:text-slate-400 mb-8 font-medium">Everything you need to scale.</p>
+
+                <div className="w-full grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-8">
+                  {PRO_PLANS.map(plan => (
+                    <button
+                      key={plan.code}
+                      type="button"
+                      onClick={() => setSelectedPlanCode(plan.code)}
+                      className={`relative rounded-lg px-2 py-2.5 text-sm font-bold transition-all ${
+                        selectedPlan.code === plan.code
+                          ? 'bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      {plan.label}
+                      {plan.savings && <span className="block text-[10px] text-green-600 dark:text-green-400 mt-0.5">{plan.savings}</span>}
+                    </button>
+                  ))}
+                </div>
                 
                 <div className="mb-8 flex flex-col items-center justify-center gap-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg text-slate-400 dark:text-slate-500 line-through decoration-red-500/50 decoration-2 font-bold">
-                      ₦{ORIGINAL_PRICE.toLocaleString()}
+                      ₦{selectedPlan.originalAmount.toLocaleString()}
                     </span>
-                    <span className="text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      30% Off
-                    </span>
+                    {selectedPlan.savings && <span className="text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider">{selectedPlan.savings}</span>}
                   </div>
                   <div className="flex items-end justify-center gap-1">
                     <span className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-                      ₦{PRO_PRICE.toLocaleString()}
+                      ₦{selectedPlan.amount.toLocaleString()}
                     </span>
-                    <span className="text-lg text-slate-500 dark:text-slate-400 mb-2 font-medium">/mo</span>
+                    <span className="text-lg text-slate-500 dark:text-slate-400 mb-2 font-medium">
+                      {selectedPlan.months === 1 ? '/mo' : `/${selectedPlan.months} mos`}
+                    </span>
                   </div>
+                  {selectedPlan.months > 1 && <p className="text-sm text-slate-500 dark:text-slate-400">₦{Math.round(selectedPlan.amount / selectedPlan.months).toLocaleString()} per month equivalent</p>}
                 </div>
 
                 <div className="w-full space-y-4 mb-10 text-left">
@@ -161,7 +182,7 @@ const Upgrade: React.FC = () => {
                     <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
                       <Check className="text-green-600 dark:text-green-400" size={14} strokeWidth={3} />
                     </div>
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">Cancel anytime</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">Pay once for your selected term</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
@@ -173,7 +194,7 @@ const Upgrade: React.FC = () => {
                     <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
                       <Check className="text-green-600 dark:text-green-400" size={14} strokeWidth={3} />
                     </div>
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">Instant activation</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">No automatic renewal</span>
                   </div>
                 </div>
                 
@@ -227,6 +248,9 @@ const Upgrade: React.FC = () => {
                     <div className="w-full text-left">
                       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
                         <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold mb-3">Transfer Details</p>
+                        <div className="mb-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 px-3 py-2 text-sm font-semibold text-purple-800 dark:text-purple-300">
+                          {selectedPlan.label} Pro access · ₦{selectedPlan.amount.toLocaleString()}
+                        </div>
                         <div className="space-y-3">
                           <div>
                             <p className="text-xs text-slate-400 mb-0.5">Bank Name</p>
@@ -255,7 +279,7 @@ const Upgrade: React.FC = () => {
                         disabled={isSubmittingTransfer}
                         className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 px-6 rounded-xl shadow-lg transition-all active:scale-[0.98] text-lg"
                       >
-                        {isSubmittingTransfer ? 'Submitting…' : 'I have made the transfer'}
+                        {isSubmittingTransfer ? 'Submitting…' : `I have transferred ₦${selectedPlan.amount.toLocaleString()}`}
                       </button>
                     </div>
                     )}

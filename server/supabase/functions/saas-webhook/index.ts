@@ -65,17 +65,20 @@ serve(async (req) => {
       // Paystack puts custom fields in an array under metadata.custom_fields
       let userId = '';
       let type = '';
+      let billingPlan = '';
       
       if (data.metadata && data.metadata.custom_fields) {
         for (const field of data.metadata.custom_fields) {
           if (field.variable_name === 'userId') userId = field.value;
           if (field.variable_name === 'type') type = field.value;
+          if (field.variable_name === 'billingPlan') billingPlan = field.value;
         }
       }
       // Also accept flat metadata keys, which are simpler for the client to set
       // and less error-prone to read than digging through custom_fields.
       userId = userId || data.metadata?.userId || data.metadata?.user_id || '';
       type = type || data.metadata?.type || '';
+      billingPlan = billingPlan || data.metadata?.billingPlan || '';
 
       const reference = data.reference ?? data.id;
       const customerCode = data.customer?.customer_code ?? data.customer_code ?? null;
@@ -83,7 +86,6 @@ serve(async (req) => {
         data.subscription_code ??
         data.subscription?.subscription_code ??
         null;
-      const planCode = data.plan?.plan_code ?? data.plan_code ?? null;
 
       // -------------------------------------------------------------------
       // Campaign email credit pack: ₦2,000 for 1,000 extra campaign emails.
@@ -173,12 +175,30 @@ serve(async (req) => {
         }
         if (!orgId) throw new Error('Could not resolve organization for SaaS subscription payment');
 
+        // Fixed-term plans are one-time payments. Existing recurring monthly
+        // subscriptions may omit the new plan metadata, so retain monthly
+        // compatibility for those provider-linked charges.
+        const validPlans = new Set(['pro_monthly', 'pro_3_months', 'pro_6_months', 'pro_12_months']);
+        const planCode = validPlans.has(billingPlan)
+          ? billingPlan
+          : (subscriptionCode || customerCode ? 'pro_monthly' : '');
+        const planTerms: Record<string, { amount: number; periodDays: number }> = {
+          pro_monthly: { amount: 350000, periodDays: 30 },
+          pro_3_months: { amount: 1000000, periodDays: 90 },
+          pro_6_months: { amount: 1900000, periodDays: 180 },
+          pro_12_months: { amount: 3500000, periodDays: 365 },
+        };
+        const selectedPlan = planTerms[planCode];
         const amount = data.amount; // in kobo
-        
-        // 3. Validate the server-side plan price and currency. The browser
-        // amount is only a checkout hint and must never grant Pro by itself.
-        if (amount < 350000 || String(data.currency || '').toUpperCase() !== 'NGN') {
-            throw new Error(`Invalid amount or currency for PRO plan: ${amount} ${data.currency || '(missing)'}`);
+
+        // The browser amount and metadata are only checkout hints. The
+        // verified webhook must match a server-owned plan exactly.
+        if (
+          !selectedPlan ||
+          amount !== selectedPlan.amount ||
+          String(data.currency || '').toUpperCase() !== 'NGN'
+        ) {
+          throw new Error(`Invalid amount or plan for PRO payment: ${amount} ${data.currency || '(missing)'}`);
         }
 
         if (!reference) {
@@ -199,7 +219,7 @@ serve(async (req) => {
             p_customer_code: customerCode,
             p_subscription_code: subscriptionCode,
             p_plan_code: planCode,
-            p_period_days: 30,
+            p_period_days: selectedPlan.periodDays,
           }
         );
 
