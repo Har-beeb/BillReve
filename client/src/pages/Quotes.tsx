@@ -15,7 +15,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import { SidePanelDetails } from '../components/SidePanelDetails';
 import { AiDraftModal } from '../components/AiDraftModal';
 import { SendDocumentModal } from '../components/SendDocumentModal';
-import { SplitButton, ActionMenu, LongPressable, EmptyState, BottomSheet } from '../components/ui';
+import { SplitButton, ActionMenu, LongPressable, SelectionIndicator, EmptyState, BottomSheet } from '../components/ui';
 import { useAppStore } from '../store/useAppStore';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
@@ -90,7 +90,7 @@ const Quotes: React.FC = () => {
   ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [quotes, filter, search]);
   
   const { currentPage, setCurrentPage, totalPages, paginatedItems: paginatedQuotes } = usePagination(filteredQuotes, 10);
-  const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedQuotes, (q) => q.localId);
+  const { selectedIds, isSelectionMode, toggleSelect, toggleSelectAll, setSelectedIds, clearSelection } = useSelection(paginatedQuotes, (q) => q.localId);
 
   React.useEffect(() => {
     const previewId = searchParams.get('preview');
@@ -423,6 +423,9 @@ const Quotes: React.FC = () => {
             ...(isProUser ? [{ label: 'Export CSV', onClick: handleBulkExportCsv }] : [])
           ]}
         />
+        <button type="button" onClick={clearSelection} className="text-xs font-medium text-slate-500 hover:text-purple-600">
+          Done
+        </button>
       </div>
 
       {/* Summary Cards (Swipeable on Mobile) */}
@@ -549,18 +552,10 @@ const Quotes: React.FC = () => {
       {/* Quote List (More compact) */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
         <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl group">
-          <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-             <input 
-               type="checkbox" 
-               checked={paginatedQuotes.length > 0 && selectedIds.size === paginatedQuotes.length}
-               onChange={toggleSelectAll}
-               className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-             />
-          </div>
-          <div className="col-span-4 truncate">Client & Quote</div>
-          <div className="col-span-3 truncate">Description & Date</div>
+          <div className="col-span-3 truncate">Client & Quote</div>
+          <div className="col-span-4 truncate">Description & Expiry Date</div>
           <div className="col-span-2 truncate">Status</div>
-          <div className="col-span-2 text-right pr-8 truncate">Amount</div>
+          <div className="col-span-3 text-right pr-8 truncate">Amount / Actions</div>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -569,83 +564,47 @@ const Quotes: React.FC = () => {
               <LongPressable 
                 key={quote.localId} 
                 onLongPress={() => toggleSelect(quote.localId)}
-                onClick={() => setSelectedQuote(quote)}
+                onClick={() => {
+                  if (isSelectionMode) {
+                    toggleSelect(quote.localId);
+                  } else {
+                    setSelectedQuote(quote);
+                  }
+                }}
                 style={{ animationDelay: `${index * 50}ms` }}
-                className={`group px-6 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(quote.localId) || selectedQuote?.localId === quote.localId ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
+                className={`group px-4 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(quote.localId) || selectedQuote?.localId === quote.localId ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
               >
-                {/* --- MOBILE VIEW --- */}
-                <div className="flex md:hidden gap-3 items-start py-4">
-                  <div className={`pt-1 transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'w-6 opacity-100 mr-2' : 'w-0 opacity-0 m-0'}`}>
-                    <input 
-                      type="checkbox"
-                      checked={selectedIds.has(quote.localId)}
-                      onChange={(e) => { e.stopPropagation(); toggleSelect(quote.localId); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                    />
+                <div className="grid md:hidden grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-4">
+                  <div className="col-span-2 flex min-w-0 items-center gap-2">
+                    <div className="min-w-0 flex-1 truncate font-semibold text-base text-slate-900 dark:text-slate-100">
+                      {allClients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
+                    </div>
+                    <Badge variant={quote.status.toLowerCase() as any}>{quote.status}</Badge>
+                    <div className="font-semibold text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                      {formatMoney(quote.total, quote.currency)}
+                    </div>
                   </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="font-bold text-base text-slate-900 dark:text-slate-100 truncate max-w-[150px] sm:max-w-[200px]">
-                          {allClients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
-                        </div>
-                        <div className="text-slate-400 text-xs mt-0.5">
-                          {quote.issuedAt ? formatDate(quote.issuedAt) : 'Not issued yet'}
-                        </div>
-                      </div>
-                      <div className="font-bold text-base text-slate-900 dark:text-slate-100">
-                         {formatMoney(quote.total, quote.currency)}
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <div className="flex items-center gap-3">
-                        <div className="text-slate-600 dark:text-slate-400 font-medium truncate">
-                          {quote.quoteNumber || quote.localId.slice(0, 8)}
-                        </div>
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        <Badge variant={quote.status.toLowerCase() as any}>{quote.status}</Badge>
-                      </div>
-                      <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                        <ActionMenu items={[
-                          { label: 'Download PDF', onClick: () => handleDownloadPdf(quote) },
-                          ...(quote.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/quotes/new', { state: { quote } }) }] : []),
-                          ...((quote.status === 'SENT') ? [
-                            { label: 'Mark as Accepted', onClick: () => handleUpdateStatus(quote, 'ACCEPTED') },
-                            { label: 'Mark as Declined', onClick: () => handleUpdateStatus(quote, 'DECLINED') }
-                          ] : []),
-                          ...(quote.status === 'COUNTERED' ? [
-                            { label: 'Accept Counter', onClick: () => handleRespondToCounter(quote, true) },
-                            { label: 'Decline Counter', onClick: () => handleRespondToCounter(quote, false) }
-                          ] : []),
-                          ...(quote.status !== 'DRAFT' ? [{ label: 'Copy Link', onClick: () => {
-                            navigator.clipboard.writeText(`${window.location.origin}/quote/${quote.localId}`);
-                            toast.success('Link copied to clipboard');
-                          } }] : []),
-                          ...((quote.status === 'SENT' || quote.status === 'ACCEPTED') ? [{ label: 'Convert to Invoice', onClick: () => {
-                            const { localId, quoteNumber, status, createdAt, updatedAt, syncStatus, ...rest } = quote;
-                            navigate('/invoices/new', { state: { invoice: rest } });
-                          } }] : []),
-                          { label: 'Send / Share', onClick: () => { setQuoteToSend(quote); setSendModalOpen(true); } },
-                          { label: 'Delete', onClick: () => { setQuoteToDelete(quote.localId); setDeleteModalOpen(true); }, variant: 'danger' }
-                        ]} />
-                      </div>
-                    </div>
+                  <div className="min-w-0 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 text-xs text-slate-400">
+                    <span className="font-medium text-slate-600 dark:text-slate-400 truncate">
+                      {quote.quoteNumber || quote.localId.slice(0, 8)}
+                    </span>
+                    <span className="truncate text-center">
+                      {quote.expiresAt ? `Expires ${formatDate(quote.expiresAt)}` : 'No expiry date'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    {isSelectionMode ? (
+                      <SelectionIndicator selected={selectedIds.has(quote.localId)} onClick={() => toggleSelect(quote.localId)} />
+                    ) : <ActionMenu items={[
+                      { label: 'Download PDF', onClick: () => handleDownloadPdf(quote) },
+                      ...(quote.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/quotes/new', { state: { quote } }) }] : []),
+                      { label: 'Delete', onClick: () => { setQuoteToDelete(quote.localId); setDeleteModalOpen(true); }, variant: 'danger' }
+                    ]} />}
                   </div>
                 </div>
 
                 {/* --- DESKTOP VIEW --- */}
                 <div className="hidden md:grid grid-cols-12 items-center w-full py-4 group">
-                  <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                    <input 
-                      type="checkbox"
-                      checked={selectedIds.has(quote.localId)}
-                      onChange={(e) => { e.stopPropagation(); toggleSelect(quote.localId); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                    />
-                  </div>
-                  
                   <div className="col-span-4 flex flex-col justify-center">
                     <div className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors truncate pr-4">
                       {allClients.find(c => c.localId === quote.clientId)?.name || quote.clientId}
@@ -660,7 +619,7 @@ const Quotes: React.FC = () => {
                       {quote.description || '—'}
                     </div>
                     <div className="text-slate-400 text-xs mt-0.5">
-                      {quote.issuedAt ? `Issued ${formatDate(quote.issuedAt)}` : 'Not issued yet'}
+                      {quote.expiresAt ? `Expires ${formatDate(quote.expiresAt)}` : 'No expiry date'}
                     </div>
                   </div>
                   
@@ -669,10 +628,12 @@ const Quotes: React.FC = () => {
                     <Badge variant={quote.status.toLowerCase() as any}>{quote.status}</Badge>
                   </div>
 
-                  <div className="col-span-2 flex items-center justify-end font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
+                  <div className="col-span-3 flex items-center justify-end gap-3 font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
                      {formatMoney(quote.total, quote.currency)}
-                     <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                       <ActionMenu items={[
+                     <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                       {isSelectionMode ? (
+                         <SelectionIndicator selected={selectedIds.has(quote.localId)} onClick={() => toggleSelect(quote.localId)} />
+                       ) : <ActionMenu items={[
                          { label: 'Download PDF', onClick: () => handleDownloadPdf(quote) },
                          ...(quote.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/quotes/new', { state: { quote } }) }] : []),
                          
@@ -697,7 +658,7 @@ const Quotes: React.FC = () => {
                          } }] : []),
                          { label: 'Send / Share', onClick: () => { setQuoteToSend(quote); setSendModalOpen(true); } },
                          { label: 'Delete', onClick: () => { setQuoteToDelete(quote.localId); setDeleteModalOpen(true); }, variant: 'danger' }
-                       ]} />
+                       ]} />}
                      </div>
                   </div>
                 </div>
@@ -829,13 +790,18 @@ const Quotes: React.FC = () => {
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Badge variant={selectedQuote.status.toLowerCase() as any}>{selectedQuote.status}</Badge>
               </div>
-              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Quote Total</div>
+              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total</div>
               <div className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
                 {formatMoney(selectedQuote.total, selectedQuote.currency)}
               </div>
               <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-                Quote {selectedQuote.quoteNumber ? `#${selectedQuote.quoteNumber}` : ''}
+                 {selectedQuote.quoteNumber ? `#${selectedQuote.quoteNumber}` : ''}
               </div>
+              {/* we would come back to this later if we want to show issued and expiry dates in the preview panel
+                <div className="mt-3 flex items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+                <span>Issued: {selectedQuote.issuedAt ? formatDate(selectedQuote.issuedAt) : 'Not issued yet'}</span>
+                <span>Expires: {selectedQuote.expiresAt ? formatDate(selectedQuote.expiresAt) : 'No expiry date'}</span>
+              </div> */}
             </div>
             
             {selectedQuote.status === 'COUNTERED' && selectedQuote.counterAmount && (
@@ -959,5 +925,3 @@ const Quotes: React.FC = () => {
 };
 
 export default Quotes;
-
-

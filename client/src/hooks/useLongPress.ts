@@ -1,105 +1,77 @@
 import { useCallback, useRef } from 'react';
 
 export const useLongPress = (
-  onLongPress: (e: any) => void,
-  onClick: (e: any) => void,
+  onLongPress: (e: React.PointerEvent<HTMLDivElement>) => void,
+  onClick: (e: React.PointerEvent<HTMLDivElement>) => void,
   { shouldPreventDefault = true, delay = 500 } = {}
 ) => {
-  const timeout = useRef<any>(null);
-  const target = useRef<any>(null);
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMoved = useRef(false);
   const isLongPressTriggered = useRef(false);
+  const suppressClick = useRef(false);
   const startPos = useRef<{x: number, y: number} | null>(null);
 
-  const start = useCallback(
-    (event: any) => {
-      // Ignore interactions with buttons, inputs, or specifically marked elements
-      if (event.target?.closest?.('button, input, .no-row-click')) return;
+  const isInteractiveTarget = (event: React.PointerEvent<HTMLDivElement>) =>
+    Boolean(event.target instanceof Element && event.target.closest('button, input, a, textarea, select, .no-row-click'));
 
-      isMoved.current = false;
-      isLongPressTriggered.current = false;
-      
-      if (isTouchEvent(event)) {
-        startPos.current = {
-          x: (event as unknown as TouchEvent).touches[0].clientX,
-          y: (event as unknown as TouchEvent).touches[0].clientY
-        };
-      } else {
-        startPos.current = { x: event.clientX, y: event.clientY };
-      }
+  const start = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (isInteractiveTarget(event)) return;
 
-      if (shouldPreventDefault && event.target) {
-        event.target.addEventListener('touchend', preventDefault, {
-          passive: false
-        });
-        target.current = event.target;
-      }
-      timeout.current = setTimeout(() => {
-        isLongPressTriggered.current = true;
-        onLongPress(event);
-      }, delay);
-    },
-    [onLongPress, delay, shouldPreventDefault]
-  );
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    isMoved.current = false;
+    isLongPressTriggered.current = false;
+    suppressClick.current = false;
+    startPos.current = { x: event.clientX, y: event.clientY };
 
-  const clear = useCallback(
-    (event: any, shouldTriggerClick = true) => {
-      // Ignore interactions with buttons, inputs, or specifically marked elements
-      if (event.target?.closest?.('button, input, .no-row-click')) return;
-
-      if (timeout.current) clearTimeout(timeout.current);
-      if (shouldTriggerClick && !isMoved.current && !isLongPressTriggered.current) {
-        onClick(event);
-      }
-      if (shouldPreventDefault && target.current) {
-        target.current.removeEventListener('touchend', preventDefault);
-      }
-      startPos.current = null;
-    },
-    [shouldPreventDefault, onClick]
-  );
-
-  const move = useCallback((event: any) => {
-    if (!startPos.current) return;
-    
-    let currentX, currentY;
-    if (isTouchEvent(event)) {
-      currentX = (event as unknown as TouchEvent).touches[0].clientX;
-      currentY = (event as unknown as TouchEvent).touches[0].clientY;
-    } else {
-      currentX = event.clientX;
-      currentY = event.clientY;
+    if (shouldPreventDefault) {
+      event.currentTarget.style.userSelect = 'none';
     }
 
-    const diffX = Math.abs(currentX - startPos.current.x);
-    const diffY = Math.abs(currentY - startPos.current.y);
+    timeout.current = setTimeout(() => {
+      isLongPressTriggered.current = true;
+      suppressClick.current = true;
+      onLongPress(event);
+    }, delay);
+  }, [delay, onLongPress, shouldPreventDefault]);
 
-    // If moved more than 10 pixels, consider it a scroll/swipe
+  const clear = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (isInteractiveTarget(event)) return;
+
+    if (timeout.current) clearTimeout(timeout.current);
+    timeout.current = null;
+    startPos.current = null;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, [onClick]);
+
+  const move = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!startPos.current) return;
+
+    const diffX = Math.abs(event.clientX - startPos.current.x);
+    const diffY = Math.abs(event.clientY - startPos.current.y);
+
     if (diffX > 10 || diffY > 10) {
       isMoved.current = true;
-      if (timeout.current) clearTimeout(timeout.current);
+      if (timeout.current) {
+        clearTimeout(timeout.current);
+        timeout.current = null;
+      }
     }
   }, []);
 
   return {
-    onMouseDown: (e: any) => start(e),
-    onTouchStart: (e: any) => start(e),
-    onMouseMove: (e: any) => move(e),
-    onTouchMove: (e: any) => move(e),
-    onMouseUp: (e: any) => clear(e),
-    onMouseLeave: (e: any) => clear(e, false),
-    onTouchEnd: (e: any) => clear(e)
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => start(e),
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => move(e),
+    onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => clear(e),
+    onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => clear(e),
+    onClick: (e: React.MouseEvent<HTMLDivElement>) => {
+      if (isInteractiveTarget(e as unknown as React.PointerEvent<HTMLDivElement>)) return;
+      if (suppressClick.current || isMoved.current) {
+        suppressClick.current = false;
+        return;
+      }
+      onClick(e as unknown as React.PointerEvent<HTMLDivElement>);
+    }
   };
-};
-
-const isTouchEvent = (event: Event) => {
-  return 'touches' in event;
-};
-
-const preventDefault = (event: Event) => {
-  if (!isTouchEvent(event)) return;
-
-  if ((event as TouchEvent).touches.length < 2 && event.preventDefault) {
-    event.preventDefault();
-  }
 };

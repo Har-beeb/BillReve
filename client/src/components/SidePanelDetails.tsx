@@ -33,7 +33,7 @@ export const SidePanelDetails: React.FC<SidePanelDetailsProps> = ({ document, ty
         
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="text-slate-500 dark:text-slate-400">Date</div>
+            <div className="text-slate-500 dark:text-slate-400">Date Created</div>
             <div className="font-medium text-slate-900 dark:text-white">{formatDate(document.createdAt)}</div>
           </div>
           {isInvoice && (document as Invoice).dueDate && (

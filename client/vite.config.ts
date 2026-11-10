@@ -26,7 +26,7 @@ export default defineConfig({
         name: 'BillReve',
         short_name: 'BillReve',
         description: 'Intelligent invoicing and billing platform.',
-        theme_color: '#ffffff',
+        theme_color: '#fafafa',
         icons: [
           {
             src: 'pwa-192x192.png',

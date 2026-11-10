@@ -32,6 +32,7 @@ export function useSelection<T>(items: T[], getId: (item: T) => string) {
 
   return {
     selectedIds,
+    isSelectionMode: selectedIds.size > 0,
     toggleSelect,
     toggleSelectAll,
     clearSelection,

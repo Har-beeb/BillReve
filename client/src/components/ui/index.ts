@@ -3,7 +3,7 @@ export { Card } from './Card';
 export { ProFeature } from './ProFeature';
 export { SplitButton } from './SplitButton';
 export { ActionMenu } from './ActionMenu';
-export { LongPressable } from './LongPressable';
+export { LongPressable, SelectionIndicator } from './LongPressable';
 export { EmptyState } from './EmptyState';
 export { cn } from '../../utils/cn';
 export * from './InstructionNote';

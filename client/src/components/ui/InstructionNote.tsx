@@ -13,9 +13,9 @@ interface InstructionNoteProps {
 const config = {
   info: {
     icon: Info,
-    containerClass: 'bg-blue-50 border-blue-200 text-blue-800',
-    iconClass: 'text-blue-500',
-    titleClass: 'text-blue-900',
+    containerClass: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/60 text-purple-800 dark:text-purple-200',
+    iconClass: 'text-purple-500 dark:text-purple-300',
+    titleClass: 'text-purple-900 dark:text-purple-100',
   },
   warning: {
     icon: AlertTriangle,

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Plus, Mail, Phone, MapPin, Download, FileText, Users } from 'lucide-react';
 import { formatMoney } from '../utils/formatters';
-import { Badge, EmptyState, ActionMenu, LongPressable } from '../components/ui';
+import { Badge, EmptyState, ActionMenu, LongPressable, SelectionIndicator } from '../components/ui';
 import { Pagination } from '../components/Pagination';
 import { PreviewPanel } from '../components/PreviewPanel';
 import { db } from '../db/db';
@@ -65,7 +65,7 @@ const Clients: React.FC = () => {
   ), [clients, search]);
   
   const { currentPage, setCurrentPage, totalPages, paginatedItems: paginatedClients } = usePagination(filteredClients, 10);
-  const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedClients, (c) => c.localId);
+  const { selectedIds, isSelectionMode, toggleSelect, toggleSelectAll, setSelectedIds, clearSelection } = useSelection(paginatedClients, (c) => c.localId);
 
   const handleSaveClient = async () => {
     if (!editingClient.name) return toast.error('Name is required');
@@ -242,6 +242,9 @@ const Clients: React.FC = () => {
                     { label: 'Delete Selected', onClick: () => setBulkDeleteModalOpen(true), variant: 'danger' }
                   ]} 
                 />
+                <button type="button" onClick={clearSelection} className="ml-2 text-xs font-medium text-slate-500 hover:text-purple-600">
+                  Done
+                </button>
             </div>
           )}
         </div>
@@ -253,17 +256,9 @@ const Clients: React.FC = () => {
       {/* Client List */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
         <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl group">
-          <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-             <input 
-               type="checkbox" 
-               checked={paginatedClients.length > 0 && selectedIds.size === paginatedClients.length}
-               onChange={toggleSelectAll}
-               className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-             />
-          </div>
           <div className="col-span-4 truncate">Client Details</div>
           <div className="col-span-4 truncate">Contact Info</div>
-          <div className="col-span-3 text-right pr-8 truncate">Total Billed</div>
+          <div className="col-span-4 text-right pr-8 truncate">Total Billed / Actions</div>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -273,42 +268,30 @@ const Clients: React.FC = () => {
               <LongPressable 
                 key={client.localId} 
                 onLongPress={() => toggleSelect(client.localId)}
-                onClick={() => setSelectedClient(client)}
+                onClick={() => {
+                  if (isSelectionMode) {
+                    toggleSelect(client.localId);
+                  } else {
+                    setSelectedClient(client);
+                  }
+                }}
                 style={{ animationDelay: `${index * 50}ms` }}
-                className={`group px-6 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(client.localId) ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
+                className={`group px-4 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(client.localId) ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
               >
                 {/* --- MOBILE VIEW --- */}
-                <div className="flex md:hidden flex-col gap-2 py-3">
-                  {/* Row 1: Checkbox, Avatar, Name, Total, Menu */}
-                  <div className="flex items-center gap-3 w-full">
-                    <div className={`transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'w-6 opacity-100 mr-2' : 'w-0 opacity-0 m-0'}`}>
-                      <input 
-                        type="checkbox"
-                        checked={selectedIds.has(client.localId)}
-                        onChange={(e) => { e.stopPropagation(); toggleSelect(client.localId); }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
-                      />
+                <div className="grid md:hidden grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-4">
+                  <div className="col-span-2 flex min-w-0 items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex flex-shrink-0 items-center justify-center text-slate-600 dark:text-slate-400 font-bold text-xs">
+                      {client.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex flex-shrink-0 items-center justify-center text-slate-600 dark:text-slate-400 font-bold text-sm">
-                       {client.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="font-bold text-slate-900 dark:text-slate-100 truncate flex-1 text-base">
+                    <div className="min-w-0 flex-1 truncate font-semibold text-base text-slate-900 dark:text-slate-100">
                       {client.name}
                     </div>
-                    <div className="font-bold text-slate-900 dark:text-slate-100 text-sm whitespace-nowrap">
-                       {formatMoney(metrics.totalInvoiced)}
-                    </div>
-                    <div onClick={(e) => e.stopPropagation()} className="shrink-0 -mr-2">
-                      <ActionMenu items={[
-                        { label: 'Edit', onClick: () => { setEditingClient(client); setIsModalOpen(true); } },
-                        { label: 'Delete', onClick: () => { setClientToDelete(client.localId); setDeleteModalOpen(true); }, variant: 'danger' }
-                      ]} />
+                    <div className="font-semibold text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                      {formatMoney(metrics.totalInvoiced)}
                     </div>
                   </div>
-                  
-                  {/* Row 2: Email / Phone */}
-                  <div className="flex items-center text-slate-500 text-sm pl-11 pr-2">
+                  <div className="min-w-0 flex items-center text-slate-500 text-sm truncate">
                     {client.email ? (
                       <div className="flex items-center gap-1.5 truncate"><Mail size={13} className="text-slate-400 shrink-0" /> <span className="truncate">{client.email}</span></div>
                     ) : client.phone ? (
@@ -317,20 +300,18 @@ const Clients: React.FC = () => {
                       <div className="italic text-slate-400 text-xs">No contact info</div>
                     )}
                   </div>
+                  <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    {isSelectionMode ? (
+                      <SelectionIndicator selected={selectedIds.has(client.localId)} onClick={() => toggleSelect(client.localId)} />
+                    ) : <ActionMenu items={[
+                      { label: 'Edit', onClick: () => { setEditingClient(client); setIsModalOpen(true); } },
+                      { label: 'Delete', onClick: () => { setClientToDelete(client.localId); setDeleteModalOpen(true); }, variant: 'danger' }
+                    ]} />}
+                  </div>
                 </div>
 
                 {/* --- DESKTOP VIEW --- */}
                 <div className="hidden md:grid grid-cols-12 items-center w-full py-4 group">
-                  <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                    <input 
-                      type="checkbox"
-                      checked={selectedIds.has(client.localId)}
-                      onChange={(e) => { e.stopPropagation(); toggleSelect(client.localId); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                    />
-                  </div>
-                  
                   <div className="col-span-4 flex items-center gap-3 pr-4">
                     <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex flex-shrink-0 items-center justify-center text-slate-600 dark:text-slate-400 font-bold group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                        {client.name.charAt(0).toUpperCase()}
@@ -359,13 +340,15 @@ const Clients: React.FC = () => {
                     )}
                   </div>
                   
-                  <div className="col-span-3 flex items-center justify-end font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
+                  <div className="col-span-4 flex items-center justify-end gap-3 font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
                      {formatMoney(metrics.totalInvoiced)}
-                     <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                       <ActionMenu items={[
+                     <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                       {isSelectionMode ? (
+                         <SelectionIndicator selected={selectedIds.has(client.localId)} onClick={() => toggleSelect(client.localId)} />
+                       ) : <ActionMenu items={[
                          { label: 'Edit', onClick: () => { setEditingClient(client); setIsModalOpen(true); } },
                          { label: 'Delete', onClick: () => { setClientToDelete(client.localId); setDeleteModalOpen(true); }, variant: 'danger' }
-                       ]} />
+                       ]} />}
                      </div>
                   </div>
                 </div>
@@ -566,5 +549,3 @@ const Clients: React.FC = () => {
 };
 
 export default Clients;
-
-

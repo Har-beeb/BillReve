@@ -15,7 +15,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import { AiDraftModal } from '../components/AiDraftModal';
 import { SendDocumentModal } from '../components/SendDocumentModal';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
-import { SplitButton, ActionMenu, LongPressable, BottomSheet } from '../components/ui';
+import { SplitButton, ActionMenu, LongPressable, SelectionIndicator, BottomSheet } from '../components/ui';
 import { useAppStore } from '../store/useAppStore';
 import { useSelection } from '../hooks/useSelection';
 import { usePagination } from '../hooks/usePagination';
@@ -133,7 +133,7 @@ const Invoices: React.FC = () => {
   ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [invoices, filter, search]);
   
   const { currentPage, setCurrentPage, totalPages, paginatedItems: paginatedInvoices } = usePagination(filteredInvoices, 10);
-  const { selectedIds, toggleSelect, toggleSelectAll, setSelectedIds } = useSelection(paginatedInvoices, (i) => i.localId);
+  const { selectedIds, isSelectionMode, toggleSelect, toggleSelectAll, setSelectedIds, clearSelection } = useSelection(paginatedInvoices, (i) => i.localId);
 
   React.useEffect(() => {
     const previewId = searchParams.get('preview');
@@ -378,6 +378,9 @@ const Invoices: React.FC = () => {
             ...(isProUser ? [{ label: 'Export CSV', onClick: handleBulkExportCsv }] : [])
           ]}
         />
+        <button type="button" onClick={clearSelection} className="text-xs font-medium text-slate-500 hover:text-purple-600">
+          Done
+        </button>
       </div>
 
       <div className="relative">
@@ -497,18 +500,10 @@ const Invoices: React.FC = () => {
 
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
         <div className="hidden md:grid grid-cols-12 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider rounded-t-xl group">
-          <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-             <input 
-               type="checkbox" 
-               checked={paginatedInvoices.length > 0 && selectedIds.size === paginatedInvoices.length}
-               onChange={toggleSelectAll}
-               className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-             />
-          </div>
-          <div className="col-span-4 pl-4 truncate">Client</div>
-          <div className="col-span-3 truncate">Description & Dates</div>
+          <div className="col-span-3 truncate">Client & Invoice</div>
+          <div className="col-span-4 truncate">Description & Due Date</div>
           <div className="col-span-2 truncate">Status</div>
-          <div className="col-span-2 text-right pr-8 truncate">Amount</div>
+          <div className="col-span-3 text-right pr-8 truncate">Amount / Actions</div>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -517,77 +512,48 @@ const Invoices: React.FC = () => {
               <LongPressable 
                 key={invoice.localId} 
                 onLongPress={() => toggleSelect(invoice.localId)}
-                onClick={() => setSelectedInvoice(invoice)}
+                onClick={() => {
+                  if (isSelectionMode) {
+                    toggleSelect(invoice.localId);
+                  } else {
+                    setSelectedInvoice(invoice);
+                  }
+                }}
                 style={{ animationDelay: `${index * 50}ms` }}
-                className={`group px-6 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(invoice.localId) || selectedInvoice?.localId === invoice.localId ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
+                className={`group px-4 md:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm block cursor-pointer animate-fade-in-up ${selectedIds.has(invoice.localId) || selectedInvoice?.localId === invoice.localId ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}`}
               >
-                <div className="flex md:hidden gap-3 items-start py-4">
-                  <div className={`pt-1 transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'w-6 opacity-100 mr-2' : 'w-0 opacity-0 m-0'}`}>
-                    <input 
-                      type="checkbox"
-                      checked={selectedIds.has(invoice.localId)}
-                      onChange={(e) => { e.stopPropagation(); toggleSelect(invoice.localId); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                    />
+                <div className="grid md:hidden grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-4">
+                  <div className="col-span-2 flex min-w-0 items-center gap-2">
+                    <div className="min-w-0 flex-1 truncate font-semibold text-base text-slate-900 dark:text-slate-100">
+                      {allClients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
+                    </div>
+                    <Badge variant={invoice.status.toLowerCase() as any}>
+                      {invoice.status === 'PARTIAL' ? 'Partial' : invoice.status}
+                    </Badge>
+                    <div className="font-semibold text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                      {formatMoney(invoice.total, invoice.currency)}
+                    </div>
                   </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="font-bold text-base text-slate-900 dark:text-slate-100 truncate max-w-[150px] sm:max-w-[200px]">
-                          {allClients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
-                        </div>
-                        <div className="text-slate-400 text-xs mt-0.5">
-                          {invoice.issuedAt ? formatDate(invoice.issuedAt) : 'Not issued yet'}
-                        </div>
-                      </div>
-                      <div className="font-bold text-base text-slate-900 dark:text-slate-100">
-                         {formatMoney(invoice.total, invoice.currency)}
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <div className="flex items-center gap-3">
-                        <div className="text-slate-600 dark:text-slate-400 font-medium truncate">
-                          {invoice.invoiceNumber || invoice.localId.slice(0, 8)}
-                        </div>
-                        <Badge variant={invoice.status.toLowerCase() as any}>
-                          {invoice.status === 'PARTIAL' ? 'Partial' : invoice.status}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                        <ActionMenu items={[
-                          ...(invoice.status === 'DRAFT' ? [
-                            { label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) },
-                            { label: 'Mark as Sent', onClick: () => { const updated = { ...invoice, status: 'SENT' as const, updatedAt: new Date().toISOString() }; db.invoices.put(updated); db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updated, status: 'pending', createdAt: new Date().toISOString() }); } },
-                            { label: 'Preview PDF', onClick: () => handleDownloadPdf(invoice) }
-                          ] : [
-                            { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
-                            ...((invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE' || invoice.status === 'SENT' || invoice.status === 'PENDING') ? [
-                              { label: 'Record Payment', onClick: () => { setInvoiceForPayment(invoice); setRecordPaymentModalOpen(true); } },
-                              { label: 'Mark as Paid', onClick: () => handleMarkAsPaid(invoice) }
-                            ] : []),
-                            { label: invoice.status === 'OVERDUE' ? 'Send Reminder' : 'Send / Share', onClick: () => { setInvoiceToSend(invoice); setSendModalOpen(true); } },
-                            { label: 'Copy Payment Link', onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.localId}`); toast.success('Payment link copied!'); } },
-                            { label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }
-                          ]),
-                          { label: 'Delete', onClick: () => { setInvoiceToDelete(invoice.localId); setDeleteModalOpen(true); }, variant: 'danger' }
-                        ]} />
-                      </div>
-                    </div>
+                  <div className="min-w-0 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 text-xs text-slate-400">
+                    <span className="font-medium text-slate-600 dark:text-slate-400 truncate">
+                      {invoice.invoiceNumber || invoice.localId.slice(0, 8)}
+                    </span>
+                    <span className="truncate text-center">
+                      {invoice.dueDate ? `Due ${formatDate(invoice.dueDate)}` : 'No due date'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    {isSelectionMode ? (
+                      <SelectionIndicator selected={selectedIds.has(invoice.localId)} onClick={() => toggleSelect(invoice.localId)} />
+                    ) : <ActionMenu items={[
+                      { label: invoice.status === 'PAID' ? 'Download Receipt' : 'Download PDF', onClick: () => handleDownloadPdf(invoice) },
+                      ...(invoice.status === 'DRAFT' ? [{ label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }] : []),
+                      { label: 'Delete', onClick: () => { setInvoiceToDelete(invoice.localId); setDeleteModalOpen(true); }, variant: 'danger' }
+                    ]} />}
                   </div>
                 </div>
 
                 <div className="hidden md:grid grid-cols-12 items-center w-full py-4 group">
-                  <div className={`col-span-1 flex items-center transition-all duration-300 overflow-hidden flex-shrink-0 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                    <input 
-                      type="checkbox"
-                      checked={selectedIds.has(invoice.localId)}
-                      onChange={(e) => { e.stopPropagation(); toggleSelect(invoice.localId); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                    />
-                  </div>
-                  
                   <div className="col-span-4 flex flex-col justify-center">
                     <div className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors truncate pr-4">
                       {allClients.find(c => c.localId === invoice.clientId)?.name || invoice.clientId}
@@ -602,7 +568,7 @@ const Invoices: React.FC = () => {
                       {invoice.description || '—'}
                     </div>
                     <div className="text-slate-400 text-xs mt-0.5">
-                      {invoice.issuedAt ? `Issued ${formatDate(invoice.issuedAt)}` : 'Not issued yet'}
+                      {invoice.dueDate ? `Due ${formatDate(invoice.dueDate)}` : 'No due date'}
                     </div>
                   </div>
                   
@@ -612,10 +578,12 @@ const Invoices: React.FC = () => {
                     </Badge>
                   </div>
 
-                  <div className="col-span-2 flex items-center justify-end font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
+                  <div className="col-span-3 flex items-center justify-end gap-3 font-semibold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
                      {formatMoney(invoice.total, invoice.currency)}
-                     <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                       <ActionMenu items={[
+                     <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                       {isSelectionMode ? (
+                         <SelectionIndicator selected={selectedIds.has(invoice.localId)} onClick={() => toggleSelect(invoice.localId)} />
+                       ) : <ActionMenu items={[
                           ...(invoice.status === 'DRAFT' ? [
                             { label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) },
                             { label: 'Mark as Sent', onClick: () => { const updated = { ...invoice, status: 'SENT' as const, updatedAt: new Date().toISOString() }; db.invoices.put(updated); db.syncQueue.add({ id: uuidv4(), action: 'UPDATE', entity: 'INVOICE', payload: updated, status: 'pending', createdAt: new Date().toISOString() }); } },
@@ -631,7 +599,7 @@ const Invoices: React.FC = () => {
                             { label: 'Edit', onClick: () => navigate('/invoices/new', { state: { invoice } }) }
                           ]),
                           { label: 'Delete', onClick: () => { setInvoiceToDelete(invoice.localId); setDeleteModalOpen(true); }, variant: 'danger' }
-                        ]} />
+                        ]} />}
                      </div>
                   </div>
                 </div>
@@ -761,8 +729,13 @@ const Invoices: React.FC = () => {
                 {formatMoney(selectedInvoice.total - selectedInvoice.amountPaid, selectedInvoice.currency)}
               </div>
               <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
-                Invoice {selectedInvoice.invoiceNumber ? `#${selectedInvoice.invoiceNumber}` : ''}
+                 {selectedInvoice.invoiceNumber ? `#${selectedInvoice.invoiceNumber}` : ''}
               </div>
+              {/* we would come back here later to add the issued and due date, but for now we will comment it out
+               <div className="mt-3 flex items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+                <span>Issued: {selectedInvoice.issuedAt ? formatDate(selectedInvoice.issuedAt) : 'Not issued yet'}</span>
+                <span>Due: {selectedInvoice.dueDate ? formatDate(selectedInvoice.dueDate) : 'No due date'}</span>
+              </div> */}
             </div>
             
             {selectedInvoice.status === 'DRAFT' && (
@@ -858,5 +831,3 @@ const Invoices: React.FC = () => {
 };
 
 export default Invoices;
-
-

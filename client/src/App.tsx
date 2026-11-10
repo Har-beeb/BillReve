@@ -74,6 +74,12 @@ const ThemeController = () => {
     }
 
     const root = document.documentElement;
+    const themeColor = theme === 'dark' ? '#18181b' : '#fafafa';
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+      meta.setAttribute('content', themeColor);
+    });
+    const appleStatusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    appleStatusBar?.setAttribute('content', theme === 'dark' ? 'black-translucent' : 'default');
     root.classList.remove('theme-wine', 'theme-ocean', 'theme-emerald', 'theme-slate', 'theme-sunset', 'theme-mustard', 'theme-cherry', 'theme-custom');
     root.style.removeProperty('--color-purple-600');
     
